@@ -1,0 +1,13 @@
+{
+  "name": "moodlenet3",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "lerna": "^4.0.0"
+  },
+  "scripts": {
+    "bs": "lerna bootstrap",
+    "exe": "lerna run --parallel --stream"
+  }
+}

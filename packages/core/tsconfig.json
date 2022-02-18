@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "exclude": ["./lib", "./index.*"],
+  "compilerOptions": {
+    "rootDir": "src",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "lib": ["ESNext"],
+    "target": "ES5",
+    "allowSyntheticDefaultImports": true,
+    "outDir": "./"
+  }
+}

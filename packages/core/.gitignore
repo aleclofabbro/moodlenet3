@@ -1,0 +1,7 @@
+node_modules
+yarn-error.log
+/lib
+/*.ts
+/*.js
+/*.ts.map
+/*.js.map
