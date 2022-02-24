@@ -1,0 +1,31 @@
+{
+  "name": "@moodlenet/pkg-mng",
+  "version": "3.0.0",
+  "main": "index.js",
+  "license": "AGPL-3.0",
+  "description": "moodlenet pkg-mng package",
+  "repository": "https://gitlab.com/moodlenet/moodlenet",
+  "author": "https://github.com/aleclofabbro",
+  "dependencies": {
+    "@moodlenet/kernel": "file:../kernel",
+    "@moodlenet/pri-http": "file:../pri-http",
+    "bullmq": "^1.74.2",
+    "dotenv": "^16.0.0",
+    "dotenv-expand": "^8.0.1",
+    "lmify": "^0.3.0",
+    "pkg-dir": "^5"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/node": "^17.0.18",
+    "node-dev": "^7.1.0",
+    "shx": "^0.3.4",
+    "typescript": "^4.5.5"
+  },
+  "scripts": {
+    "build-dev": "tsc --watch",
+    "start": "node index.js",
+    "clean": "shx rm -rf lib",
+    "start-dev": "node-dev --trace-warnings --inspect --deps 4 --respawn --notify=false ./index.js"
+  }
+}

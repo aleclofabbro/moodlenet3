@@ -1,26 +1,26 @@
 {
-  "name": "@moodlenet/process",
-  "version": "3.0.0",
-  "main": "lib/process.js",
+  "name": "@moodlenet/kernel",
+  "version": "1.0.0",
+  "main": "index.js",
   "license": "AGPL-3.0",
-  "description": "moodlenet process package",
+  "description": "moodlenet kernel package",
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
-    "@moodlenet/pri-http": "^3.0.0",
-    "pkg-dir": "^5",
-    "type-fest": "^2.11.2"
+    "bullmq": "^1.74.2",
+    "pkg-dir": "^5"
   },
   "devDependencies": {
     "@types/node": "^17.0.18",
     "node-dev": "^7.1.0",
     "shx": "^0.3.4",
+    "type-fest": "^2.11.2",
     "typescript": "^4.5.5"
   },
   "scripts": {
     "build-dev": "tsc --watch",
     "start": "node index.js",
     "clean": "shx rm -rf lib",
-    "start-dev": "node-dev --trace-warnings --inspect --deps 4 --respawn --notify=false ./index.js "
+    "---start-dev": "node-dev --trace-warnings --inspect --deps 4 --respawn --notify=false ./index.js"
   }
 }

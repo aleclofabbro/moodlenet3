@@ -1,14 +1,14 @@
-import { MNModule } from '@moodlenet/process/lib/MNModule'
-import { MNPackage } from '@moodlenet/process/lib/MNPackage'
-import { httpServer } from './server'
+import { Extension } from '@moodlenet/kernel/lib/v1/Extension'
+import createPriServer from './pri-server'
 
-const pkg = new MNPackage(module, {
-  modules: {
-    server: new MNModule({
-      components: {
-        http: httpServer,
+export default Extension(module, () => {
+  const priServer = createPriServer()
+  return [
+    {
+      async start() {
+        priServer.start()
       },
-    }),
-  },
+    },
+    {},
+  ]
 })
-export default pkg
