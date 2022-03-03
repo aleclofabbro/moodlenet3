@@ -34,11 +34,16 @@ console.log({
 
   await npmcli.install([kernelInstallRef], false)
 
-  const MNBareMetal = { npmcli, rootDir, kernelInstallRef }
+  const nodeModulesDir = `${rootDir}/node_modules`
   console.log(`starting kernel`)
 
-  await require(`${rootDir}/node_modules/@moodlenet/kernel`).default(
-    MNBareMetal
-  )
+  await require(`${rootDir}/node_modules/@moodlenet/kernel`).boot({
+    npmcli,
+    rootDir,
+    nodeModulesDir,
+    kernelInstallRef,
+    version: '1',
+  })
+
   console.log(`kernel ${kernelInstallRef} started`)
 })()

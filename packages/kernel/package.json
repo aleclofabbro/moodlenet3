@@ -3,12 +3,23 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "AGPL-3.0",
+  "moodlenet": {
+    "name": "moodlenet kernel",
+    "shortDesc": "a desc for moodlenet kernel"
+  },
   "description": "moodlenet kernel package",
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
+  "files": [
+    "dev.js",
+    "lib/"
+  ],
   "dependencies": {
+    "arangojs": "^7.7.0",
     "bullmq": "^1.74.2",
-    "pkg-dir": "^5"
+    "pkg-dir": "^5",
+    "rxjs": "^7.5.4",
+    "rxjs-compat": "^6.6.7"
   },
   "devDependencies": {
     "@types/node": "^17.0.18",
@@ -19,7 +30,7 @@
   },
   "scripts": {
     "build-dev": "tsc --watch",
-    "start": "node index.js",
+    "start-dev": "node-dev --trace-warnings --inspect --deps 4 --respawn --notify=false start-dev.js",
     "clean": "shx rm -rf lib",
     "---start-dev": "node-dev --trace-warnings --inspect --deps 4 --respawn --notify=false ./index.js"
   }

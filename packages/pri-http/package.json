@@ -15,6 +15,7 @@
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
+    "@moodlenet/kernel": "file:../kernel",
     "express": "^4.17.2"
   },
   "peerDependencies": {

@@ -2,3 +2,4 @@ node_modules
 yarn-error.log
 /lib
 .ignore-dir
+mn-kernel-config.js
