@@ -16,6 +16,7 @@
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
     "@moodlenet/kernel": "file:../kernel",
+    "body-parser": "^1.19.2",
     "express": "^4.17.2"
   },
   "peerDependencies": {

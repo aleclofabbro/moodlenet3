@@ -101,19 +101,19 @@ export const boot = (pkgMng?: PkgMng) => {
   //   return pkgs.map((pkg) => extRequire(pkg))
   // }
 
-  setTimeout(() => {
-    pushMessage(
-      createMessage({
-        payload: {},
-        session: { user: {} },
-        source: { extId: kernelExtId, path: [] },
-        target: {
-          extId: { name: '@moodlenet/pri-http', version: '1.0.0' },
-          path: ['deactivate'],
-        },
-      })
-    )
-  }, 2000)
+  // setTimeout(() => {
+  //   pushMessage(
+  //     createMessage({
+  //       payload: {},
+  //       session: { user: {} },
+  //       source: { extId: kernelExtId, path: [] },
+  //       target: {
+  //         extId: { name: '@moodlenet/pri-http', version: '1.0.0' },
+  //         path: ['deactivate'],
+  //       },
+  //     })
+  //   )
+  // }, 2000)
 }
 
 const pushMessage = (message: Message) => {
@@ -151,9 +151,10 @@ const pushMessage = (message: Message) => {
   //TODO: after this narrowing targetPortTopoNode gets typed as "never" :\ (same as for portGates)
 
   const targetPort: Port<any> = targetPortTopoNode
+  const shell = makeShell({ message, cwAddress: target })
   //TODO: WARN NO Guard
   try {
-    targetPort.meta?.guard?.(message)
+    targetPort.meta?.guard?.(shell)
   } catch (guardError) {
     console.error(`
 message guard failed
@@ -164,7 +165,6 @@ msg ${String(guardError)}
     `)
     throw guardError
   }
-  const shell = makeShell({ message, cwAddress: target })
   targetPort(shell)
 }
 function makeShell<P extends Obj>({
@@ -178,7 +178,7 @@ function makeShell<P extends Obj>({
   const listen = (listener: PortListener) => addListener(ext.id, listener)
 
   const getMsg: GetMsg = (gate) => (isMsg(gate, message) ? message : undefined)
-  const lookup = lookupFor(message.session, message.source)
+  const lookup = lookupFor(message.session, message.target)
   const env = extEnv(ext.id.name)
   return {
     env,

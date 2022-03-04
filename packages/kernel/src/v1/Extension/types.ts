@@ -68,7 +68,7 @@ export type PortOutcome = void
 export type RawPort<Payload> = (shell: PortShell<Payload>) => PortOutcome
 export type Port<Payload> = WithPortMeta & RawPort<Payload>
 
-export type Guard = (message: Message) => any
+export type Guard = (shell: PortShell) => unknown
 
 export type PortMeta = {
   guard?: Guard
