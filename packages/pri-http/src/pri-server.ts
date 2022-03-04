@@ -1,8 +1,8 @@
 import { PortShell } from '@moodlenet/kernel/lib/v1'
 import {
-  ShellGate,
-  ShellGatesTopology,
-} from '@moodlenet/kernel/lib/v1/extension'
+  invoke,
+  isReqResShellGatesTopo,
+} from '@moodlenet/kernel/lib/v1/port-access-strategies/lib'
 import { json } from 'body-parser'
 import express from 'express'
 
@@ -10,7 +10,7 @@ export const makeApp = ({
   shell,
   rootPath = '',
 }: {
-  shell: PortShell
+  shell: PortShell<any>
   rootPath?: string
 }) => {
   const app = express()
@@ -33,15 +33,12 @@ export const makeApp = ({
     if (!ext) {
       return next()
     }
-    const port = path.reduce(
-      (node, prop) => (node as any)?.[prop],
-      ext.gates as ShellGatesTopology | undefined
-    )
-    if (!port || 'function' !== typeof port) {
+    const rrGates = path.reduce((node, prop) => node?.[prop], ext.gates as any)
+    if (!isReqResShellGatesTopo(rrGates)) {
       return next()
     }
 
-    const response = await (port as ShellGate<PortShell>)({ payload: req.body })
+    const response = await invoke(shell, rrGates)(req.body)
     res.send(response)
   })
   app.use(`${rootPath}/`, (_, res) => {

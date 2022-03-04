@@ -2,7 +2,8 @@ import { v1 } from '@moodlenet/kernel/lib'
 import { inspect } from 'util'
 import { makeApp } from './pri-server'
 
-v1.Extension(module, {
+type Def = typeof def
+const def = {
   name: '@moodlenet/pri-http',
   version: '1.0.0',
   ports: {
@@ -13,8 +14,9 @@ v1.Extension(module, {
       const server = app.listen(port, () =>
         console.log(`http listening @${port}`)
       )
-      const _this = shell.lookup('@moodlenet/pri-http')!
-      _this.gates.deactivate.meta.guard?.(shell)
+      const _this = shell.lookup<Def>('@moodlenet/pri-http')!
+
+      v1.invoke(shell, _this.gates.a.b)({ a: 12 })
       shell.listen((shell) => {
         console.log('listen', inspect(shell, false, 8, true))
         shell.message.ctx.xxx = 10000
@@ -26,9 +28,8 @@ v1.Extension(module, {
     }),
     deactivate() {},
     a: {
-      b: v1.ExtPort<{ a: 1 }>({ guard() {} }, (shell) => {
-        console.log('http.a.b: ', inspect(shell, false, 8, true))
-      }),
+      b: v1.reqResPort(async <T>(t: T) => ({ _: `http.a.b:`, t })),
     },
   },
-})
+} as const
+v1.Extension(module, def)

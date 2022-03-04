@@ -1,3 +1,5 @@
+import { MsgID } from '.'
+import { Push } from '..'
 import {
   assertRegisteredExtension,
   getRegisteredExtension,
@@ -60,6 +62,7 @@ msg ${String(guardError)}
     throw guardError
   }
   targetPort(shell)
+  return message
 }
 function makeShell<P extends Obj>({
   message,
@@ -74,6 +77,17 @@ function makeShell<P extends Obj>({
   const getMsg: GetMsg = (gate) => (isMsg(gate, message) ? message : undefined)
   const lookup = lookupFor(message.session, message.target)
   const env = extEnv(ext.id.name)
+  const push: Push = (target, payload) =>
+    pushMessage(
+      createMessage({
+        payload,
+        target,
+        session: message.session,
+        source: cwAddress,
+        parentMsgId: message.id,
+      })
+    )
+
   return {
     env,
     lookup,
@@ -82,6 +96,7 @@ function makeShell<P extends Obj>({
     isMsg,
     getMsg,
     cwAddress,
+    push,
   }
 }
 const addListener = (cwAddress: PortAddress, listener: PortListener) => {
@@ -106,11 +121,13 @@ export function createMessage<P extends Obj>({
   source,
   target,
   session,
+  parentMsgId,
 }: {
   session: Session
   payload: P
   source: PortAddress
   target: PortAddress
+  parentMsgId: MsgID | null
 }): Message<P> {
   return {
     id: newId(),
@@ -119,5 +136,6 @@ export function createMessage<P extends Obj>({
     session,
     source,
     target,
+    parentMsgId,
   }
 }

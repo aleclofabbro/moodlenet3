@@ -11,4 +11,5 @@ export type Message<Payload extends Obj = Obj> = {
   session: Session
   payload: Payload
   ctx: Obj
+  parentMsgId: MsgID | null
 }

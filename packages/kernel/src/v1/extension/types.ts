@@ -95,7 +95,7 @@ export type ShellGatesTopology<
   [NodeName in keyof GatesTopo]: GatesTopo[NodeName] extends Gate<infer Payload>
     ? ShellGate<Payload>
     : GatesTopo[NodeName] extends GatesTopology
-    ? GatesTopo[NodeName]
+    ? ShellGatesTopology<GatesTopo[NodeName]>
     : never
 }
 

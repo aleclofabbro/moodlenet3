@@ -68,6 +68,7 @@ export const boot = (pkgMng?: PkgMng) => {
             extId: extReg.id,
             path: ['activate'],
           },
+          parentMsgId: null,
         })
       )
     })

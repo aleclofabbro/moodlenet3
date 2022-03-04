@@ -27,8 +27,12 @@ export type PortShell<Payload = unknown> = {
   isMsg: IsGateMsg
   getMsg: GetMsg
   cwAddress: PortAddress
+  push: Push
 }
-
+export type Push = <Payload>(
+  portAddr: PortAddress,
+  payload: Payload
+) => Message<Payload> | undefined
 export type Session = {
   user: User
 }

@@ -85,6 +85,7 @@ export function portGates<PortsTopo extends PortsTopology>(
           target: thisGateExtAddress,
           session,
           source,
+          parentMsgId: null,
         })
         pushMessage(message)
         //const shell = makeShell({ cwAddress: thisGateExtAddress, message })
