@@ -1,47 +1,15 @@
-import type { PackageJson } from 'type-fest'
 // export interface AnnotatedExtComponent {
 //   name: string
 //   description?: string
-// }
-export type Obj = any //Record<string, any>
 
-export type PkgInfo = {
-  dir: string
-  json: NodePackageJson
-}
+import { Message } from '../message/types'
+import { PortAddress } from '../port-address/types'
+import { Obj, PortShell, Session } from '../types'
 
-export type MNPackageJsonExt = {
-  displayName?: string
-  shortDesc?: string
-  description?: string
-  webappExtensionFile?: string
-}
+/////
 
-export type NodePackageJson = Omit<PackageJson, 'name' | 'version'> & {
-  moodlenet: MNPackageJsonExt
-  name: string
-  version: string
-}
-
-type Path = string[]
-export type PortAddress = {
-  extId: ExtensionId
-  path: Path
-}
-
-export type PostOpts = {}
-export type MsgID = string
-export type Message<Payload extends Obj = Obj> = {
-  id: MsgID
-  target: PortAddress
-  source: PortAddress
-  session: Session
-  payload: Payload
-  ctx: Obj
-}
-
-type ExtName = string
-type ExtVersion = string
+export type ExtName = string
+export type ExtVersion = string
 export type ExtensionId<
   Name extends ExtName = ExtName,
   Version extends ExtVersion = ExtVersion
@@ -49,12 +17,11 @@ export type ExtensionId<
   name: Name
   version: Version
 }
+
 export type IsGateMsg = <P extends Obj>(
   gate: Gate<P> | ShellGate<P>,
   msg: Message
 ) => msg is Message<P>
-
-export type GetMsg = <P extends Obj>(gate: Gate<P>) => Message<P> | undefined
 
 export type ExtensionDef<
   Name extends ExtName = ExtName,
@@ -100,8 +67,8 @@ export type RawShellGate<Payload> = (_: {
 }) => Message<Payload>
 export type ShellGate<Payload> = WithGateMeta & RawShellGate<Payload>
 
-type ActivateExtPayload = {}
-type DeactivateExtPayload = {}
+export type ActivateExtPayload = {}
+export type DeactivateExtPayload = {}
 export type RootPortsTopology = {
   activate: Port<ActivateExtPayload>
   deactivate: Port<DeactivateExtPayload>
@@ -141,32 +108,6 @@ export type ShellGatedExtension<ExtDef extends ExtensionDef = ExtensionDef> = {
   gates: ShellGatesTopology<GatesTopology<ExtDef['ports']>>
   id: ExtensionId<ExtDef['name'], ExtDef['version']>
 }
-
-export type ExtensionUnavailable = undefined
-
-export type ShellLookup = <Ext extends ExtensionDef>(
-  name: Ext['name']
-) => ShellGatedExtension<Ext> | ExtensionUnavailable
-
-export type PostOutcome = void
-
-export type PortListener = (shell: PortShell<Obj>) => void
-export type Listen = (_: PortListener) => Unlisten
-type Unlisten = () => void
-export type PortShell<Payload = unknown> = {
-  message: Message<Payload>
-  lookup: ShellLookup
-  env: any
-  listen: Listen
-  isMsg: IsGateMsg
-  getMsg: GetMsg
-}
-
-export type Session = {
-  user: User
-}
-
-export type User = {}
 
 /*
 

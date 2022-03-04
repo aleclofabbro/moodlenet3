@@ -3,6 +3,19 @@ import packageDirectory from 'pkg-dir'
 import { inspect } from 'util'
 import { MNPackageJsonExt, NodePackageJson, PkgInfo } from './types'
 
+function isMNPackageJsonExt(_: any): _ is MNPackageJsonExt {
+  return (
+    !!_ &&
+    isOptString(_, 'displayName') &&
+    isOptString(_, 'description') &&
+    isOptString(_, 'webappExtensionFile') &&
+    isOptString(_, 'shortDesc')
+  )
+}
+function isOptString(_: any, p: string) {
+  return !!_ && (p in _ ? typeof _[p] === 'string' : true)
+}
+
 export function pkgDirOf(node_module: NodeModule) {
   const mod_dir = dirname(node_module.filename)
   const dir = packageDirectory.sync(mod_dir)
@@ -44,17 +57,4 @@ export function pkgInfoOf(node_module: NodeModule): PkgInfo {
     )
   }
   return { dir, json }
-}
-
-function isMNPackageJsonExt(_: any): _ is MNPackageJsonExt {
-  return (
-    !!_ &&
-    isOptString(_, 'displayName') &&
-    isOptString(_, 'description') &&
-    isOptString(_, 'webappExtensionFile') &&
-    isOptString(_, 'shortDesc')
-  )
-}
-function isOptString(_: any, p: string) {
-  return !!_ && (p in _ ? typeof _[p] === 'string' : true)
 }

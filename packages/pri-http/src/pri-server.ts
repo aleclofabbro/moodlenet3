@@ -1,8 +1,8 @@
+import { PortShell } from '@moodlenet/kernel/lib/v1'
 import {
-  PortShell,
   ShellGate,
   ShellGatesTopology,
-} from '@moodlenet/kernel/lib/v1/Extension/types'
+} from '@moodlenet/kernel/lib/v1/extension'
 import { json } from 'body-parser'
 import express from 'express'
 

@@ -1,12 +1,12 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { ExtPort } from '@moodlenet/kernel/lib/v1/Extension'
+import { inspect } from 'util'
 import { makeApp } from './pri-server'
 
 v1.Extension(module, {
   name: '@moodlenet/pri-http',
   version: '1.0.0',
   ports: {
-    activate: ExtPort({}, (shell) => {
+    activate: v1.ExtPort({}, (shell) => {
       const port = shell.env.port
       const app = makeApp({ shell })
 
@@ -15,10 +15,10 @@ v1.Extension(module, {
       )
       const _this = shell.lookup('@moodlenet/pri-http')!
       _this.gates.deactivate.meta.guard?.(shell)
-      shell.listen(({ message }) => {
-        console.log('listen', message)
-
-        if (shell.isMsg(_this.gates.deactivate, message)) {
+      shell.listen((shell) => {
+        console.log('listen', inspect(shell, false, 8, true))
+        shell.message.ctx.xxx = 10000
+        if (shell.isMsg(_this.gates.deactivate, shell.message)) {
           console.log('stop server')
           server.close()
         }
@@ -26,8 +26,8 @@ v1.Extension(module, {
     }),
     deactivate() {},
     a: {
-      b: ExtPort({ guard() {} }, (shell) => {
-        console.log(shell.message)
+      b: v1.ExtPort<{ a: 1 }>({ guard() {} }, (shell) => {
+        console.log('http.a.b: ', inspect(shell, false, 8, true))
       }),
     },
   },
