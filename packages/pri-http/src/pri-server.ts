@@ -1,8 +1,8 @@
 import { PortShell } from '@moodlenet/kernel/lib/v1'
 import {
   invoke,
-  isReqResShellGatesTopo,
-} from '@moodlenet/kernel/lib/v1/port-access-strategies/lib'
+  isAsyncShellGatesTopo,
+} from '@moodlenet/kernel/lib/v1/port-access-strategies/async-port'
 import { json } from 'body-parser'
 import express from 'express'
 
@@ -34,7 +34,7 @@ export const makeApp = ({
       return next()
     }
     const rrGates = path.reduce((node, prop) => node?.[prop], ext.gates as any)
-    if (!isReqResShellGatesTopo(rrGates)) {
+    if (!isAsyncShellGatesTopo(rrGates)) {
       return next()
     }
 
