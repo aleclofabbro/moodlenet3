@@ -29,11 +29,15 @@ export const makeApp = ({
         : path.splice(0, 1)
     ).join('/')
     console.log(extName)
+
+    //TODO: implement shell.lookupPort(addr:PortAddress):ShellGatesTopology<any>
     const ext = shell.lookup(extName)
     if (!ext) {
       return next()
     }
     const rrGates = path.reduce((node, prop) => node?.[prop], ext.gates as any)
+    //TODO: ^^^
+
     if (!isAsyncShellGatesTopo(rrGates)) {
       return next()
     }

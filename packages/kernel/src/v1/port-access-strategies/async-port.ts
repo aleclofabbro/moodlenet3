@@ -2,27 +2,32 @@ import { GatesTopology, Port, PortShell, ShellGatesTopology } from '..'
 
 type AsyncFn<Arg, Val> = (arg: Arg) => Promise<Val>
 
-export type AsyncPortTopo<A extends AsyncFn<any, any>> = {
-  request: Port<{ arg: A extends AsyncFn<infer Arg, any> ? Arg : never }>
-  response: Port<{ value: A extends AsyncFn<any, infer Val> ? Val : never }>
+export type AsyncPortTopo<Arg, Val, _A extends AsyncFn<Arg, Val>> = {
+  request: Port<{ arg: Arg }>
+  response: Port<{ value: Val }>
 }
-export type AsyncGatesTopo<A extends AsyncFn<any, any>> = GatesTopology<
-  AsyncPortTopo<A>
->
-export type AsyncShellGatesTopo<A extends AsyncFn<any, any>> =
-  ShellGatesTopology<AsyncGatesTopo<A>>
+export type AsyncGatesTopo<
+  Arg,
+  Val,
+  A extends AsyncFn<Arg, Val>
+> = GatesTopology<AsyncPortTopo<Arg, Val, A>>
+export type AsyncShellGatesTopo<
+  Arg,
+  Val,
+  A extends AsyncFn<Arg, Val>
+> = ShellGatesTopology<AsyncGatesTopo<Arg, Val, A>>
 
-export const isAsyncShellGatesTopo = (
+export const isAsyncShellGatesTopo = <Arg, Val>(
   _: any
-): _ is AsyncShellGatesTopo<AsyncFn<any, any>> =>
+): _ is AsyncShellGatesTopo<Arg, Val, AsyncFn<Arg, Val>> =>
   !!_ && 'request' in _ && 'response' in _ //TODO: so trivial ^^'
 
-export type AsyncPort<A extends AsyncFn<any, any>> = (
-  shell: PortShell<{ arg: A extends AsyncFn<infer Arg, any> ? Arg : never }>
+export type AsyncPort<Arg, Val, A extends AsyncFn<Arg, Val>> = (
+  shell: PortShell<{ arg: Arg }>
 ) => A
-export const asyncPort = <A extends AsyncFn<any, any>>(
-  asyncPort: AsyncPort<A>
-): AsyncPortTopo<A> => ({
+export const asyncPort = <A extends AsyncFn<Arg, Val>, Arg = any, Val = any>(
+  asyncPort: AsyncPort<Arg, Val, A>
+): AsyncPortTopo<Arg, Val, A> => ({
   async request(shell) {
     const respPath = shell.cwAddress.path.slice(0, -1).concat('response')
     const value = await asyncPort(shell)(shell.message.payload.arg)
@@ -31,11 +36,11 @@ export const asyncPort = <A extends AsyncFn<any, any>>(
   response() {},
 })
 
-export const invoke = <A extends AsyncFn<any, any>>(
+export const invoke = <Arg, Val, A extends AsyncFn<Arg, Val>>(
   shell: PortShell<any>,
-  rrGates: AsyncShellGatesTopo<A>
+  rrGates: AsyncShellGatesTopo<Arg, Val, A>
 ): A =>
-  ((arg: any) =>
+  ((arg: Arg) =>
     new Promise((resolve, _reject) => {
       const reqMsg = rrGates.request({ payload: { arg } })
       const unsub = shell.listen(({ message: respMsg }) => {
@@ -47,6 +52,38 @@ export const invoke = <A extends AsyncFn<any, any>>(
         unsub()
       })
     })) as any as A
+
+// type Def = typeof def
+// const def = {
+//   name: '@moodlenet/pri-http',
+//   version: '1.0.0',
+//   ports: {
+//     activate: ExtPort({}, async (shell) => {
+//       const _this = shell.lookup<Def>('@moodlenet/pri-http')!
+
+//       const x = await invoke(shell, _this.gates.a.b)({ t: '12', k: 10 })
+//       x.kk.___
+//       x.tt.___
+//     }),
+//     deactivate() {},
+//     a: {
+//       b: asyncPort((__) => async <T, K>(a: { t: T; k: K }) => ({
+//         _: __.message.target,
+//         tt: { ___: a.t },
+//         kk: { ___: a.k },
+//       })),
+//     },
+//   },
+// } as const
+// type AA = <T, K>(a: {
+//   t: T
+//   k: K
+// }) => Promise<{
+//   _: PortAddress
+//   tt: ZZ<T>
+//   kk: ZZ<K>
+// }>
+// type ZZ<T> = { ___: T }
 
 // type Wrapper<AFN extends AsyncFunction> = (x: string) => AFN
 // type Unwrapped<P extends Wrapper<AsyncFunction>> = P extends Wrapper<infer AFN>

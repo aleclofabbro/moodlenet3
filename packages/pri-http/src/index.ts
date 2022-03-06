@@ -1,5 +1,4 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { PortAddress } from '@moodlenet/kernel/lib/v1/port-address/types'
 import { inspect } from 'util'
 import { makeApp } from './pri-server'
 
@@ -17,7 +16,9 @@ const def = {
       )
       const _this = shell.lookup<Def>('@moodlenet/pri-http')!
 
-      const x = await v1.invoke(shell, _this.gates.a.b)({ a: 12 })
+      const x = await v1.invoke(shell, _this.gates.a.b)({ t: '12', k: 10 })
+      x.kk.___
+      x.tt.___
       shell.listen((shell) => {
         console.log('listen', inspect(shell, false, 8, true))
         shell.message.ctx.xxx = 10000
@@ -29,12 +30,13 @@ const def = {
     }),
     deactivate() {},
     a: {
-      b: v1.asyncPort<ZZ>((__) => async <T>(t: T) => ({
+      b: v1.asyncPort((__) => async <T, K>(a: { t: T; k: K }) => ({
         _: __.message.target,
-        t,
+        tt: { ___: a.t },
+        kk: { ___: a.k },
       })),
     },
   },
 } as const
+
 v1.Extension(module, def)
-type ZZ = <T>(t: T) => Promise<{ _: PortAddress; t: T }>
