@@ -1,8 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import App from './App'
-import './index.css'
 import reportWebVitals from './reportWebVitals'
+;['/_lib/kernel/static/js/main.3d8b4a59.js'].forEach((lib) => {
+  import(lib)
+  fetch(lib).then(async (_) => console.log(await _.text()))
+})
 
 ReactDOM.render(
   <React.StrictMode>

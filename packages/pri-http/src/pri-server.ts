@@ -8,16 +8,22 @@ import express from 'express'
 
 export const makeApp = ({
   shell,
+  webAppRootFolder,
+  libFolders,
   rootPath = '',
 }: {
   shell: PortShell<any>
+  webAppRootFolder: string
+  libFolders: { ext: string; dir: string }[]
   rootPath?: string
 }) => {
   const app = express()
-  app.use(json())
-  app.use(`${rootPath}/_/`, async (req, res, next) => {
+  //srvApp
+  const srvApp = express()
+  srvApp.use(json())
+  srvApp.post('*', async (req, res, next) => {
     const path = req.path.split('/').slice(1)
-    console.log(path)
+    console.log(path, req.path)
     if (path.length < 2) {
       return next()
     }
@@ -32,6 +38,7 @@ export const makeApp = ({
 
     //TODO: implement shell.lookupPort(addr:PortAddress):ShellGatesTopology<any>
     const ext = shell.lookup(extName)
+    console.log({ ext })
     if (!ext) {
       return next()
     }
@@ -45,9 +52,25 @@ export const makeApp = ({
     const response = await invoke(shell, rrGates)(req.body)
     res.send(response)
   })
-  app.use(`${rootPath}/`, (_, res) => {
-    res.status(404).send('not found')
+  srvApp.all(`*`, (_, res) => res.status(404).send('service not available'))
+  app.use(`${rootPath}/_srv/`, srvApp)
+  //srvApp
+
+  //allLibsApp
+  const allLibsApp = express()
+  libFolders.forEach((lib) => {
+    //libApp
+    const libApp = express()
+    const libPath = `/${lib.ext}/`
+    console.log(`hooking : [${lib.ext}] ${libPath} -> ${lib.dir}`)
+    libApp.use('/', express.static(lib.dir))
+    allLibsApp.use(libPath, libApp)
+    //libApp
   })
+  app.use(`${rootPath}/_lib/`, allLibsApp)
+  //allLibsApp
+
+  app.get(`${rootPath}/*`, express.static(webAppRootFolder))
 
   return app
 }
