@@ -1,9 +1,9 @@
 import { v1 } from '@moodlenet/kernel/lib'
+import { shellGatesTopologyOf } from '@moodlenet/kernel/lib/v1'
 import { inspect } from 'util'
 import { makeApp } from './pri-server'
 
-type Def = typeof def
-const def = {
+const ext = v1.Extension(module, {
   name: '@moodlenet/pri-http',
   version: '1.0.0',
   ports: {
@@ -16,16 +16,19 @@ const def = {
       const server = app.listen(port, () =>
         console.log(`http listening @${port}`)
       )
-      const _this = shell.lookup<Def>('@moodlenet/pri-http')!
-
-      // const x = await v1.invoke(shell, _this.gates.a.b)({ t: '12', k: 10 })
-      // x.kk.___
-      // x.tt.___
+      const myShellgates = shellGatesTopologyOf(
+        ext.gates,
+        shell.message.session,
+        shell.cwAddress
+      )
+      const x = await v1.invoke(shell, myShellgates.a.b)({ t: 12, k: '10' })
+      x.kk.___
+      x.tt.___
       shell.listen((shell) => {
         console.log('listen', inspect(shell, false, 8, true))
         shell.message.ctx.xxx = 10000
         // FIXME: need a better message filter function
-        if (shell.isMsg(_this.gates.deactivate, shell.message)) {
+        if (shell.isMsg(ext.gates.deactivate, shell.message)) {
           console.log('stop server')
           server.close()
         }
@@ -41,6 +44,4 @@ const def = {
       })),
     },
   },
-} as const
-
-v1.Extension(module, def)
+})

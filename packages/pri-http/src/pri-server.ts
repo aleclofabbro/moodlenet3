@@ -9,7 +9,6 @@ import express from 'express'
 export const makeApp = ({
   shell,
   webAppRootFolder,
-  libFolders,
   rootPath = '',
 }: {
   shell: PortShell<any>
@@ -56,19 +55,19 @@ export const makeApp = ({
   app.use(`${rootPath}/_srv/`, srvApp)
   //srvApp
 
-  //allLibsApp
-  const allLibsApp = express()
-  libFolders.forEach((lib) => {
-    //libApp
-    const libApp = express()
-    const libPath = `/${lib.ext}/`
-    console.log(`hooking : [${lib.ext}] ${libPath} -> ${lib.dir}`)
-    libApp.use('/', express.static(lib.dir))
-    allLibsApp.use(libPath, libApp)
-    //libApp
-  })
-  app.use(`${rootPath}/_lib/`, allLibsApp)
-  //allLibsApp
+  // //allLibsApp
+  // const allLibsApp = express()
+  // libFolders.forEach((lib) => {
+  //   //libApp
+  //   const libApp = express()
+  //   const libPath = `/${lib.ext}/`
+  //   console.log(`hooking : [${lib.ext}] ${libPath} -> ${lib.dir}`)
+  //   libApp.use('/', express.static(lib.dir))
+  //   allLibsApp.use(libPath, libApp)
+  //   //libApp
+  // })
+  // app.use(`${rootPath}/_lib/`, allLibsApp)
+  // //allLibsApp
 
   app.get(`${rootPath}/*`, express.static(webAppRootFolder))
 

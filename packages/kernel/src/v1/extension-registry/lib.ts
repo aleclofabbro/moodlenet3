@@ -60,11 +60,11 @@ function assertNotRegisteredExtension(pkgName: string) {
 //   }
 //   return getRegisteredExtension(pkgInfo?.json.name)
 // }
-export function registerExtension({
+export function registerExtension<Def extends ExtensionDef>({
   def,
   pkgInfo,
 }: {
-  def: ExtensionDef
+  def: Def
   pkgInfo: PkgInfo
 }) {
   const pkgName = pkgInfo.json.name
@@ -72,7 +72,16 @@ export function registerExtension({
   const env = extEnv(pkgName)
   const id: ExtensionId = { name: def.name, version: def.version }
   const gates = portGates(id, def.ports, [])
-  extensionRegistry[pkgName] = { def, id, active: false, env, pkgInfo, gates }
+  const extRegRec: ExtensionRegistryRecord<Def> = {
+    def,
+    id,
+    active: false,
+    env,
+    pkgInfo,
+    gates,
+  }
+
+  return (extensionRegistry[pkgName] = extRegRec)
 }
 
 // function assertRegisteredExtensionOf(node_module: NodeModule) {

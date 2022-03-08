@@ -18,5 +18,5 @@ export function Extension<ExtDef extends ExtensionDef>(
     )
   }
 
-  registerExtension({ pkgInfo, def })
+  return registerExtension<ExtDef>({ pkgInfo, def })
 }
