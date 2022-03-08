@@ -7,7 +7,7 @@
     "lib": ["ESNext"],
     "target": "ES5",
     "allowSyntheticDefaultImports": true,
-    "outDir": "lib"
-  },
-  "exclude": ["webapp-lib"]
+    "outDir": "lib",
+    "jsx": "react-jsx"
+  }
 }

@@ -15,11 +15,11 @@
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
+    "@moodlenet/kernel": "^1.0.0",
     "body-parser": "^1.19.2",
     "express": "^4.17.2"
   },
   "devDependencies": {
-    "@moodlenet/kernel": "^1.0.0",
     "@types/express": "^4.17.13",
     "@types/node": "^17.0.18",
     "shx": "^0.3.4",
@@ -28,8 +28,5 @@
   "scripts": {
     "build-dev": "tsc --watch",
     "clean": "shx rm -rf pkg"
-  },
-  "peerDependencies": {
-    "@moodlenet/kernel": "^1.0.0"
   }
 }

@@ -7,7 +7,7 @@
     "lerna": "^4.0.0"
   },
   "scripts": {
-    "bs": "lerna bootstrap",
+    "bs": "lerna bootstrap --hoist",
     "exe": "lerna run --parallel --stream"
   }
 }
