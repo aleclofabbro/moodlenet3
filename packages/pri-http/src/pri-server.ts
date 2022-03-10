@@ -13,7 +13,6 @@ export const makeApp = ({
 }: {
   shell: PortShell<any>
   webAppRootFolder: string
-  libFolders: { ext: string; dir: string }[]
   rootPath?: string
 }) => {
   const app = express()
@@ -47,27 +46,12 @@ export const makeApp = ({
     if (!isAsyncShellGatesTopo(rrGates)) {
       return next()
     }
-
+    console.log('*********body', req.body)
     const response = await invoke(shell, rrGates)(req.body)
-    res.send(response)
+    res.json(response)
   })
   srvApp.all(`*`, (_, res) => res.status(404).send('service not available'))
   app.use(`${rootPath}/_srv/`, srvApp)
-  //srvApp
-
-  // //allLibsApp
-  // const allLibsApp = express()
-  // libFolders.forEach((lib) => {
-  //   //libApp
-  //   const libApp = express()
-  //   const libPath = `/${lib.ext}/`
-  //   console.log(`hooking : [${lib.ext}] ${libPath} -> ${lib.dir}`)
-  //   libApp.use('/', express.static(lib.dir))
-  //   allLibsApp.use(libPath, libApp)
-  //   //libApp
-  // })
-  // app.use(`${rootPath}/_lib/`, allLibsApp)
-  // //allLibsApp
 
   app.get(`${rootPath}/*`, express.static(webAppRootFolder))
 

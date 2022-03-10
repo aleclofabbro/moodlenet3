@@ -1,22 +1,28 @@
-import { mCmp } from '@moodlenet/kernel/lib/v1/webapp'
-import React from 'react'
-import ReactDOM from 'react-dom'
-import App from './App'
-import { Ctx } from './Ctx'
-import reportWebVitals from './reportWebVitals'
-export * from './Ctx'
-const Cmp = mCmp(Ctx)
-console.log(Cmp)
+import 'antd/dist/antd.css';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+import { Ctx } from './Ctx';
+
+const { Cmp } = require('@moodlenet/kernel/lib/v1/webapp');
+
+console.log(Cmp);
+
+fetch(`http://localhost:8888/_srv/_moodlenet_/pri-http/a/b`, {
+  body: JSON.stringify({ k: 1111, t: 'xx' }),
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  },
+  method: 'post',
+}).then(async (r) => console.log(await r.json()));
+
 ReactDOM.render(
   <React.StrictMode>
-    <Ctx.Provider value={{ a: 'provided' }}>
+    <Ctx.Provider value={{ a: 'provided @+^^++@' }}>
       <Cmp />
       <App />
     </Ctx.Provider>
   </React.StrictMode>,
-  document.getElementById('root')
-)
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals()
+  document.querySelector('#root'),
+);

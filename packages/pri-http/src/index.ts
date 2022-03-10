@@ -10,11 +10,10 @@ const ext = v1.Extension(module, {
     activate: v1.ExtPort({}, async (shell) => {
       const port = shell.env.port
       const webAppRootFolder = shell.env.webAppRootFolder
-      const libFolders = shell.env.libFolders
 
-      const app = makeApp({ shell, webAppRootFolder, libFolders })
+      const app = makeApp({ shell, webAppRootFolder })
       const server = app.listen(port, () =>
-        console.log(`http listening @${port}`)
+        console.log(`http listening @${port} !! :)`)
       )
       const myShellgates = shellGatesTopologyOf(
         ext.gates,
@@ -38,7 +37,7 @@ const ext = v1.Extension(module, {
     a: {
       b: v1.asyncPort((__) => async <T, K>(a: { t: T; k: K }) => ({
         XX: __.message.payload.arg === a,
-        _: __.message.target,
+        _: __.message,
         tt: { ___: a.t },
         kk: { ___: a.k },
       })),

@@ -6,6 +6,9 @@ if (!rootDir) {
     `pkg-mng: needs a valid process.env.PKG_MNG_ROOT_DIR: ${process.env.PKG_MNG_ROOT_DIR}`
   )
 }
+export const preinstallPkgs = (process.env.MOODLENET_PKG_MNG_PREINSTALL ?? '')
+  .split(';')
+  .filter(Boolean)
 export const moodlenetKernelVersion =
   process.env.MOODLENET_PKG_MNG_KERNEL_VERSION
 export const moodlenetPkgMngDevKernelPkgLoc =
@@ -32,7 +35,7 @@ console.log({
 
   console.log(`installing kernel from ${kernelInstallRef}`)
 
-  await npmcli.install([kernelInstallRef], false)
+  await npmcli.install([...preinstallPkgs], false)
 
   const nodeModulesDir = `${rootDir}/node_modules`
   console.log(`starting kernel`)

@@ -7,7 +7,7 @@
     "lerna": "^4.0.0"
   },
   "scripts": {
-    "bs": "lerna bootstrap --hoist",
+    "bs": "lerna bootstrap --hoist --nohoist=babel-* --nohoist=*react* --nohoist=@ant-* --nohoist=antd*",
     "exe": "lerna run --parallel --stream"
   }
 }

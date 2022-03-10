@@ -1,29 +1,13 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
+    "rootDir": "src",
+    "moduleResolution": "Node",
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    //"noEmit": true,
-    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "target": "ES5",
+    "allowSyntheticDefaultImports": true,
     "outDir": "lib",
-    "rootDirs": [
-      "src",
-      "/home/alec/MOODLENET/repo/moodlenet3/packages/kernel/src/v1/webapp"
-    ]
-  },
-  "include": [
-    "src",
-    "/home/alec/MOODLENET/repo/moodlenet3/packages/kernel/src/v1/webapp"
-  ]
+    "jsx": "react-jsx"
+  }
 }
