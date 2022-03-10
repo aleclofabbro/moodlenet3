@@ -47,7 +47,7 @@ export const invoke = <Arg, Val, A extends AsyncFn<Arg, Val>>(
         if (respMsg.parentMsgId !== reqMsg.id) {
           return
         }
-        console.log(`resolve`, respMsg.payload.val)
+        console.log(`resolve`, respMsg.payload.value)
         resolve(respMsg.payload.value)
         unsub()
       })

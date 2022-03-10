@@ -1,12 +1,12 @@
 const HtmlWebPackPlugin = require('html-webpack-plugin');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const path = require('path');
 const webpack = require('webpack');
 const CompressionPlugin = require('compression-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const { jsonBeautify } = require('beautify-json');
 
-let config = {
+const config = {
   output: {
     path: path.resolve(__dirname, 'build'),
     publicPath: '/',
@@ -27,12 +27,12 @@ let config = {
       {
         test: /\.(ts|tsx)$/,
         exclude: /node_modules/,
-        use: 'ts-loader'
+        use: 'ts-loader',
       },
       {
         test: /\.(js|jsx)$/,
         exclude: /node_modules/,
-        use: 'babel-loader'
+        use: 'babel-loader',
       },
       {
         test: /\.css$/,
@@ -76,24 +76,24 @@ let config = {
 module.exports = (env, argv) => {
   config.mode = argv.mode;
   if (argv.mode === 'development') {
-    config.entry = ['react-hot-loader/patch', './src'];
+    config.entry = ['react-hot-loader/patch', './src/webapp'];
     config.devtool = 'inline-source-map';
     config.resolve.alias['react-dom'] = '@hot-loader/react-dom';
     config.plugins.push(new webpack.HotModuleReplacementPlugin());
     config.devServer = {
       compress: true,
       hot: true,
-      historyApiFallback: true, //For react router
+      historyApiFallback: true, // For react router
       static: {
         serveIndex: true,
         watch: true,
         directory: './build',
-      }
+      },
     };
   }
 
   if (argv.mode === 'production') {
-    config.entry = ['./src'];
+    config.entry = ['./src/webapp'];
     config.devtool = 'source-map';
     config.output.filename = '[name].[chunkhash].bundle.js';
     config.output.chunkFilename = '[name].[chunkhash].bundle.js';
@@ -126,15 +126,13 @@ module.exports = (env, argv) => {
         test: /\.js(\?.*)?$/i,
       }),
       new CopyPlugin({
-        patterns: [
-          { from: './_redirects' },
-        ],
-      })
+        patterns: [{ from: './_redirects' }],
+      }),
     );
     config.performance = {
       hints: 'warning',
       // Calculates sizes of gziped bundles.
-      assetFilter: function (assetFilename) {
+      assetFilter(assetFilename) {
         return assetFilename.endsWith('.js.gz');
       },
     };

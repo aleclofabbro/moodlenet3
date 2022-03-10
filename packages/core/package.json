@@ -8,7 +8,7 @@
   "author": "https://github.com/aleclofabbro",
   "devDependencies": {
     "shx": "^0.3.4",
-    "typescript": "^4.5.5"
+    "typescript": "^4.6.2"
   },
   "scripts": {
     "build-dev": "tsc --watch"
