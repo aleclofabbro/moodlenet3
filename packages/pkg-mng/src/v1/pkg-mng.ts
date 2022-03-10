@@ -1,52 +1,40 @@
+import { join } from 'path'
 import makeyarncli from './npm-cli'
 
 export const rootDir = process.env.MOODLENET_PKG_MNG_ROOT_DIR
 if (!rootDir) {
+  throw new Error(`pkg-mng: needs a valid process.env.PKG_MNG_ROOT_DIR: ${process.env.PKG_MNG_ROOT_DIR}`)
+}
+export const kernelModule = process.env.MOODLENET_PKG_MNG_KERNEL_MODULE
+if (!kernelModule) {
   throw new Error(
-    `pkg-mng: needs a valid process.env.PKG_MNG_ROOT_DIR: ${process.env.PKG_MNG_ROOT_DIR}`
+    `pkg-mng: needs a valid process.env.MOODLENET_PKG_MNG_KERNEL_MODULE: ${process.env.MOODLENET_PKG_MNG_KERNEL_MODULE}`,
   )
 }
-export const preinstallPkgs = (process.env.MOODLENET_PKG_MNG_PREINSTALL ?? '')
-  .split(';')
-  .filter(Boolean)
-export const moodlenetKernelVersion =
-  process.env.MOODLENET_PKG_MNG_KERNEL_VERSION
-export const moodlenetPkgMngDevKernelPkgLoc =
-  process.env.MOODLENET_PKG_MNG_DEV_KERNEL_PKG_LOC
-if (!(moodlenetPkgMngDevKernelPkgLoc || moodlenetKernelVersion)) {
-  throw new Error(
-    `pkg-mng: needs either a valid :
-    process.env.PKG_MNG_ROOT_DIR: ${process.env.PKG_MNG_ROOT_DIR}
-    or 
-    process.env.MOODLENET_PKG_MNG_KERNEL_VERSION: ${process.env.MOODLENET_PKG_MNG_KERNEL_VERSION}
-    `
-  )
-}
+
+export const preinstallPkgs = (process.env.MOODLENET_PKG_MNG_PREINSTALL ?? '').split('\n').filter(Boolean)
+
 console.log({
   rootDir,
-  moodlenetKernelVersion,
-  moodlenetPkgMngDevKernelPkgLoc,
+  preinstallPkgs,
+  kernelModule,
 })
 ;(async () => {
   const npmcli = await makeyarncli(rootDir)
-  const kernelInstallRef =
-    moodlenetPkgMngDevKernelPkgLoc ??
-    `@moodlenet/kernel@${moodlenetKernelVersion}`
 
-  console.log(`installing kernel from ${kernelInstallRef}`)
+  console.log(`installing pkgs: ${preinstallPkgs}`)
 
-  await npmcli.install([...preinstallPkgs], false)
+  await npmcli.install(preinstallPkgs, false)
 
   const nodeModulesDir = `${rootDir}/node_modules`
   console.log(`starting kernel`)
 
-  await require(`${rootDir}/node_modules/@moodlenet/kernel`).boot({
+  await require(join(rootDir, 'node_modules', ...kernelModule.split('/'))).boot({
     npmcli,
     rootDir,
     nodeModulesDir,
-    kernelInstallRef,
     version: '1',
   })
 
-  console.log(`kernel ${kernelInstallRef} started`)
+  console.log(`kernel started`)
 })()
