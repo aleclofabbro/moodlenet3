@@ -2,6 +2,10 @@
   "name": "@moodlenet/webapp",
   "version": "1.0.0",
   "description": "",
+  "moodlenet": {
+    "name": "moodlenet webapp",
+    "shortDesc": "a desc for moodlenet webapp"
+  },
   "main": "index.js",
   "scripts": {
     "start": "webpack-dev-server --port 8080 --open --mode=development --stats-error-details",
@@ -54,6 +58,8 @@
     "@babel/plugin-proposal-class-properties": "^7.16.7",
     "@babel/preset-env": "^7.16.11",
     "@babel/preset-react": "^7.16.7",
+    "@moodlenet/kernel": "^1.0.0",
+    "@moodlenet/pri-http": "^1.0.0",
     "@svgr/webpack": "^5.5.0",
     "@types/jest": "^27.4.0",
     "@types/node": "^17.0.18",

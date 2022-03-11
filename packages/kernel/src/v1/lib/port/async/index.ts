@@ -1,54 +1,42 @@
-import { GatesTopology, Port, PortShell, ShellGatesTopology } from '..'
+import { GatesTopology, Port, PortShell, ShellGatesTopology } from '../../..'
 
-type AsyncFn<Arg, Val> = (arg: Arg) => Promise<Val>
+type AsyncFn<Arg, Val> = (asyncPortReqArg: Arg) => Promise<Val>
 
 export type AsyncPortTopo<Arg, Val, _A extends AsyncFn<Arg, Val>> = {
-  request: Port<{ arg: Arg }>
-  response: Port<{ value: Val }>
+  request: Port<{ asyncPortReqArg: Arg }>
+  response: Port<{ asyncPortRespValue: Val }>
 }
-export type AsyncGatesTopo<
-  Arg,
-  Val,
-  A extends AsyncFn<Arg, Val>
-> = GatesTopology<AsyncPortTopo<Arg, Val, A>>
-export type AsyncShellGatesTopo<
-  Arg,
-  Val,
-  A extends AsyncFn<Arg, Val>
-> = ShellGatesTopology<AsyncGatesTopo<Arg, Val, A>>
+export type AsyncGatesTopo<Arg, Val, A extends AsyncFn<Arg, Val>> = GatesTopology<AsyncPortTopo<Arg, Val, A>>
+export type AsyncShellGatesTopo<Arg, Val, A extends AsyncFn<Arg, Val>> = ShellGatesTopology<AsyncGatesTopo<Arg, Val, A>>
 
-export const isAsyncShellGatesTopo = <Arg, Val>(
-  _: any
-): _ is AsyncShellGatesTopo<Arg, Val, AsyncFn<Arg, Val>> =>
+export const isAsyncShellGatesTopo = <Arg, Val>(_: any): _ is AsyncShellGatesTopo<Arg, Val, AsyncFn<Arg, Val>> =>
   !!_ && 'request' in _ && 'response' in _ //TODO: so trivial ^^'
 
-export type AsyncPort<Arg, Val, A extends AsyncFn<Arg, Val>> = (
-  shell: PortShell<{ arg: Arg }>
-) => A
+export type AsyncPort<Arg, Val, A extends AsyncFn<Arg, Val>> = (shell: PortShell<{ asyncPortReqArg: Arg }>) => A
 export const asyncPort = <A extends AsyncFn<Arg, Val>, Arg = any, Val = any>(
-  asyncPort: AsyncPort<Arg, Val, A>
+  asyncPort: AsyncPort<Arg, Val, A>,
 ): AsyncPortTopo<Arg, Val, A> => ({
   async request(shell) {
     const respPath = shell.cwAddress.path.slice(0, -1).concat('response')
-    const value = await asyncPort(shell)(shell.message.payload.arg)
-    shell.push({ extId: shell.cwAddress.extId, path: respPath }, { value })
+    const asyncPortRespValue = await asyncPort(shell)(shell.message.payload.asyncPortReqArg)
+    shell.push({ extId: shell.cwAddress.extId, path: respPath }, { asyncPortRespValue })
   },
   response() {},
 })
 
 export const invoke = <Arg, Val, A extends AsyncFn<Arg, Val>>(
   shell: PortShell<any>,
-  rrGates: AsyncShellGatesTopo<Arg, Val, A>
+  rrGates: AsyncShellGatesTopo<Arg, Val, A>,
 ): A =>
-  ((arg: Arg) =>
+  ((asyncPortReqArg: Arg) =>
     new Promise((resolve, _reject) => {
-      const reqMsg = rrGates.request({ payload: { arg } })
+      const reqMsg = rrGates.request({ payload: { asyncPortReqArg } })
       const unsub = shell.listen(({ message: respMsg }) => {
         if (respMsg.parentMsgId !== reqMsg.id) {
           return
         }
-        console.log(`resolve`, respMsg.payload.value)
-        resolve(respMsg.payload.value)
+        console.log(`resolve`, respMsg.payload.asyncPortRespValue)
+        resolve(respMsg.payload.asyncPortRespValue)
         unsub()
       })
     })) as any as A

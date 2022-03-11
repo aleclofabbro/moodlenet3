@@ -1,40 +1,53 @@
+import execa, { Options } from 'execa'
 import { join } from 'path'
-import makeyarncli from './npm-cli'
+import { BootModule, PkgMngHandle } from './types'
 
 export const rootDir = process.env.MOODLENET_PKG_MNG_ROOT_DIR
 if (!rootDir) {
-  throw new Error(`pkg-mng: needs a valid process.env.PKG_MNG_ROOT_DIR: ${process.env.PKG_MNG_ROOT_DIR}`)
+  throw new Error(`pkg-mng: needs a valid process.env.PKG_MNG_ROOT_DIR : ${process.env.PKG_MNG_ROOT_DIR}`)
+}
+export const kernelPkg = process.env.MOODLENET_PKG_MNG_KERNEL_PKG
+if (!kernelPkg) {
+  throw new Error(
+    `pkg-mng: needs a valid process.env.MOODLENET_PKG_MNG_KERNEL_PKG : ${process.env.MOODLENET_PKG_MNG_KERNEL_PKG}`,
+  )
 }
 export const kernelModule = process.env.MOODLENET_PKG_MNG_KERNEL_MODULE
 if (!kernelModule) {
   throw new Error(
-    `pkg-mng: needs a valid process.env.MOODLENET_PKG_MNG_KERNEL_MODULE: ${process.env.MOODLENET_PKG_MNG_KERNEL_MODULE}`,
+    `pkg-mng: needs a valid process.env.MOODLENET_PKG_MNG_KERNEL_MODULE : ${process.env.MOODLENET_PKG_MNG_KERNEL_MODULE}`,
   )
 }
-
-export const preinstallPkgs = (process.env.MOODLENET_PKG_MNG_PREINSTALL ?? '').split('\n').filter(Boolean)
+const nodeModulesDir = `${rootDir}/node_modules`
 
 console.log({
   rootDir,
-  preinstallPkgs,
+  kernelPkg,
   kernelModule,
+  nodeModulesDir,
 })
 ;(async () => {
-  const npmcli = await makeyarncli(rootDir)
+  const execa_opts: Options = { cwd: rootDir }
+  await execa('npm', ['init', '-y'], execa_opts)
 
-  console.log(`installing pkgs: ${preinstallPkgs}`)
+  const install = (pkgs: string[], strict = true) =>
+    execa('npm', ['install', '--save', ...(strict ? ['--strict-peer-deps'] : []), ...pkgs], execa_opts)
+  const uninstall = (pkgs: string[]) => execa('npm', ['rm', ...pkgs], execa_opts)
 
-  await npmcli.install(preinstallPkgs, false)
+  console.log(`installing kernel pkg: ${kernelPkg}`)
 
-  const nodeModulesDir = `${rootDir}/node_modules`
+  await install([kernelPkg], false)
+
   console.log(`starting kernel`)
 
-  await require(join(rootDir, 'node_modules', ...kernelModule.split('/'))).boot({
-    npmcli,
+  const bootModule: BootModule = await import(join(rootDir, 'node_modules', ...kernelModule.split('/')))
+  console.log(`kernel started`)
+  const pkgMngHandle: PkgMngHandle = {
     rootDir,
+    install,
+    uninstall,
     nodeModulesDir,
     version: '1',
-  })
-
-  console.log(`kernel started`)
+  }
+  await bootModule.boot(pkgMngHandle)
 })()

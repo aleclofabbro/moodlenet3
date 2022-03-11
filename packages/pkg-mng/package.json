@@ -7,10 +7,12 @@
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
+    "@types/esm": "^3.2.0",
     "bullmq": "^1.74.2",
     "dotenv": "^16.0.0",
     "dotenv-expand": "^8.0.1",
-    "execa": "^6.1.0",
+    "esm": "^3.2.25",
+    "execa": "^5.1.1",
     "lmify": "^0.3.0",
     "pkg-dir": "^5"
   },

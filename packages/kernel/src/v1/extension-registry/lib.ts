@@ -1,10 +1,5 @@
 import { portGates, shellGatesTopologyOf } from '../extension/topology'
-import {
-  ExtensionDef,
-  ExtensionId,
-  GatesTopology,
-  ShellGatedExtension,
-} from '../extension/types'
+import { ExtensionDef, ExtensionId, GatesTopology, ShellGatedExtension } from '../extension/types'
 import { extEnv } from '../kernel'
 import { PkgInfo } from '../pkg-info/types'
 import { PortAddress } from '../port-address/types'
@@ -16,7 +11,7 @@ const extensionRegistry: {
 export const getExtensions = () => Object.values(extensionRegistry)
 export const lookupFor =
   (session: Session, source: PortAddress): ShellLookup =>
-  (name) => {
+  name => {
     const ext = getRegisteredExtension(name)
     if (!ext) {
       return
@@ -28,7 +23,7 @@ export const lookupFor =
     }
     return shellGatedExtension
   }
-type ExtensionRegistryRecord<ExtDef extends ExtensionDef> = {
+export type ExtensionRegistryRecord<ExtDef extends ExtensionDef> = {
   def: ExtDef
   active: boolean
   env: any
@@ -60,13 +55,7 @@ function assertNotRegisteredExtension(pkgName: string) {
 //   }
 //   return getRegisteredExtension(pkgInfo?.json.name)
 // }
-export function registerExtension<Def extends ExtensionDef>({
-  def,
-  pkgInfo,
-}: {
-  def: Def
-  pkgInfo: PkgInfo
-}) {
+export function registerExtension<Def extends ExtensionDef>({ def, pkgInfo }: { def: Def; pkgInfo: PkgInfo }) {
   const pkgName = pkgInfo.json.name
   assertNotRegisteredExtension(pkgName)
   const env = extEnv(pkgName)
