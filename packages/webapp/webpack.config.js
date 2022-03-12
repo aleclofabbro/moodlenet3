@@ -4,76 +4,78 @@ const path = require('path');
 const webpack = require('webpack');
 const CompressionPlugin = require('compression-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
-const { jsonBeautify } = require('beautify-json');
+// const { jsonBeautify } = require('beautify-json');
 
-const config = {
-  output: {
-    path: path.resolve(__dirname, 'build'),
-    publicPath: '/',
-    filename: 'bundle.js',
-  },
-  resolve: {
-    // extensions: ['.js', '.jsx'],
-    extensions: ['.ts', '.tsx', '.js', '.jsx'],
-    modules: [path.join(__dirname, 'src'), 'node_modules'],
-    alias: {
-      react: path.join(__dirname, 'node_modules', 'react'),
-      '@moodlenet/kernel': '/home/alec/MOODLENET/repo/moodlenet3/packages/kernel',
-      '@moodlenet/webapp': '/home/alec/MOODLENET/repo/moodlenet3/packages/webapp',
+const configTemplate = () => {
+
+  return {
+    context: path.resolve(__dirname, ''),
+    output: {
+      path: path.resolve(__dirname, 'build'),
+      publicPath: '/',
+      filename: 'bundle.js',
     },
-  },
-  module: {
-    rules: [
-      {
-        test: /\.(ts|tsx)$/,
-        exclude: /node_modules/,
-        use: 'ts-loader',
+    resolve: {
+      // extensions: ['.js', '.jsx'],
+      extensions: ['.ts', '.tsx', '.js', '.jsx'],
+      modules: [path.join(__dirname, 'src'), 'node_modules'],
+      alias: {
+        react: path.join(__dirname, 'node_modules', 'react'),
       },
-      {
-        test: /\.(js|jsx)$/,
-        exclude: /node_modules/,
-        use: 'babel-loader',
-      },
-      {
-        test: /\.css$/,
-        use: [
-          {
-            loader: 'style-loader',
-          },
-          {
-            loader: 'css-loader',
-          },
-        ],
-      },
-      {
-        test: /\.less$/,
-        use: [
-          {
-            loader: 'style-loader',
-          },
-          {
-            loader: 'css-loader',
-          },
-          {
-            loader: 'less-loader',
-          },
-        ],
-      },
-      {
-        test: /\.svg$/,
-        use: ['@svgr/webpack'],
-      },
+    },
+    module: {
+      rules: [
+        {
+          test: /\.(ts|tsx)$/,
+          exclude: /node_modules/,
+          use: 'ts-loader',
+        },
+        {
+          test: /\.(js|jsx)$/,
+          exclude: /node_modules/,
+          use: 'babel-loader',
+        },
+        {
+          test: /\.css$/,
+          use: [
+            {
+              loader: 'style-loader',
+            },
+            {
+              loader: 'css-loader',
+            },
+          ],
+        },
+        {
+          test: /\.less$/,
+          use: [
+            {
+              loader: 'style-loader',
+            },
+            {
+              loader: 'css-loader',
+            },
+            {
+              loader: 'less-loader',
+            },
+          ],
+        },
+        {
+          test: /\.svg$/,
+          use: ['@svgr/webpack'],
+        },
+      ],
+    },
+    plugins: [
+      new HtmlWebPackPlugin({
+        template: './index.html',
+        favicon: './favicon.png',
+      }),
     ],
-  },
-  plugins: [
-    new HtmlWebPackPlugin({
-      template: './index.html',
-      favicon: './favicon.png',
-    }),
-  ],
-};
-
-module.exports = (env, argv) => {
+  };
+}
+const getConfig = (env = {}, argv = {}) => {
+  const config = configTemplate()
   config.mode = argv.mode;
   if (argv.mode === 'development') {
     config.entry = ['react-hot-loader/patch', './src/webapp'];
@@ -138,9 +140,12 @@ module.exports = (env, argv) => {
     };
   }
 
-  console.log('Webpack config\n');
+  // console.log('Webpack config\n');
 
-  jsonBeautify(config);
+  // jsonBeautify(config);
 
   return config;
 };
+
+module.exports = getConfig
+module.exports.default = getConfig

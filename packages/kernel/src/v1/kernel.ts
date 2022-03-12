@@ -1,8 +1,10 @@
 import type { Boot } from '@moodlenet/pkg-mng/lib/v1/types'
 import { createRequire } from 'module'
+import { resolve } from 'path'
 import { getRegisteredExtension } from './extension-registry/lib'
 import { Extension } from './extension/extension'
 import type { ExtensionId } from './extension/types'
+import { watchExt } from './lib/flow'
 import { createMessage, pushMessage } from './message'
 
 const cfgPath = process.env.MN_EXT_ENV ?? `${process.cwd()}/mn-kernel-config`
@@ -34,7 +36,22 @@ export const boot: Boot = async pkgMng => {
   Extension(module, {
     ...kernelExtId,
     ports: {
-      activate() {},
+      activate(shell) {
+        // watchExt<WebappExt>(shell, '@moodlenet/webapp', gatedExt => {
+        watchExt(shell, '@moodlenet/webapp', webapp => {
+          console.log(`************************************\n****************************************`, webapp)
+          if (!webapp) {
+            return
+          }
+          ;(webapp.gates.ensureExtension as any)?.({
+            payload: {
+              extId: kernelExtId,
+              moduleLoc: resolve(__dirname, '..', '..'),
+              cmpPath: `lib/v1/webapp`,
+            },
+          })
+        })
+      },
       deactivate() {},
     },
   })
@@ -70,6 +87,19 @@ export const boot: Boot = async pkgMng => {
           parentMsgId: null,
         }),
       )
+    }),
+  )
+
+  pushMessage(
+    createMessage({
+      payload: {},
+      session: { user: {} },
+      source: { extId: kernelExtId, path: [] },
+      target: {
+        extId: kernelExtId,
+        path: ['activate'],
+      },
+      parentMsgId: null,
     }),
   )
 }

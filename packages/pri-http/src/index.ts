@@ -1,23 +1,39 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { shellGatesTopologyOf } from '@moodlenet/kernel/lib/v1'
-import { makeApp } from './pri-server'
+import { PortShell } from '@moodlenet/kernel/lib/v1'
+import { invoke, isAsyncShellGatesTopo } from '@moodlenet/kernel/lib/v1/port-access-strategies/async-port'
+import { json } from 'body-parser'
+import express, { Express } from 'express'
+import type { Server } from 'http'
 
+let app: Express | undefined
+let server: Server | undefined
 export type MNPriHttpExt = typeof ext
 const ext = v1.Extension(module, {
-  name: '@moodlenet/pri-http',
-  version: '1.0.0',
+  name: '@moodlenet/pri-http' as const,
+  version: '1.0.0' as const,
   ports: {
     activate: v1.ExtPort({}, async shell => {
       const port = shell.env.port
-      const webAppRootFolder = shell.env.webAppRootFolder
+      const rootPath = shell.env.rootPath
+      const extPortsApp = makeExtPortsApp(shell)
 
-      const app = makeApp({ shell, webAppRootFolder })
-      const server = app.listen(port, () => console.log(`http listening @${port} !! :)`))
-      const myShellgates = shellGatesTopologyOf(ext.gates, shell.message.session, shell.cwAddress)
-      const x = await v1.invoke(shell, myShellgates.a.b)({ t: 12, k: '10' })
-      ;[x.kk.___, x.tt.___, server.connections]
+      app = express().use(`${rootPath}/`, (_, __, next) => next())
+      app.use(`/_srv`, extPortsApp)
+      server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
     }),
-    deactivate() {},
+    setWebAppRootFolder: v1.ExtPort(
+      {},
+      ({
+        message: {
+          payload: { folder },
+        },
+      }: PortShell<{ folder: string }>) => {
+        app?.get(`/*`, express.static(folder))
+      },
+    ),
+    deactivate() {
+      server?.close()
+    },
     a: {
       b: v1.asyncPort(shell => async <T, K>(a: { t: T; k: K }) => ({
         XX: shell.message.payload.asyncPortReqArg === a,
@@ -28,3 +44,41 @@ const ext = v1.Extension(module, {
     },
   },
 })
+
+function makeExtPortsApp(shell: PortShell) {
+  //BEGIN EXT PORTS APP
+  const srvApp = express()
+  srvApp.use(json())
+  srvApp.post('*', async (req, res, next) => {
+    const path = req.path.split('/').slice(1)
+    console.log('makeExtPortsApp', path, req.path)
+    if (path.length < 2) {
+      return next()
+    }
+    const extName = (
+      path[0]?.startsWith('_') && path[0]?.endsWith('_')
+        ? path.splice(0, 2).map((_, i) => (i === 0 ? `@${_.substring(1, _.length - 1)}` : _))
+        : path.splice(0, 1)
+    ).join('/')
+    console.log(extName)
+
+    //TODO: implement shell.lookupPort(addr:PortAddress):ShellGatesTopology<any>
+    const ext = shell.lookup(extName)
+    console.log({ ext })
+    if (!ext) {
+      return next()
+    }
+    const rrGates = path.reduce((node, prop) => node?.[prop], ext.gates as any)
+    //TODO: ^^^
+
+    if (!isAsyncShellGatesTopo(rrGates)) {
+      return next()
+    }
+    console.log('*********body', req.body)
+    const response = await invoke(shell, rrGates)(req.body)
+    res.json(response)
+  })
+  srvApp.all(`*`, (_, res) => res.status(404).send('service not available'))
+  //END EXT PORTS APP
+  return srvApp
+}

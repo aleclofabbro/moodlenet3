@@ -11,7 +11,7 @@ export const watchExt = <Ext extends ExtensionRegistryRecord<any>>(
 ) => {
   trigWatch()
   return shell.listen(shell => {
-    console.log('watchExt', inspect(shell, false, 8, true))
+    console.log('watchExt:', inspect(shell, false, 8, true))
     const trg = shell.message.target
     if (trg.extId.name === extName && ['activate', 'deactivate'].includes(trg.path.join('::'))) {
       //FIXME: AHHAHHA
@@ -21,6 +21,6 @@ export const watchExt = <Ext extends ExtensionRegistryRecord<any>>(
 
   function trigWatch() {
     const gatedExt = shell.lookup(extName)
-    setImmediate(()=>watcher(gatedExt))
+    setImmediate(() => watcher(gatedExt))
   }
 }

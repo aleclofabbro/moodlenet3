@@ -1,10 +1,6 @@
 import { MsgID } from '.'
 import { Push } from '..'
-import {
-  assertRegisteredExtension,
-  getRegisteredExtension,
-  lookupFor,
-} from '../extension-registry/lib'
+import { assertRegisteredExtension, getRegisteredExtension, lookupFor } from '../extension-registry/lib'
 import { Port, PortTopologyNode } from '../extension/types'
 import { extEnv } from '../kernel'
 import { isMsg } from '../port-address'
@@ -13,7 +9,15 @@ import { Obj, PortListener, PortShell, Session } from '../types'
 import { GetMsg, Message } from './types'
 
 export const pushMessage = (message: Message) => {
-  console.log(`***********pushMessage \n`, message, '\n')
+  console.log(
+    `
++++++++++++++++++++++++
+pushMessage`,
+    message,
+    `
+-----------------------
+`,
+  )
   const { target, source } = message
   const sourceExt = getRegisteredExtension(source.extId.name)
   const targetExt = getRegisteredExtension(target.extId.name)
@@ -23,11 +27,10 @@ export const pushMessage = (message: Message) => {
     return
   }
 
-  const targetPortTopoNode: PortTopologyNode | undefined =
-    target.path.reduce<any>(
-      (portTopoNode, nextProp) => (portTopoNode ?? {})[nextProp],
-      targetExt.def.ports
-    )
+  const targetPortTopoNode: PortTopologyNode | undefined = target.path.reduce<any>(
+    (portTopoNode, nextProp) => (portTopoNode ?? {})[nextProp],
+    targetExt.def.ports,
+  )
   if ('function' !== typeof targetPortTopoNode) {
     //TODO: WARN or throw ?
     return
@@ -74,7 +77,7 @@ function makeShell<P extends Obj>({
   const ext = assertRegisteredExtension(cwAddress.extId.name)
   const listen = (listener: PortListener) => addListener(cwAddress, listener)
 
-  const getMsg: GetMsg = (gate) => (isMsg(gate, message) ? message : undefined)
+  const getMsg: GetMsg = gate => (isMsg(gate, message) ? message : undefined)
   const lookup = lookupFor(message.session, message.target)
   const env = extEnv(ext.id.name)
   const push: Push = (target, payload) =>
@@ -85,7 +88,7 @@ function makeShell<P extends Obj>({
         session: message.session,
         source: cwAddress,
         parentMsgId: message.id,
-      })
+      }),
     )
 
   return {
@@ -104,7 +107,7 @@ const addListener = (cwAddress: PortAddress, listener: PortListener) => {
   msgListeners = [...msgListeners, listenerRecord]
   // setImmediate(() => (msgListeners = [...msgListeners, listenerRecord]))
   return () => {
-    msgListeners = msgListeners.filter((_) => _ !== listenerRecord)
+    msgListeners = msgListeners.filter(_ => _ !== listenerRecord)
   }
 }
 type PortListenerRecord = {
