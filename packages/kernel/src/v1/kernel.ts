@@ -34,6 +34,7 @@ export const kernelExtId: ExtensionId = {
 }
 //TODO: returns something to pkgmng ?
 export const boot: Boot = async pkgMng => {
+  const extRequire = createRequire(pkgMng?.nodeModulesDir ?? process.cwd())
   Extension(module, {
     ...kernelExtId,
     ports: {
@@ -55,15 +56,18 @@ export const boot: Boot = async pkgMng => {
       },
       deactivate() {},
       extensions: {
-        installAndActivate: asyncPort(_shell => async (pkgLoc: string) => {
-          const execaRet = await pkgMng.install([pkgLoc])
-          return execaRet.all
-        }),
+        installAndActivate: asyncPort(
+          shell =>
+            async ({ extId, pkgLoc = `${extId.name}@${extId.version}` }: { pkgLoc?: string; extId: ExtensionId }) => {
+              console.log((await pkgMng.install([pkgLoc])).all)
+              extRequire(extId.name)
+              shell.push({ extId, path: ['activate'] }, {})
+            },
+        ),
       },
     },
   })
 
-  const extRequire = createRequire(pkgMng?.nodeModulesDir ?? process.cwd())
   const kernelEnv: KernelEnv = {
     coreExts: [],
     activateExts: [],

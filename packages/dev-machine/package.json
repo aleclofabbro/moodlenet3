@@ -7,10 +7,7 @@
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
-    "@moodlenet/kernel": "^1.0.0",
     "@moodlenet/pkg-mng": "^1.0.0",
-    "@moodlenet/pri-http": "^1.0.0",
-    "@moodlenet/webapp": "^1.0.0",
     "dotenv": "^16.0.0",
     "dotenv-expand": "^8.0.1"
   },
