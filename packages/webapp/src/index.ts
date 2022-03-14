@@ -65,8 +65,8 @@ const build = throttle(1000)(
           ;(config.resolve ?? {}).alias = { ...config.resolve?.alias, ...webpackAliases }
           console.log(`Webpack build ....`, inspect({ config, extAliases, webpackAliases }, false, 6, true))
           webpack(config, (err, stats) => {
-            if (err || stats.hasErrors()) {
-              console.error(`Webpack build error`, err ?? stats.toString())
+            if (err || stats?.hasErrors()) {
+              console.error(`Webpack build error`, err ?? stats?.toString())
               return reject(err ?? stats)
             }
             console.log(`Webpack build done`)

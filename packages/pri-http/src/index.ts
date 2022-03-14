@@ -1,6 +1,5 @@
 import { v1 } from '@moodlenet/kernel/lib'
 import { PortShell } from '@moodlenet/kernel/lib/v1'
-import { invoke, isAsyncShellGatesTopo } from '@moodlenet/kernel/lib/v1/port-access-strategies/async-port'
 import { json } from 'body-parser'
 import express, { Express } from 'express'
 import type { Server } from 'http'
@@ -71,11 +70,11 @@ function makeExtPortsApp(shell: PortShell) {
     const rrGates = path.reduce((node, prop) => node?.[prop], ext.gates as any)
     //TODO: ^^^
 
-    if (!isAsyncShellGatesTopo(rrGates)) {
+    if (!v1.isAsyncShellGatesTopo(rrGates)) {
       return next()
     }
     console.log('*********body', req.body)
-    const response = await invoke(shell, rrGates)(req.body)
+    const response = await v1.invoke(shell, rrGates)(req.body)
     res.json(response)
   })
   srvApp.all(`*`, (_, res) => res.status(404).send('service not available'))
