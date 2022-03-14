@@ -1,6 +1,7 @@
-import { ComponentType } from 'react';
+import { ComponentType } from 'react'
 
 export type AppRoute = {
-  path: string;
-  Component: ComponentType;
-};
+  label: string
+  path: string
+  Component: ComponentType
+}

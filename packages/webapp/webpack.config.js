@@ -26,16 +26,6 @@ const configTemplate = () => {
     module: {
       rules: [
         {
-          test: /\.(ts|tsx)$/,
-          exclude: /node_modules/,
-          use: 'ts-loader',
-        },
-        {
-          test: /\.(js|jsx)$/,
-          exclude: /node_modules/,
-          use: 'babel-loader',
-        },
-        {
           test: /\.css$/,
           use: [
             {
@@ -63,6 +53,16 @@ const configTemplate = () => {
         {
           test: /\.svg$/,
           use: ['@svgr/webpack'],
+        },
+        {
+          test: /\.(ts|tsx)$/,
+          exclude: /node_modules/,
+          use: 'ts-loader',
+        },
+        {
+          test: /\.(js|jsx)$/,
+          exclude: /node_modules/,
+          use: 'babel-loader',
         },
       ],
     },

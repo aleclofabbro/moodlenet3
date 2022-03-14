@@ -1,84 +1,43 @@
-import { ContactsOutlined, HomeOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { Layout, Menu } from 'antd';
-import React from 'react';
-import { Link } from 'react-router-dom';
-import './MainLayout.less';
+import { Layout, Menu } from 'antd'
+import { FC, useContext, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { RouterCtx } from '../routes'
+import './MainLayout.less'
 
-const { Footer, Sider } = Layout;
+const { Footer, Sider } = Layout
 
-const rootRoutes = ['/', '/about', '/contact'];
-const aboutSubRoutes = ['/about/me', '/about/company'];
-
-export default class MainLayout extends React.Component<any, { collapsed: boolean }> {
-  constructor(props: any) {
-    super(props);
-
-    this.state = {
-      collapsed: false,
-    };
-  }
-
-  onCollapse = (collapsed: boolean) => {
-    this.setState({ collapsed });
-  };
-
-  render() {
-    const { collapsed } = this.state;
-    const { children } = this.props;
-    return (
+const MainLayout: FC = ({ children }) => {
+  const [collapsed, onCollapse] = useState(false)
+  const { routes } = useContext(RouterCtx)
+  console.log({ routes })
+  return (
+    <Layout>
+      <Sider collapsible collapsed={collapsed} onCollapse={onCollapse}>
+        {collapsed ? <div className="logo">N</div> : <div className="logo">Nikhil Kumaran S</div>}
+        <Menu theme="dark" mode="inline">
+          {routes.map(({ path, label }, i) => (
+            <Menu.Item key={`${path}_${i}`}>
+              <Link to={path}>
+                <span className="menu-item-link">{label}</span>
+              </Link>
+            </Menu.Item>
+          ))}
+        </Menu>
+      </Sider>
       <Layout>
-        <Sider collapsible collapsed={collapsed} onCollapse={this.onCollapse}>
-          {collapsed ? <div className="logo">N</div> : <div className="logo">Nikhil Kumaran S</div>}
-          <Menu
-            theme="dark"
-            mode="inline"
-            defaultSelectedKeys={[
-              aboutSubRoutes.includes(window.location.pathname)
-                ? '1'
-                : rootRoutes.indexOf(window.location.pathname).toString(),
-            ]}
-          >
-            <Menu.Item key="0">
-              <Link to="/">
-                <HomeOutlined />
-                <span className="menu-item-link">Home</span>
-              </Link>
-            </Menu.Item>
-            <Menu.Item key="1">
-              <Link to="/about">
-                <QuestionCircleOutlined />
-                <span className="menu-item-link">About</span>
-              </Link>
-            </Menu.Item>
-            <Menu.Item key="2">
-              <Link to="/contact">
-                <ContactsOutlined />
-                <span className="menu-item-link">Contact</span>
-              </Link>
-            </Menu.Item>
-          </Menu>
-        </Sider>
-        <Layout>
-          {children}
-          <Footer>
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href="https://github.com/Nikhil-Kumaran/reactjs-boilerplate"
-            >
-              GitHub
-            </a>
-            <span> | </span>
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href="https://www.npmjs.com/package/reactjs-boilerplate"
-            >
-              npm
-            </a>
-          </Footer>
-        </Layout>
+        {children}
+        <Footer>
+          <a target="_blank" rel="noopener noreferrer" href="https://github.com/Nikhil-Kumaran/reactjs-boilerplate">
+            GitHub
+          </a>
+          <span> | </span>
+          <a target="_blank" rel="noopener noreferrer" href="https://www.npmjs.com/package/reactjs-boilerplate">
+            npm
+          </a>
+        </Footer>
       </Layout>
-    );
-  }
+    </Layout>
+  )
 }
+
+export default MainLayout

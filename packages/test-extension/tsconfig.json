@@ -4,10 +4,10 @@
     "rootDir": "src",
     "moduleResolution": "Node",
     "resolveJsonModule": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "target": "ES5",
     "allowSyntheticDefaultImports": true,
-    "outDir": "lib",
+    "outDir": "pkg",
     "jsx": "react-jsx"
   }
 }

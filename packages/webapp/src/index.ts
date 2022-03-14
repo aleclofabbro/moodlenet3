@@ -37,16 +37,17 @@ const webappExt = v1.Extension(module, {
     deactivate() {},
   },
 })
-const build = throttle(1000)(
+const build = throttle(3000)(
   () =>
     new Promise<void>((res, reject) => {
+      console.log('BUILD WEBAPP')
       rm(buildFolder, { maxRetries: 5, retryDelay: 500, force: true, recursive: true }, err => {
         if (err) {
           console.error(`rm build error`, err)
           return reject(err)
         }
 
-        const extensionsJsFileName = resolve(__dirname, '..', 'extensions.js')
+        const extensionsJsFileName = resolve(__dirname, '..', 'extensions.js' /* 'src', 'webapp', 'extensions.ts' */)
         console.log(`generate extensions.js ....`, { extensionsJsFileName })
         writeFile(extensionsJsFileName, extensionsJsString(), { encoding: 'utf8' }, err => {
           if (err) {
@@ -77,15 +78,14 @@ const build = throttle(1000)(
     }),
 )
 function extensionsJsString() {
-  const requiresAndPush = Object.entries(extAliases)
-    .map(([pkgName, { cmpPath }]) => `extensions.push( [ '${pkgName}', require('${pkgName}/${cmpPath}').Cmp ] )`)
-    .join('\n')
+  // const requiresAndPush = Object.entries(extAliases)
+  //   .map(([pkgName, { cmpPath }]) => `extensions.push( [ '${pkgName}', require('${pkgName}/${cmpPath}').Cmp ] )`)
+  //   .join('\n')
 
   return `  
-const extensions = []
-${requiresAndPush}
-
-module.exports = extensions
-module.exports.default = extensions
+${Object.entries(extAliases)
+  .map(([pkgName, { cmpPath }], index) => `module.exports['Cmp_${index}']= require('${pkgName}/${cmpPath}').Cmp`)
+  // .map(([pkgName, { cmpPath }], index) => `export { Cmp as Cmp_${index} } from '${pkgName}/${cmpPath}' //pkgName`)
+  .join('\n')}
 `
 }

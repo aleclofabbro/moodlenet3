@@ -1,27 +1,33 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import MainLayout from './layout/MainLayout';
-import { AppRoute } from './types';
+import { createContext, FC, Suspense, useContext, useMemo, useReducer } from 'react'
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+import MainLayout from './layout/MainLayout'
+import { AppRoute } from './types'
 
-const Home = lazy(() => import('./pages/home/Home'));
-const About = lazy(() => import('./pages/about/About'));
-const Contact = lazy(() => import('./pages/contact/Contact'));
+// const Home = lazy(() => import('./pages/home/Home'))
+// const About = lazy(() => import('./pages/about/About'))
+// const Contact = lazy(() => import('./pages/contact/Contact'))
 
-const routes: AppRoute[] = [
-  {
-    path: '/',
-    Component: Home,
-  },
-  {
-    path: '/about',
-    Component: About,
-  },
-  {
-    path: '/contact',
-    Component: Contact,
-  },
-];
+export type RouterCtxT = {
+  addRoute(route: AppRoute): void
+  routes: AppRoute[]
+}
+export type RouterCtx = typeof RouterCtx
+export const RouterCtx = createContext<RouterCtxT>({ addRoute() {}, routes: [] })
+
+export const AppRouterContextProvider: FC = ({ children }) => {
+  const [routes, addRoute] = useReducer((prev:AppRoute[], route:AppRoute)=>{
+    return [...prev,route]
+  }, [])
+  const ctx = useMemo<RouterCtxT>(() => {
+    return {
+      addRoute,
+      routes,
+    }
+  }, [routes])
+  return <RouterCtx.Provider value={ctx}>{children}</RouterCtx.Provider>
+}
 const AppRouter = () => {
+  const { routes } = useContext(RouterCtx)
   return (
     <Router>
       <MainLayout>
@@ -40,7 +46,7 @@ const AppRouter = () => {
         </Routes>
       </MainLayout>
     </Router>
-  );
-};
+  )
+}
 
-export default AppRouter;
+export default AppRouter

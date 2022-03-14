@@ -5,6 +5,7 @@ import { getRegisteredExtension } from './extension-registry/lib'
 import { Extension } from './extension/extension'
 import type { ExtensionId } from './extension/types'
 import { watchExt } from './lib/flow'
+import { asyncPort } from './lib/port'
 import { createMessage, pushMessage } from './message'
 
 const cfgPath = process.env.MN_EXT_ENV ?? `${process.cwd()}/mn-kernel-config`
@@ -53,6 +54,12 @@ export const boot: Boot = async pkgMng => {
         })
       },
       deactivate() {},
+      extensions: {
+        installAndActivate: asyncPort(_shell => async (pkgLoc: string) => {
+          const execaRet = await pkgMng.install([pkgLoc])
+          return execaRet.all
+        }),
+      },
     },
   })
 
