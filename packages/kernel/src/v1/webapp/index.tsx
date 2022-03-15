@@ -34,7 +34,14 @@ const KernelPage: FC = () => {
         'Content-Type': 'application/json',
       },
       method: 'post',
-    }).then(() => alert(`${pkgId} installed and activated, wait for webapp rebuild`))
+    })
+      .then(async _ => {
+        if (_.status >= 400) {
+          throw new Error(await _.text())
+        }
+        alert(`${pkgId} installed and activated, wait for webapp rebuild`)
+      })
+      .catch(err => alert(`Error installing ${pkgId}:\n${err}`))
   }, [pkgId, pkgLoc])
   return (
     <div>

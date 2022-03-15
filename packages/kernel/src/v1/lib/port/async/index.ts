@@ -4,7 +4,7 @@ type AsyncFn<Arg, Val> = (asyncPortReqArg: Arg) => Promise<Val>
 
 export type AsyncPortTopo<Arg, Val, _A extends AsyncFn<Arg, Val>> = {
   request: Port<{ asyncPortReqArg: Arg }>
-  response: Port<{ asyncPortRespValue: Val }>
+  response: Port<{ asyncPortRespValue: Val } | { error: any }>
 }
 export type AsyncGatesTopo<Arg, Val, A extends AsyncFn<Arg, Val>> = GatesTopology<AsyncPortTopo<Arg, Val, A>>
 export type AsyncShellGatesTopo<Arg, Val, A extends AsyncFn<Arg, Val>> = ShellGatesTopology<AsyncGatesTopo<Arg, Val, A>>
@@ -18,8 +18,12 @@ export const asyncPort = <A extends AsyncFn<Arg, Val>, Arg = any, Val = any>(
 ): AsyncPortTopo<Arg, Val, A> => ({
   async request(shell) {
     const respPath = shell.cwAddress.path.slice(0, -1).concat('response')
-    const asyncPortRespValue = await asyncPort(shell)(shell.message.payload.asyncPortReqArg)
-    shell.push({ extId: shell.cwAddress.extId, path: respPath }, { asyncPortRespValue })
+    try {
+      const asyncPortRespValue = await asyncPort(shell)(shell.message.payload.asyncPortReqArg)
+      shell.push({ extId: shell.cwAddress.extId, path: respPath }, { asyncPortRespValue })
+    } catch (error) {
+      shell.push({ extId: shell.cwAddress.extId, path: respPath }, { error })
+    }
   },
   response() {},
 })
@@ -29,14 +33,13 @@ export const invoke = <Arg, Val, A extends AsyncFn<Arg, Val>>(
   rrGates: AsyncShellGatesTopo<Arg, Val, A>,
 ): A =>
   ((asyncPortReqArg: Arg) =>
-    new Promise((resolve, _reject) => {
+    new Promise((resolve, reject) => {
       const reqMsg = rrGates.request({ payload: { asyncPortReqArg } })
       const unsub = shell.listen(({ message: respMsg }) => {
         if (respMsg.parentMsgId !== reqMsg.id) {
           return
         }
-        // console.log(`resolve`, respMsg.payload.asyncPortRespValue)
-        resolve(respMsg.payload.asyncPortRespValue)
+        'error' in respMsg.payload ? reject(respMsg.payload.error) : resolve(respMsg.payload.asyncPortRespValue)
         unsub()
       })
     })) as any as A

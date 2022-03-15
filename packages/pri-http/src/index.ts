@@ -74,8 +74,12 @@ function makeExtPortsApp(shell: PortShell) {
       return next()
     }
     console.log('*********body', req.body)
-    const response = await v1.invoke(shell, rrGates)(req.body)
-    res.json(response)
+    try {
+      const response = await v1.invoke(shell, rrGates)(req.body)
+      res.json(response)
+    } catch (err) {
+      res.status(500).send(err)
+    }
   })
   srvApp.all(`*`, (_, res) => res.status(404).send('service not available'))
   //END EXT PORTS APP
