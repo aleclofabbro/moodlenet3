@@ -3,5 +3,6 @@
     "source.fixAll": true,
     "source.organizeImports": true
   },
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "exportall.config.relExclusion": ["/packages/dev-machine/.ignore-dir/root-dirs/dev-machine-1"]
 }

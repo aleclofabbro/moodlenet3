@@ -1,7 +1,7 @@
 import type { RouterCtx } from '@moodlenet/webapp/lib/webapp/routes'
 import { FC, useContext, useEffect } from 'react'
 
-export const Cmp: FC<{ RouterCtx: RouterCtx }> = ({ children, RouterCtx }) => {
+const Cmp: FC<{ RouterCtx: RouterCtx }> = ({ children, RouterCtx }) => {
   const routerCtx = useContext(RouterCtx)
   useEffect(() => {
     routerCtx.addRoute({ Component: TestExtPage, path: '/test-extension', label: 'test-extension page' })
@@ -18,3 +18,5 @@ const TestExtPage: FC = () => {
     </div>
   )
 }
+
+export default Cmp

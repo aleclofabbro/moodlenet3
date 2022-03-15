@@ -2,7 +2,7 @@ import type { RouterCtx } from '@moodlenet/webapp/lib/webapp/routes'
 import { FC, useContext, useEffect } from 'react'
 console.log('kernel - lib')
 
-export const Cmp: FC<{ RouterCtx: RouterCtx }> = ({ children, RouterCtx }) => {
+const Cmp: FC<{ RouterCtx: RouterCtx }> = ({ children, RouterCtx }) => {
   const routerCtx = useContext(RouterCtx)
   useEffect(() => {
     routerCtx.addRoute({ Component: KernelPage, path: '/kernel', label: 'kernel page' })
@@ -19,3 +19,5 @@ const KernelPage: FC = () => {
     </div>
   )
 }
+
+export default Cmp
