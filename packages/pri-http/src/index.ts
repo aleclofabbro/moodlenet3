@@ -27,7 +27,9 @@ const ext = v1.Extension(module, {
           payload: { folder },
         },
       }: PortShell<{ folder: string }>) => {
-        app?.get(`/*`, express.static(folder))
+        const staticApp = express.static(folder)
+        app?.get(`/*`, staticApp)
+        app?.get(`/*`, (req, res, next) => staticApp(((req.url = '/'), req), res, next))
       },
     ),
     deactivate() {

@@ -39,8 +39,8 @@ export const invoke = <Arg, Val, A extends AsyncFn<Arg, Val>>(
         if (respMsg.parentMsgId !== reqMsg.id) {
           return
         }
-        'error' in respMsg.payload ? reject(respMsg.payload.error) : resolve(respMsg.payload.asyncPortRespValue)
         unsub()
+        'error' in respMsg.payload ? reject(respMsg.payload.error) : resolve(respMsg.payload.asyncPortRespValue)
       })
     })) as any as A
 
