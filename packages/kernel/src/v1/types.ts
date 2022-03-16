@@ -1,40 +1,37 @@
-import { ExtensionDef, IsGateMsg, ShellGatedExtension } from './extension/types'
-import { GetMsg, Message } from './message/types'
+import { TypeofPath, TypePaths } from '../path'
+import { ExtensionDef, Port } from './extension/types'
+import { Message } from './message/types'
 import { PortAddress } from './port-address/types'
 
-// }
-
-export type Obj = any //Record<string, any>
-
 export type PostOpts = {}
-
 export type ExtensionUnavailable = undefined
 
-export type ShellLookup = <Ext extends ExtensionDef>(
-  name: Ext['name']
-) => ShellGatedExtension<Ext> | ExtensionUnavailable
+export type LookupExt = <Ext extends ExtensionDef>(extName: Ext['name']) => LookupPort<Ext>
 
-export type PostOutcome = void
+type LookupPort<Ext extends ExtensionDef> = <Path extends TypePaths<Ext['topo'], Port<any>>>(
+  path: Path,
+) => PostInPort<Ext, Path>
 
-export type PortListener = (shell: PortShell<Obj>) => void
+type PostInPort<Ext extends ExtensionDef, Path extends TypePaths<Ext['topo'], Port<any>>> = (
+  portPayload: TypeofPath<Ext['topo'], Path>['portPayload'],
+) => Message<TypeofPath<Ext['topo'], Path>['portPayload']>
+
 export type Listen = (_: PortListener) => Unlisten
+export type PortListener = (shell: PortShell) => void
 export type Unlisten = () => void
-export type PortShell<Payload = unknown> = {
+
+export type PortShell<Payload = any> = {
   message: Message<Payload>
-  lookup: ShellLookup
+  lookup: LookupExt
   env: any
   listen: Listen
-  isMsg: IsGateMsg
-  getMsg: GetMsg
   cwAddress: PortAddress
-  push: Push
+  push: PushMessage
 }
-export type Push = <Payload>(
-  portAddr: PortAddress,
-  payload: Payload
-) => Message<Payload> | undefined
+
+export type PushMessage = <Payload>(portAddr: PortAddress, payload: Payload) => Message<Payload>
+
 export type Session = {
   user: User
 }
-
 export type User = {}

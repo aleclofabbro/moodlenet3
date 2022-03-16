@@ -13,7 +13,7 @@ export const watchExt = <Ext extends ExtensionRegistryRecord<any>>(
   return shell.listen(shell => {
     console.log('watchExt:', inspect(shell, false, 8, true))
     const trg = shell.message.target
-    if (trg.extId.name === extName && ['activate', 'deactivate'].includes(trg.path.join('::'))) {
+    if (trg.extName.name === extName && ['activate', 'deactivate'].includes(trg.path.join('::'))) {
       //FIXME: AHHAHHA
       setTimeout(trigWatch, 2000)
     }

@@ -1,35 +1,20 @@
-import { portGates, shellGatesTopologyOf } from '../extension/topology'
-import { ExtensionDef, ExtensionId, GatesTopology, ShellGatedExtension } from '../extension/types'
-import { extEnv } from '../kernel'
+import { ExtensionId, ExtLCStop, ExtLifeCycleHandle } from '../extension/types'
 import { PkgInfo } from '../pkg-info/types'
-import { PortAddress } from '../port-address/types'
-import { Session, ShellLookup } from '../types'
 
 const extensionRegistry: {
-  [pkgName: string]: ExtensionRegistryRecord<ExtensionDef>
+  [pkgName: string]: ExtensionRegistryRecord
 } = {}
 export const getExtensions = () => Object.values(extensionRegistry)
-export const lookupFor =
-  (session: Session, source: PortAddress): ShellLookup =>
-  name => {
-    const ext = getRegisteredExtension(name)
-    if (!ext) {
-      return
-    }
-    const shellGatesTopology = shellGatesTopologyOf(ext.gates, session, source)
-    const shellGatedExtension: ShellGatedExtension = {
-      gates: shellGatesTopology,
-      id: ext.id,
-    }
-    return shellGatedExtension
-  }
-export type ExtensionRegistryRecord<ExtDef extends ExtensionDef> = {
-  def: ExtDef
-  active: boolean
-  env: any
-  id: ExtensionId
-  gates: GatesTopology<ExtDef['ports']>
+
+export type Deployment = {
+  at: Date
+  stop: ExtLCStop
+}
+export type ExtensionRegistryRecord<ExtId extends ExtensionId = ExtensionId> = {
+  id: ExtId
+  deployment: Deployment | undefined
   pkgInfo: PkgInfo
+  lifeCycle: ExtLifeCycleHandle
 }
 export function getRegisteredExtension(pkgName: string) {
   return extensionRegistry[pkgName]
@@ -55,19 +40,29 @@ function assertNotRegisteredExtension(pkgName: string) {
 //   }
 //   return getRegisteredExtension(pkgInfo?.json.name)
 // }
-export function registerExtension<Def extends ExtensionDef>({ def, pkgInfo }: { def: Def; pkgInfo: PkgInfo }) {
+export function registerExtension<ExtId extends ExtensionId>({
+  id,
+  pkgInfo,
+  lifeCycle,
+}: {
+  id: ExtId
+  pkgInfo: PkgInfo
+  lifeCycle: ExtLifeCycleHandle
+}) {
   const pkgName = pkgInfo.json.name
+
+  if (id.name !== pkgName) {
+    throw new Error(`package.json name and provided extension name must exactly match !`)
+  }
+  if (id.version !== pkgInfo.json.version) {
+    throw new Error(`package.json version and provided extension version must exactly match !`)
+  }
   assertNotRegisteredExtension(pkgName)
-  const env = extEnv(pkgName)
-  const id: ExtensionId = { name: def.name, version: def.version }
-  const gates = portGates(id, def.ports, [])
-  const extRegRec: ExtensionRegistryRecord<Def> = {
-    def,
-    id,
-    active: false,
-    env,
+  const extRegRec: ExtensionRegistryRecord<ExtId> = {
+    deployment: undefined,
     pkgInfo,
-    gates,
+    id,
+    lifeCycle,
   }
 
   return (extensionRegistry[pkgName] = extRegRec)

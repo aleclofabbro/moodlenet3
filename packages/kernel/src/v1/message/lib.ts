@@ -1,14 +1,11 @@
 import { MsgID } from '.'
-import { Push } from '..'
-import { assertRegisteredExtension, getRegisteredExtension, lookupFor } from '../extension-registry/lib'
-import { Port, PortTopologyNode } from '../extension/types'
+import { assertRegisteredExtension, getRegisteredExtension } from '../extension-registry/lib'
 import { extEnv } from '../kernel'
-import { isMsg } from '../port-address'
 import { PortAddress } from '../port-address/types'
-import { Obj, PortListener, PortShell, Session } from '../types'
-import { GetMsg, Message } from './types'
+import { LookupExt, PortListener, PortShell, PushMessage, Session } from '../types'
+import { Message, Obj } from './types'
 
-export const pushMessage = (message: Message) => {
+export const pushMessage = <P extends Obj>(message: Message<P>) => {
   console.log(
     `
 +++++++++++++++++++++++
@@ -23,22 +20,12 @@ pushMessage`,
   const targetExt = getRegisteredExtension(target.extId.name)
 
   if (!(targetExt && sourceExt)) {
-    //TODO: WARN
-    return
+    throw new Error(`source or target extensions not available`)
   }
 
-  const targetPortTopoNode: PortTopologyNode | undefined = target.path.reduce<any>(
-    (portTopoNode, nextProp) => (portTopoNode ?? {})[nextProp],
-    targetExt.def.ports,
-  )
-  if ('function' !== typeof targetPortTopoNode) {
-    //TODO: WARN or throw ?
-    return
-  }
-  //TODO: after this narrowing targetPortTopoNode gets typed as "never" :\ (same as for portGates)
   msgListeners.forEach(({ listener, cwAddress }) => {
     const listenerExt = getRegisteredExtension(cwAddress.extId.name)
-    if (!listenerExt?.active) {
+    if (!listenerExt?.deployment) {
       //TODO: WARN
       return
     }
@@ -46,28 +33,16 @@ pushMessage`,
       cwAddress,
       message,
     })
-    listener(shell)
+    if (cwAddress.extId.name === message.target.extId.name && cwAddress.path === message.target.path) {
+      setImmediate(() => listener(shell))
+    } else {
+      listener(shell)
+    }
   })
 
-  const targetPort: Port<any> = targetPortTopoNode
-  const shell = makeShell({ message, cwAddress: target })
-  //TODO: WARN NO Guard
-  try {
-    targetPort.meta?.guard?.(shell)
-  } catch (guardError) {
-    console.error(`
-message guard failed
-message #${message.id} 
-from ${message.source.extId}#${message.source.path.join('::')}
-to ${message.target.extId}#${message.target.path.join('::')}
-msg ${String(guardError)}
-    `)
-    throw guardError
-  }
-  targetPort(shell)
   return message
 }
-function makeShell<P extends Obj>({
+export function makeShell<P extends Obj = Obj>({
   message,
   cwAddress,
 }: {
@@ -76,11 +51,7 @@ function makeShell<P extends Obj>({
 }): PortShell<P> {
   const ext = assertRegisteredExtension(cwAddress.extId.name)
   const listen = (listener: PortListener) => addListener(cwAddress, listener)
-
-  const getMsg: GetMsg = gate => (isMsg(gate, message) ? message : undefined)
-  const lookup = lookupFor(message.session, message.target)
-  const env = extEnv(ext.id.name)
-  const push: Push = (target, payload) =>
+  const push: PushMessage = (target, payload) =>
     pushMessage(
       createMessage({
         payload,
@@ -91,13 +62,20 @@ function makeShell<P extends Obj>({
       }),
     )
 
+  const lookup: LookupExt = extName => {
+    const regExt = getRegisteredExtension(extName)
+    if (!regExt?.deployment) {
+      throw new Error(`${extName} extensions not available`)
+    }
+    return path => payload => push({ extId: regExt.id, path }, payload)
+  }
+  const env = extEnv(ext.id.name)
+
   return {
     env,
     lookup,
     message,
     listen,
-    isMsg,
-    getMsg,
     cwAddress,
     push,
   }

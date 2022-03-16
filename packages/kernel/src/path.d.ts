@@ -1,8 +1,3 @@
-export type Flow<Key extends string = string, Route extends string = string> = {
-  _key: Key
-  _route: Route
-}
-
 // prettier-ignore
 type Prev = [never, 0, 1, 2, 3, 4, 5, 6,  7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...0[]]
 
@@ -22,15 +17,15 @@ export type TypePaths<Obj, SearchType, Depth extends number = 10> = [Depth] exte
     }[keyof Obj]
   : never
 
-export type TypeUnion<Hash, Prop extends keyof Hash = keyof Hash> = Prop extends infer Type
-  ? Type extends Prop
-    ? { t: Type; p: Hash[Type] }
-    : never
-  : never
+// export type TypeUnion<Hash, Prop extends keyof Hash = keyof Hash> = Prop extends infer Type
+//   ? Type extends Prop
+//     ? { t: Type; p: Hash[Type] }
+//     : never
+//   : never
 
-export type WildTypeUnion<Hash, Prop extends '*' | keyof Hash = keyof Hash> = Prop extends keyof Hash
-  ? TypeUnion<Hash, Prop>
-  : TypeUnion<Hash, keyof Hash>
+// export type WildTypeUnion<Hash, Prop extends '*' | keyof Hash = keyof Hash> = Prop extends keyof Hash
+//   ? TypeUnion<Hash, Prop>
+//   : TypeUnion<Hash, keyof Hash>
 
 export type TypeofPath<T, L extends string> = L extends `${infer P}.${infer Rest}`
   ? P extends keyof T
@@ -40,7 +35,6 @@ export type TypeofPath<T, L extends string> = L extends `${infer P}.${infer Rest
   ? T[L]
   : never
 
-/* 
 type X = {
   a: number
   b: {
@@ -52,5 +46,4 @@ type X = {
 type Q = TypeofPath<X, 'a'>
 
 declare const fn: <T, K>() => <TP extends TypePaths<X, K>>(p: TP) => { z: TypeofPath<T, TP> }
-const x = fn<X, { c: number }>()('b')
-*/
+// const x = fn<X, { c: number }>()('b')

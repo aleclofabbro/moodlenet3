@@ -1,22 +1,14 @@
 import { registerExtension } from '../extension-registry/lib'
 import { pkgInfoOf } from '../pkg-info'
-import { ExtensionDef } from './types'
+import { ExtensionDef, ExtensionId, ExtLifeCycleHandle } from './types'
 
+type IdOf<ExtDef extends ExtensionDef> = Pick<ExtDef, keyof ExtensionId>
 export function Extension<ExtDef extends ExtensionDef>(
   node_module: NodeModule,
-  def: ExtDef
+  id: IdOf<ExtDef>,
+  lifeCycle: ExtLifeCycleHandle,
 ) {
   const pkgInfo = pkgInfoOf(node_module)
-  if (def.name !== pkgInfo.json.name) {
-    throw new Error(
-      `package.json name and provided extension name must exactly match !`
-    )
-  }
-  if (def.version !== pkgInfo.json.version) {
-    throw new Error(
-      `package.json version and provided extension version must exactly match !`
-    )
-  }
 
-  return registerExtension<ExtDef>({ pkgInfo, def })
+  return registerExtension<IdOf<ExtDef>>({ pkgInfo, id, lifeCycle })
 }
