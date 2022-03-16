@@ -35,15 +35,15 @@ export type TypeofPath<T, L extends string> = L extends `${infer P}.${infer Rest
   ? T[L]
   : never
 
-type X = {
-  a: number
-  b: {
-    c: number
-    d: string
-  }
-}
+// type X = {
+//   a: number
+//   b: {
+//     c: number
+//     d: string
+//   }
+// }
 
-type Q = TypeofPath<X, 'a'>
+// type Q = TypeofPath<X, 'a'>
 
-declare const fn: <T, K>() => <TP extends TypePaths<X, K>>(p: TP) => { z: TypeofPath<T, TP> }
+// declare const fn: <T, K>() => <TP extends TypePaths<X, K>>(p: TP) => { z: TypeofPath<T, TP> }
 // const x = fn<X, { c: number }>()('b')

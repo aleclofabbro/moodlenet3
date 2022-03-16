@@ -1,26 +1,18 @@
-import { inspect } from 'util'
-import { ShellGatedExtension } from '../../../extension'
-import { ExtensionRegistryRecord } from '../../../extension-registry'
-import { PortShell } from '../../../types'
+import { ExtensionDef } from '../../../extension'
+import { LookupResult, PortShell } from '../../../types'
 
-type Watcher<Ext extends ExtensionRegistryRecord<any>> = (ext: ShellGatedExtension<Ext['def']> | undefined) => unknown
-export const watchExt = <Ext extends ExtensionRegistryRecord<any>>(
-  shell: PortShell,
-  extName: Ext['def']['name'],
-  watcher: Watcher<Ext>,
-) => {
+type Watcher<Ext extends ExtensionDef> = (_: LookupResult<Ext>) => void
+export const watchExt = <Ext extends ExtensionDef>(shell: PortShell, extName: Ext['name'], watcher: Watcher<Ext>) => {
   trigWatch()
   return shell.listen(shell => {
-    console.log('watchExt:', inspect(shell, false, 8, true))
-    const trg = shell.message.target
-    if (trg.extName.name === extName && ['activate', 'deactivate'].includes(trg.path.join('::'))) {
-      //FIXME: AHHAHHA
-      setTimeout(trigWatch, 2000)
+    const src = shell.message.source
+    if (src.extId.name === extName && ['activated', 'deactivating'].includes(src.path)) {
+      trigWatch()
     }
   })
 
   function trigWatch() {
-    const gatedExt = shell.lookup(extName)
-    setImmediate(() => watcher(gatedExt))
+    const lookupResult = shell.lookup(extName)
+    setImmediate(() => watcher(lookupResult))
   }
 }

@@ -1,5 +1,5 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { ExtensionId, PortShell } from '@moodlenet/kernel/lib/v1'
+import { AsyncPort, asyncRequest, asyncRespond, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
 import type { MNPriHttpExt } from '@moodlenet/pri-http/pkg'
 import { rename, rm, writeFile } from 'fs/promises'
 import { debounce } from 'lodash'
@@ -15,29 +15,48 @@ const extAliases: {
   [pkgName: string]: { moduleLoc: string; cmpPath: string }
 } = {}
 
-export type WebappExt = typeof webappExt
-const webappExt = v1.Extension(module, {
-  name: '@moodlenet/webapp' as const,
-  version: '1.0.0' as const,
+export const webappExtId: ExtIdOf<WebappExt> = {
+  name: '@moodlenet/webapp',
+  version: '1.0.0',
+} as const
+export type WebappExt = {
+  name: '@moodlenet/webapp'
+  version: '1.0.0'
   ports: {
-    activate(shell) {
+    ensureExtension: AsyncPort<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
+  }
+}
+v1.Extension(
+  module,
+  {
+    name: '@moodlenet/webapp',
+    version: '1.0.0',
+  },
+  {
+    async start({ shell }) {
       v1.watchExt<MNPriHttpExt>(shell, '@moodlenet/pri-http', priHttp => {
         // console.log('webapp watched priHttp ', priHttp)
-        if (!priHttp) {
+        if (!priHttp?.active) {
           return
         }
-        priHttp.gates.setWebAppRootFolder({ payload: { folder: latestBuildFolder } })
+        asyncRequest<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({ path: 'setWebAppRootFolder' })({
+          folder: latestBuildFolder,
+        })
       })
       build()
+      asyncRespond<WebappExt>({ extName: '@moodlenet/webapp', shell })({
+        path: 'ensureExtension',
+        afnPort:
+          _shell =>
+          async ({ cmpPath, extId, moduleLoc }) => {
+            extAliases[extId.name] = { moduleLoc, cmpPath }
+            build()
+          },
+      })
+      return async () => {}
     },
-    ensureExtension: v1.ExtPort({}, (shell: PortShell<{ extId: ExtensionId; moduleLoc: string; cmpPath: string }>) => {
-      const { moduleLoc, extId, cmpPath } = shell.message.payload
-      extAliases[extId.name] = { moduleLoc, cmpPath }
-      build()
-    }),
-    deactivate() {},
   },
-})
+)
 
 // let runWp:Promise<webpack.Stats>|undefined
 const build = debounce(
@@ -57,7 +76,7 @@ const build = debounce(
       {},
     )
     config.resolve!.alias = { ...config.resolve!.alias, ...webpackAliases }
-    console.log(`Webpack build ....`, inspect({ config, extAliases, webpackAliases }, false, 6, true))
+    console.log(`Webpack build ....`, inspect({ /* config,  */ extAliases, webpackAliases }, false, 6, true))
 
     const wp = webpack(config)
     const runWp = promisify(wp.run.bind(wp))
