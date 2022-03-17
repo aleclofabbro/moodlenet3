@@ -17,13 +17,13 @@ export const listenPort = <ExtDef extends ExtensionDef, Path extends ExtPortPath
   path: Path
   listener: Listener<ExtDef, Path>
 }) => {
-  return shell.listen(shell => {
+  return shell.listen(listenShell => {
     const {
       message: { target },
-    } = shell
+    } = listenShell
     if (!(target.extName === extName && target.path === path)) {
       return
     }
-    return listener(shell)
+    return listener(listenShell)
   })
 }

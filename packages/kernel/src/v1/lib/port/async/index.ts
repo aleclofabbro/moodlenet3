@@ -3,8 +3,10 @@ import { TypeofPath, TypePaths } from '../../../../path'
 import { ExtensionDef, PortsTopology } from '../../../extension'
 import { listenPort } from '../listen'
 
-export type AsyncFn<Args extends any[] = any[], Val = any> = (...asyncPortReqArgs: Args) => Promise<Val>
-// export type AsyncFn = (...asyncPortReqArgs: any[]) => Promise<any>
+// export type AsyncFn = () => Promise<any>
+// export type AsyncFn<Arg extends any[] = any[], Val = any> = (...asyncPortReqArg: Arg) => Promise<Val>
+export type AsyncFn = (asyncPortReqArg: any) => Promise<any>
+// export type AsyncFn = (...asyncPortReqArg: any[]) => Promise<any>
 export type AsyncPortPaths<Topo extends PortsTopology> = TypePaths<Topo, AsyncPort<AsyncFn>>
 export type ExtAsyncPortPaths<ExtDef extends ExtensionDef> = AsyncPortPaths<ExtDef['ports']>
 export type ExtPathAsyncFn<ExtDef extends ExtensionDef, Path extends ExtAsyncPortPaths<ExtDef>> = TypeofPath<
@@ -14,7 +16,7 @@ export type ExtPathAsyncFn<ExtDef extends ExtensionDef, Path extends ExtAsyncPor
   ? Afn
   : never
 
-export type AsyncPortRequestPort<Afn extends AsyncFn> = RawPort<{ asyncPortReqArgs: Parameters<Afn> }>
+export type AsyncPortRequestPort<Afn extends AsyncFn> = RawPort<{ asyncPortReqArg: Parameters<Afn>[0] }>
 export type AsyncPortResponsePort<Afn extends AsyncFn> = RawPort<
   { asyncPortRespValue: Awaited<ReturnType<Afn>> } | { asyncPortRespError: any }
 >
@@ -22,16 +24,17 @@ export type AsyncPortResponsePort<Afn extends AsyncFn> = RawPort<
 export type AsyncPort<Afn extends AsyncFn> = {
   asyncPortRequest: AsyncPortRequestPort<Afn>
   asyncPortResponse: AsyncPortResponsePort<Afn>
+  _never_?: RawPort<Afn>
 }
 
 export const asyncRespond =
   <ExtDef extends ExtensionDef>({ extName, shell }: { shell: PortShell; extName: ExtDef['name'] }) =>
-  <Path extends ExtAsyncPortPaths<ExtDef>>({
+  <Path extends ExtAsyncPortPaths<ExtDef>, Afn extends ExtPathAsyncFn<ExtDef, Path> = ExtPathAsyncFn<ExtDef, Path>>({
     path,
     afnPort,
   }: {
     path: Path
-    afnPort(shell: PortShell /* <Parameters<ExtPathAsyncFn<ExtDef, Path>>> */): ExtPathAsyncFn<ExtDef, Path>
+    afnPort(shell: PortShell<{ asyncPortReqArg: Parameters<Afn>[0] }>): Afn
   }) => {
     const requestPath = `${path}.asyncPortRequest` as any
     const responsePath = `${path}.asyncPortResponse` as any
@@ -40,25 +43,35 @@ export const asyncRespond =
       path: requestPath,
       shell,
       listener: async requestListenerShell => {
-        const afn = afnPort(requestListenerShell)
+        const afn = afnPort(requestListenerShell as any)
         // console.log({ payload: requestListenerShell.message.payload })
         try {
-          const asyncPortRespValue = await afn(...(requestListenerShell.message.payload as any).asyncPortReqArgs)
-          requestListenerShell.push(extName, responsePath, { asyncPortRespValue } as any)
+          const asyncPortRespValue = await afn((requestListenerShell.message.payload as any).asyncPortReqArg)
+          shell.push(extName, responsePath, { asyncPortRespValue } as any)
         } catch (asyncPortRespError) {
-          requestListenerShell.push(extName, responsePath, { asyncPortRespError } as any)
+          shell.push(extName, responsePath, { asyncPortRespError } as any)
         }
       },
     })
   }
-export const asyncRequest =
-  <ExtDef extends ExtensionDef>({ extName, shell }: { shell: PortShell; extName: ExtDef['name'] }) =>
-  <Path extends ExtAsyncPortPaths<ExtDef>>({ path }: { path: Path }) =>
-    ((...asyncPortReqArgs) =>
+
+export type AsyncRequest = <ExtDef extends ExtensionDef>(_: {
+  shell: PortShell
+  extName: ExtDef['name']
+}) => <
+  Path extends ExtAsyncPortPaths<ExtDef>,
+  Afn extends ExtPathAsyncFn<ExtDef, Path> = ExtPathAsyncFn<ExtDef, Path>,
+>(_: {
+  path: Path
+}) => Afn
+export const asyncRequest: AsyncRequest =
+  ({ extName, shell }) =>
+  ({ path }) =>
+    ((asyncPortReqArg: any) =>
       new Promise((resolve, reject) => {
         const requestPath = `${path}.asyncPortRequest` as any
         const responsePath = `${path}.asyncPortResponse` as any
-        const requestMessage = shell.push(extName, requestPath, { asyncPortReqArgs } as any)
+        const requestMessage = shell.push(extName, requestPath, { asyncPortReqArg } as any)
         const unsub = listenPort({
           extName,
           path: responsePath,
@@ -79,7 +92,7 @@ export const asyncRequest =
           },
         })
         return unsub
-      })) as ExtPathAsyncFn<ExtDef, Path>
+      })) as any
 
 // export const invoke = <A extends AsyncFn>(
 //   shell: PortShell<any>,

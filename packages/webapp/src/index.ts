@@ -2,6 +2,7 @@ import { v1 } from '@moodlenet/kernel/lib'
 import { AsyncPort, asyncRequest, asyncRespond, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
 import type { MNPriHttpExt } from '@moodlenet/pri-http/pkg'
 import { rename, rm, writeFile } from 'fs/promises'
+import { debounce } from 'lodash'
 import { join, resolve } from 'path'
 import { inspect, promisify } from 'util'
 import webpack from 'webpack'
@@ -60,7 +61,7 @@ v1.Extension(
 )
 
 // let runWp:Promise<webpack.Stats>|undefined
-const build = async () => {
+const build = debounce( async () => {
   console.log('BUILD WEBAPP')
 
   const extensionsJsFileName = resolve(__dirname, '..', 'extensions.js' /* 'src', 'webapp', 'extensions.ts' */)
@@ -90,7 +91,7 @@ const build = async () => {
   await rename(config.output!.path!, latestBuildFolder)
   removeOldLatestBuildFolder()
   console.log(`build done`)
-}
+},3000,{trailing:true})
 
 function removeOldLatestBuildFolder() {
   console.log(`removing oldLatestBuildFolder..`)

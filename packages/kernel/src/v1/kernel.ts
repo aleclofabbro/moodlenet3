@@ -74,8 +74,10 @@ export const boot: Boot = async pkgMng => {
             console.log(installResp.all)
             extRequire(extId.name)
             startExtension(extId.name)
+            // return 1
           },
       })
+
       await startCoreExtensions()
 
       return async () => {}
