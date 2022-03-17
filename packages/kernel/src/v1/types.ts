@@ -1,40 +1,54 @@
-import { ExtensionDef, IsGateMsg, ShellGatedExtension } from './extension/types'
-import { GetMsg, Message } from './message/types'
-import { PortAddress } from './port-address/types'
-
-// }
-
-export type Obj = any //Record<string, any>
+import { TypeofPath, TypePaths } from '../path'
+import type { ExtensionDef, ExtPortPaths, PathPayload, Port } from './extension/types'
+import { Message, Obj } from './message/types'
+import { FullPortAddress } from './port-address/types'
 
 export type PostOpts = {}
-
 export type ExtensionUnavailable = undefined
 
-export type ShellLookup = <Ext extends ExtensionDef>(
-  name: Ext['name']
-) => ShellGatedExtension<Ext> | ExtensionUnavailable
+export type LookupExt = <Ext extends ExtensionDef>(extName: Ext['name']) => LookupResult<Ext>
+export type LookupResult<Ext extends ExtensionDef> =
+  | ExtensionUnavailable
+  | {
+      port: LookupPort<Ext>
+      active: true
+    }
+  | {
+      port?: undefined
+      active: false
+    }
 
-export type PostOutcome = void
+export type LookupPort<Ext extends ExtensionDef> = <Path extends TypePaths<Ext['ports'], Port<any>>>(
+  path: Path,
+) => PostInPort<Ext, Path>
 
-export type PortListener = (shell: PortShell<Obj>) => void
+export type PostInPort<Ext extends ExtensionDef, Path extends TypePaths<Ext['ports'], Port<any>>> = (
+  portPayload: TypeofPath<Ext['ports'], Path>['portPayload'],
+) => Message<TypeofPath<Ext['ports'], Path>['portPayload']>
+
 export type Listen = (_: PortListener) => Unlisten
+export type PortListener = (shell: PortShell) => void
 export type Unlisten = () => void
-export type PortShell<Payload = unknown> = {
+
+export type PortShell<Payload = any> = {
   message: Message<Payload>
-  lookup: ShellLookup
+  lookup: LookupExt
   env: any
   listen: Listen
-  isMsg: IsGateMsg
-  getMsg: GetMsg
-  cwAddress: PortAddress
-  push: Push
+  cwAddress: FullPortAddress
+  push: PushMessage
 }
-export type Push = <Payload>(
-  portAddr: PortAddress,
-  payload: Payload
-) => Message<Payload> | undefined
+
+export type PushMessage = <
+  ExtDef extends ExtensionDef = ExtensionDef,
+  Path extends ExtPortPaths<ExtDef> = ExtPortPaths<ExtDef>,
+>(
+  extName: ExtDef['name'],
+  path: Path,
+  payload: PathPayload<ExtDef, Path>,
+) => PathPayload<ExtDef, Path> extends Obj ? Message<PathPayload<ExtDef, Path>> : never
+
 export type Session = {
   user: User
 }
-
 export type User = {}

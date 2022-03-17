@@ -1,7 +1,11 @@
-import { ExtensionId } from '../extension/types'
+import { ExtensionId, ExtName, PortPath } from '../extension/types'
 
-type Path = string[]
-export type PortAddress = {
+export type FullPortAddress = {
   extId: ExtensionId
-  path: Path
+  path: PortPath
+}
+
+export type PortAddress = {
+  extName: ExtName
+  path: PortPath
 }

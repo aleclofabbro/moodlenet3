@@ -38,7 +38,7 @@ console.log({
 
   await install([kernelPkg], false)
 
-  console.log(`starting kernel`)
+  console.log(`starting kernel ... `)
 
   const bootModule: BootModule = await import(join(rootDir, 'node_modules', ...kernelModule.split('/')))
   console.log(`kernel started`)

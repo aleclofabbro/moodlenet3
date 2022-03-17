@@ -1,17 +1,52 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { PortShell } from '@moodlenet/kernel/lib/v1'
+import { AsyncPort, asyncRespond, PortShell } from '@moodlenet/kernel/lib/v1'
+import { Message } from '@moodlenet/kernel/lib/v1/message'
 import { json } from 'body-parser'
 import express, { Express } from 'express'
 import type { Server } from 'http'
 
 let app: Express | undefined
 let server: Server | undefined
-export type MNPriHttpExt = typeof ext
-const ext = v1.Extension(module, {
-  name: '@moodlenet/pri-http' as const,
-  version: '1.0.0' as const,
+export type MNPriHttpExt = {
+  name: '@moodlenet/pri-http'
+  version: '1.0.0'
   ports: {
-    activate: v1.ExtPort({}, async shell => {
+    setWebAppRootFolder: AsyncPort<(_: { folder: string }) => Promise<void>>
+    a: {
+      b: AsyncPort<
+        <T, K>(a: {
+          t: T
+          k: K
+        }) => Promise<{
+          _: Message
+          tt: { ___: T }
+          kk: { ___: K }
+        }>
+      >
+    }
+  }
+}
+/* setWebAppRootFolder: v1.ExtPort(
+  {},
+  ({
+    message: {
+      payload: { folder },
+    },
+  }: PortShell<{ folder: string }>) => {
+    const staticApp = express.static(folder)
+    app?.get(`/*`, staticApp)
+    app?.get(`/*`, (req, res, next) => staticApp(((req.url = '/'), req), res, next))
+  },
+),
+ */
+v1.Extension<MNPriHttpExt>(
+  module,
+  {
+    name: '@moodlenet/pri-http',
+    version: '1.0.0',
+  },
+  {
+    async start({ shell }) {
       const port = shell.env.port
       const rootPath = shell.env.rootPath
       const extPortsApp = makeExtPortsApp(shell)
@@ -19,32 +54,57 @@ const ext = v1.Extension(module, {
       app = express().use(`${rootPath}/`, (_, __, next) => next())
       app.use(`/_srv`, extPortsApp)
       server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
-    }),
-    setWebAppRootFolder: v1.ExtPort(
-      {},
-      ({
-        message: {
-          payload: { folder },
+      asyncRespond<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({
+        path: 'setWebAppRootFolder',
+        afnPort: _shell => async p => {
+          console.log({ p })
+          const staticApp = express.static(p.folder)
+          app?.get(`/*`, staticApp)
+          app?.get(`/*`, (req, res, next) => staticApp(((req.url = '/'), req), res, next))
         },
-      }: PortShell<{ folder: string }>) => {
-        const staticApp = express.static(folder)
-        app?.get(`/*`, staticApp)
-        app?.get(`/*`, (req, res, next) => staticApp(((req.url = '/'), req), res, next))
-      },
-    ),
-    deactivate() {
-      server?.close()
-    },
-    a: {
-      b: v1.asyncPort(shell => async <T, K>(a: { t: T; k: K }) => ({
-        XX: shell.message.payload.asyncPortReqArg === a,
-        _: shell.message,
-        tt: { ___: a.t },
-        kk: { ___: a.k },
-      })),
+      })
+
+      // asyncRespond<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({
+      //   path: 'a.b',
+      //   afnPort: _shell => async a => {
+      //     return {
+      //       _: shell.message,
+      //       tt: { ___: a.t },
+      //       kk: { ___: a.k },
+      //     }
+      //   },
+      // })
+      return async () => {
+        server?.close()
+      }
     },
   },
-})
+)
+// setWebAppRootFolder: v1.ExtPort(
+//   {},
+//   ({
+//     message: {
+//       payload: { folder },
+//     },
+//   }: PortShell<{ folder: string }>) => {
+//     const staticApp = express.static(folder)
+//     app?.get(`/*`, staticApp)
+//     app?.get(`/*`, (req, res, next) => staticApp(((req.url = '/'), req), res, next))
+//   },
+// )
+//     deactivate() {
+//       server?.close()
+//     },
+//     a: {
+//       b: v1.asyncPort(shell => async <T, K>(a: { t: T; k: K }) => ({
+//         XX: shell.message.payload.asyncPortReqArg === a,
+//         _: shell.message,
+//         tt: { ___: a.t },
+//         kk: { ___: a.k },
+//       })),
+//     },
+//   },
+// })
 
 function makeExtPortsApp(shell: PortShell) {
   //BEGIN EXT PORTS APP
@@ -65,19 +125,12 @@ function makeExtPortsApp(shell: PortShell) {
 
     //TODO: implement shell.lookupPort(addr:PortAddress):ShellGatesTopology<any>
     const ext = shell.lookup(extName)
-    console.log({ ext })
-    if (!ext) {
-      return next()
-    }
-    const rrGates = path.reduce((node, prop) => node?.[prop], ext.gates as any)
-    //TODO: ^^^
-
-    if (!v1.isAsyncShellGatesTopo(rrGates)) {
+    if (!ext?.active) {
       return next()
     }
     console.log('*********body', req.body)
     try {
-      const response = await v1.invoke(shell, rrGates)(req.body)
+      const response = await (v1.asyncRequest({ extName, shell }) as any)({ path: path.join('.') })(req.body)
       res.json(response)
     } catch (err) {
       res.status(500).send(err)

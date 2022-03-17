@@ -1,87 +1,98 @@
-import { GatesTopology, Port, PortShell, ShellGatesTopology } from '../../..'
+import { Port as RawPort, PortShell } from '../../..'
+import { TypeofPath, TypePaths } from '../../../../path'
+import { ExtensionDef, PortsTopology } from '../../../extension'
+import { listenPort } from '../listen'
 
-type AsyncFn<Arg, Val> = (asyncPortReqArg: Arg) => Promise<Val>
+export type AsyncFn<Args extends any[] = any[], Val = any> = (...asyncPortReqArgs: Args) => Promise<Val>
+// export type AsyncFn = (...asyncPortReqArgs: any[]) => Promise<any>
+export type AsyncPortPaths<Topo extends PortsTopology> = TypePaths<Topo, AsyncPort<AsyncFn>>
+export type ExtAsyncPortPaths<ExtDef extends ExtensionDef> = AsyncPortPaths<ExtDef['ports']>
+export type ExtPathAsyncFn<ExtDef extends ExtensionDef, Path extends ExtAsyncPortPaths<ExtDef>> = TypeofPath<
+  ExtDef['ports'],
+  Path
+> extends AsyncPort<infer Afn>
+  ? Afn
+  : never
 
-export type AsyncPortTopo<Arg, Val, _A extends AsyncFn<Arg, Val>> = {
-  request: Port<{ asyncPortReqArg: Arg }>
-  response: Port<{ asyncPortRespValue: Val } | { error: any }>
+export type AsyncPortRequestPort<Afn extends AsyncFn> = RawPort<{ asyncPortReqArgs: Parameters<Afn> }>
+export type AsyncPortResponsePort<Afn extends AsyncFn> = RawPort<
+  { asyncPortRespValue: Awaited<ReturnType<Afn>> } | { asyncPortRespError: any }
+>
+
+export type AsyncPort<Afn extends AsyncFn> = {
+  asyncPortRequest: AsyncPortRequestPort<Afn>
+  asyncPortResponse: AsyncPortResponsePort<Afn>
 }
-export type AsyncGatesTopo<Arg, Val, A extends AsyncFn<Arg, Val>> = GatesTopology<AsyncPortTopo<Arg, Val, A>>
-export type AsyncShellGatesTopo<Arg, Val, A extends AsyncFn<Arg, Val>> = ShellGatesTopology<AsyncGatesTopo<Arg, Val, A>>
 
-export const isAsyncShellGatesTopo = <Arg, Val>(_: any): _ is AsyncShellGatesTopo<Arg, Val, AsyncFn<Arg, Val>> =>
-  !!_ && 'request' in _ && 'response' in _ //TODO: so trivial ^^'
-
-export type AsyncPort<Arg, Val, A extends AsyncFn<Arg, Val>> = (shell: PortShell<{ asyncPortReqArg: Arg }>) => A
-export const asyncPort = <A extends AsyncFn<Arg, Val>, Arg = any, Val = any>(
-  asyncPort: AsyncPort<Arg, Val, A>,
-): AsyncPortTopo<Arg, Val, A> => ({
-  async request(shell) {
-    const respPath = shell.cwAddress.path.slice(0, -1).concat('response')
-    try {
-      const asyncPortRespValue = await asyncPort(shell)(shell.message.payload.asyncPortReqArg)
-      shell.push({ extId: shell.cwAddress.extId, path: respPath }, { asyncPortRespValue })
-    } catch (error) {
-      shell.push({ extId: shell.cwAddress.extId, path: respPath }, { error })
-    }
-  },
-  response() {},
-})
-
-export const invoke = <Arg, Val, A extends AsyncFn<Arg, Val>>(
-  shell: PortShell<any>,
-  rrGates: AsyncShellGatesTopo<Arg, Val, A>,
-): A =>
-  ((asyncPortReqArg: Arg) =>
-    new Promise((resolve, reject) => {
-      const reqMsg = rrGates.request({ payload: { asyncPortReqArg } })
-      const unsub = shell.listen(({ message: respMsg }) => {
-        if (respMsg.parentMsgId !== reqMsg.id) {
-          return
+export const asyncRespond =
+  <ExtDef extends ExtensionDef>({ extName, shell }: { shell: PortShell; extName: ExtDef['name'] }) =>
+  <Path extends ExtAsyncPortPaths<ExtDef>>({
+    path,
+    afnPort,
+  }: {
+    path: Path
+    afnPort(shell: PortShell /* <Parameters<ExtPathAsyncFn<ExtDef, Path>>> */): ExtPathAsyncFn<ExtDef, Path>
+  }) => {
+    const requestPath = `${path}.asyncPortRequest` as any
+    const responsePath = `${path}.asyncPortResponse` as any
+    return listenPort({
+      extName,
+      path: requestPath,
+      shell,
+      listener: async requestListenerShell => {
+        const afn = afnPort(requestListenerShell)
+        // console.log({ payload: requestListenerShell.message.payload })
+        try {
+          const asyncPortRespValue = await afn(...(requestListenerShell.message.payload as any).asyncPortReqArgs)
+          requestListenerShell.push(extName, responsePath, { asyncPortRespValue } as any)
+        } catch (asyncPortRespError) {
+          requestListenerShell.push(extName, responsePath, { asyncPortRespError } as any)
         }
-        unsub()
-        'error' in respMsg.payload ? reject(respMsg.payload.error) : resolve(respMsg.payload.asyncPortRespValue)
-      })
-    })) as any as A
+      },
+    })
+  }
+export const asyncRequest =
+  <ExtDef extends ExtensionDef>({ extName, shell }: { shell: PortShell; extName: ExtDef['name'] }) =>
+  <Path extends ExtAsyncPortPaths<ExtDef>>({ path }: { path: Path }) =>
+    ((...asyncPortReqArgs) =>
+      new Promise((resolve, reject) => {
+        const requestPath = `${path}.asyncPortRequest` as any
+        const responsePath = `${path}.asyncPortResponse` as any
+        const requestMessage = shell.push(extName, requestPath, { asyncPortReqArgs } as any)
+        const unsub = listenPort({
+          extName,
+          path: responsePath,
+          shell,
+          listener: responseListenerShell => {
+            const message = responseListenerShell.message
+            if (message.parentMsgId !== requestMessage.id) {
+              return
+            }
+            unsub()
+            const asyncResponse = message.payload as any
+            // console.log({ asyncResponse })
+            if ('asyncPortRespError' in asyncResponse) {
+              reject(asyncResponse.asyncPortRespError)
+            } else {
+              resolve(asyncResponse.asyncPortRespValue)
+            }
+          },
+        })
+        return unsub
+      })) as ExtPathAsyncFn<ExtDef, Path>
 
-// type Def = typeof def
-// const def = {
-//   name: '@moodlenet/pri-http',
-//   version: '1.0.0',
-//   ports: {
-//     activate: ExtPort({}, async (shell) => {
-//       const _this = shell.lookup<Def>('@moodlenet/pri-http')!
-
-//       const x = await invoke(shell, _this.gates.a.b)({ t: '12', k: 10 })
-//       x.kk.___
-//       x.tt.___
-//     }),
-//     deactivate() {},
-//     a: {
-//       b: asyncPort((__) => async <T, K>(a: { t: T; k: K }) => ({
-//         _: __.message.target,
-//         tt: { ___: a.t },
-//         kk: { ___: a.k },
-//       })),
-//     },
-//   },
-// } as const
-// type AA = <T, K>(a: {
-//   t: T
-//   k: K
-// }) => Promise<{
-//   _: PortAddress
-//   tt: ZZ<T>
-//   kk: ZZ<K>
-// }>
-// type ZZ<T> = { ___: T }
-
-// type Wrapper<AFN extends AsyncFunction> = (x: string) => AFN
-// type Unwrapped<P extends Wrapper<AsyncFunction>> = P extends Wrapper<infer AFN>
-//   ? AFN
-//   : never
-// declare const x: Unwrapped<(c: string) => <T>(d: T) => Promise<[T, string]>>
-
-// ;async () => {
-//   const y = await x({ a: 1 })
-// }
+// export const invoke = <A extends AsyncFn>(
+//   shell: PortShell<any>,
+//   rrGates: any, //AsyncShellGatesTopo<Arg, Val, A>,
+// ): A =>
+//   ((asyncPortReqArg: any /* Arg */) =>
+//     new Promise((resolve, reject) => {
+//       const reqMsg = rrGates.request({ payload: { asyncPortReqArg } })
+//       const unsub = shell.listen(({ message: respMsg }) => {
+//         if (respMsg.parentMsgId !== reqMsg.id) {
+//           return
+//         }
+//         unsub()
+//         'error' in respMsg.payload ? reject(respMsg.payload.error) : resolve(respMsg.payload.asyncPortRespValue)
+//       })
+//     })) as any as A

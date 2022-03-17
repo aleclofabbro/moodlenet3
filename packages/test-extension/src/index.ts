@@ -1,35 +1,36 @@
 import { v1 } from '@moodlenet/kernel/lib'
+import type { WebappExt } from '@moodlenet/webapp/lib'
 import { resolve } from 'path'
 
-const extId: v1.ExtensionId = {
-  name: '@moodlenet/test-extension' as const,
-  version: '1.0.0' as const,
+export type TestExt = {
+  name: '@moodlenet/test-extension'
+  version: '1.0.0'
+  ports: {}
 }
-export type MNPriHttpExt = typeof ext
-const ext = v1.Extension(module, {
-  ...extId,
-  ports: {
-    activate: v1.ExtPort({}, async shell => {
-      v1.watchExt(shell, '@moodlenet/webapp', webapp => {
-        if (!webapp) {
+export const testExtId: v1.ExtIdOf<TestExt> = {
+  name: '@moodlenet/test-extension',
+  version: '1.0.0',
+} as const
+v1.Extension(
+  module,
+  {
+    name: '@moodlenet/test-extension',
+    version: '1.0.0',
+  },
+  {
+    async start({ shell }) {
+      v1.watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
+        if (!webapp?.active) {
           return
         }
-        ;(webapp.gates.ensureExtension as any)?.({
-          payload: {
-            extId,
-            moduleLoc: resolve(__dirname, '..', '..', 'test-extension'),
-            cmpPath: `pkg/webapp`,
-          },
+        v1.asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
+          extId: testExtId,
+          moduleLoc: resolve(__dirname, '..'),
+          cmpPath: 'pkg/webapp',
         })
       })
-    }),
-    deactivate() {},
-    myNs: {
-      testApi: v1.asyncPort(shell => async <T, K>(_: { argA: T; argB: K }) => ({
-        _: shell.message,
-        a: _.argA,
-        b: _.argB,
-      })),
+
+      return async () => {}
     },
   },
-})
+)
