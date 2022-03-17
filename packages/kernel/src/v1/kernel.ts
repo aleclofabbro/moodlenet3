@@ -34,6 +34,7 @@ export const kernelExtId: ExtIdOf<KernelExt> = {
   name: '@moodlenet/kernel',
   version: '1.0.0',
 } as const
+
 export type KernelExt = {
   name: '@moodlenet/kernel'
   version: '1.0.0'
@@ -50,21 +51,15 @@ export const boot: Boot = async pkgMng => {
 
   Extension<KernelExt>(module, kernelExtId, {
     async start({ shell }) {
-      await startCoreExtensions()
-
-      watchExt(shell, '@moodlenet/webapp', webapp => {
-        console.log(`************************************\n****************************************`, webapp)
-        if (!webapp) {
+      watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
+        if (!webapp?.active) {
           return
         }
-
-        // ;(webapp.gates.ensureExtension as any)?.({
-        //   payload: {
-        //     extId: kernelExtId,
-        //     moduleLoc: resolve(__dirname, '..', '..'),
-        //     cmpPath: `lib/v1/webapp`,
-        //   },
-        // })
+        asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
+          extId: kernelExtId,
+          moduleLoc: resolve(__dirname, '..', '..'),
+          cmpPath: 'lib/v1/webapp',
+        })
       })
 
       asyncRespond<KernelExt>({
@@ -81,12 +76,8 @@ export const boot: Boot = async pkgMng => {
             startExtension(extId.name)
           },
       })
+      await startCoreExtensions()
 
-      asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
-        extId: kernelExtId,
-        moduleLoc: resolve(__dirname, '..', '..'),
-        cmpPath: 'lib/v1/webapp',
-      })
       return async () => {}
     },
   })
@@ -121,6 +112,7 @@ export const boot: Boot = async pkgMng => {
 
     console.log(`** KERNEL: starting ${extReg.id.name}@${extReg.id.version}`)
     const shell = makeStartShell(extReg.id)
+    extReg.deployment = 'deploying'
     const stop = await extReg.lifeCycle.start({ shell })
     extReg.deployment = {
       at: new Date(),

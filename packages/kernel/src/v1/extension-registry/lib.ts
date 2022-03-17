@@ -12,7 +12,7 @@ export type Deployment = {
 }
 export type ExtensionRegistryRecord<ExtId extends ExtensionId = ExtensionId> = {
   id: ExtId
-  deployment: Deployment | undefined
+  deployment: 'deploying' | Deployment | undefined
   pkgInfo: PkgInfo
   lifeCycle: ExtLifeCycleHandle
 }
