@@ -20,7 +20,7 @@ const KernelPage: FC = () => {
       alert(`invalid pkg:${pkgId}`)
     }
     const name = pkgId.substring(0, atIndex)
-    const version = pkgId.substring(-atIndex)
+    const version = pkgId.substring(atIndex + 1)
     if (!(name && version)) {
       alert(`invalid pkg:${pkgId}`)
       return

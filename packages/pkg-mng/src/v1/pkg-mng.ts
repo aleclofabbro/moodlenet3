@@ -31,7 +31,7 @@ console.log({
   await execa('npm', ['init', '-y'], execa_opts)
 
   const install = (pkgs: string[], strict = true) =>
-    execa('npm', ['install', '--save', ...(strict ? ['--strict-peer-deps'] : []), ...pkgs], execa_opts)
+    execa('npm', ['install', '--force --save', ...(strict ? ['--strict-peer-deps'] : []), ...pkgs], execa_opts)
   const uninstall = (pkgs: string[]) => execa('npm', ['rm', ...pkgs], execa_opts)
 
   console.log(`installing kernel pkg: ${kernelPkg}`)

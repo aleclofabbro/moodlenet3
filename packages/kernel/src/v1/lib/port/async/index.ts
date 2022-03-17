@@ -36,8 +36,7 @@ export const asyncRespond =
     path: Path
     afnPort(shell: PortShell<{ asyncPortReqArg: Parameters<Afn>[0] }>): Afn
   }) => {
-    const requestPath = `${path}.asyncPortRequest` as any
-    const responsePath = `${path}.asyncPortResponse` as any
+    const { requestPath, responsePath } = paths(path)
     return listenPort({
       extName,
       path: requestPath,
@@ -47,9 +46,9 @@ export const asyncRespond =
         // console.log({ payload: requestListenerShell.message.payload })
         try {
           const asyncPortRespValue = await afn((requestListenerShell.message.payload as any).asyncPortReqArg)
-          shell.push(extName, responsePath, { asyncPortRespValue } as any)
+          requestListenerShell.push(extName, responsePath, { asyncPortRespValue } as any)
         } catch (asyncPortRespError) {
-          shell.push(extName, responsePath, { asyncPortRespError } as any)
+          requestListenerShell.push(extName, responsePath, { asyncPortRespError } as any)
         }
       },
     })
@@ -69,8 +68,7 @@ export const asyncRequest: AsyncRequest =
   ({ path }) =>
     ((asyncPortReqArg: any) =>
       new Promise((resolve, reject) => {
-        const requestPath = `${path}.asyncPortRequest` as any
-        const responsePath = `${path}.asyncPortResponse` as any
+        const { requestPath, responsePath } = paths(path)
         const requestMessage = shell.push(extName, requestPath, { asyncPortReqArg } as any)
         const unsub = listenPort({
           extName,
@@ -94,6 +92,12 @@ export const asyncRequest: AsyncRequest =
         return unsub
       })) as any
 
+function paths(path: string) {
+  return {
+    requestPath: `${path}.asyncPortRequest`,
+    responsePath: `${path}.asyncPortResponse`,
+  } as any
+}
 // export const invoke = <A extends AsyncFn>(
 //   shell: PortShell<any>,
 //   rrGates: any, //AsyncShellGatesTopo<Arg, Val, A>,
