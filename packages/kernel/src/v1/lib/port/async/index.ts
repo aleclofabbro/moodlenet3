@@ -1,6 +1,6 @@
 import { Port as RawPort, PortShell } from '../../..'
 import { TypeofPath, TypePaths } from '../../../../path'
-import { ExtensionDef, ExtPointerPaths, Pointer, PortsTopology } from '../../../extension'
+import { ExtensionDef, PortsTopology } from '../../../extension'
 import { Unlisten } from '../../../types'
 import { listenPort } from '../listen'
 
@@ -32,12 +32,9 @@ export type AsyncPort<Afn extends AsyncFn> = {
 export type AsyncPortFnOf<T> = (shell: PortShell<{ asyncPortReqArgs: Parameters<AsyncFnOf<T>> }>) => AsyncFnOf<T>
 
 export const handle =
-  <Ext extends ExtensionDef>(
-    shell: PortShell,
-    ...pointer: Pointer<Ext, AsyncPort<any>, ExtPointerPaths<Ext, AsyncPort<any>>>
-  ) =>
-  (afnPort: AsyncPortFnOf<typeof pointer[1]>) => {
-    const [extName, path]: any[] = pointer[0].split('::')
+  <Ext extends ExtensionDef>(shell: PortShell, pointer: ExtAsyncPortPaths<Ext>) =>
+  (afnPort: AsyncPortFnOf<TypeofPath<Ext['ports'], typeof pointer>>) => {
+    const [extName, path]: any[] = pointer.split('::')
     return asyncRespond({ extName, shell })({ afnPort: afnPort as any, path })
   }
 
@@ -104,9 +101,9 @@ export const asyncRequest: AsyncRequest =
 
 export const asyncFn = <Ext extends ExtensionDef>(
   shell: PortShell,
-  ...pointer: Pointer<Ext, AsyncPort<any>, ExtPointerPaths<Ext, AsyncPort<any>>>
-): AsyncFnOf<typeof pointer[1]> => {
-  const [extName, path]: any[] = pointer[0].split('::')
+  pointer: `${Ext['name']}::${ExtAsyncPortPaths<Ext>}`,
+): AsyncFnOf<TypeofPath<Ext['ports'], typeof pointer extends `${Ext['name']}::${infer Rest}` ? Rest : never>> => {
+  const [extName, path]: any[] = pointer.split('::')
   return ((asyncPortReqArgs: never) =>
     new Promise((resolve, reject) => {
       const { requestPath, responsePath } = paths(path)
