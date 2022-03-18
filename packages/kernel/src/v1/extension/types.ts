@@ -20,12 +20,41 @@ export type ExtensionDef<
 
 export type PortPath = string
 export type Port<Payload> = Opaque<{ portPayload: Payload }>
+
+export type TopologyNode = Port<any> | PortsTopology
 export type PortsTopology = {
-  [topoNodeName in string]: Port<any> | PortsTopology
+  [topoNodeName in string]: TopologyNode
 }
 
 export type PortPaths<Topo extends PortsTopology, Payload = any> = TypePaths<Topo, Port<Payload>>
 export type ExtPortPaths<ExtDef extends ExtensionDef, Payload = any> = PortPaths<ExtDef['ports'], Payload>
+
+export type ExtPointerPaths<ExtDef extends ExtensionDef, TopoNode extends TopologyNode = TopologyNode> = TypePaths<
+  ExtDef['ports'],
+  TopoNode
+>
+
+// export type ExtPointer<
+//   ExtDef extends ExtensionDef,
+//   TopoNode extends TopologyNode = Port<any>,
+//   P extends ExtPointerPaths<ExtDef, TopoNode> = ExtPointerPaths<ExtDef, TopoNode>,
+// > = {
+//   p: P
+//   fp: `${ExtDef['name']}/${P}`
+//   type: TypeofPath<ExtDef['ports'], P>
+// }
+
+export type Pointer<
+  Ext extends ExtensionDef,
+  NodeType extends TopologyNode,
+  Path extends ExtPointerPaths<Ext, NodeType>,
+> = [`${Ext['name']}::${Path}`, TypeofPath<Ext['ports'], Path>?]
+
+// export type ExtPointerFullPaths<
+//   ExtDef extends ExtensionDef,
+//   TopoNode extends TopologyNode = Port<any>,
+// > = `${ExtDef['name']}/${ExtPointerPaths<ExtDef, TopoNode>}`
+
 export type PortPayload<P extends Port<any>> = P extends Port<infer PL> ? PL : never
 export type PathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
   ExtDef['ports'],

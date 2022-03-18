@@ -1,5 +1,6 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { AsyncPort, asyncRequest, asyncRespond, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
+import type { AsyncPort, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
+import { asyncRequest, asyncRespond } from '@moodlenet/kernel/lib/v1'
 import type { MNPriHttpExt } from '@moodlenet/pri-http/pkg'
 import { rename, rm, writeFile } from 'fs/promises'
 import { debounce } from 'lodash'
@@ -27,12 +28,10 @@ export type WebappExt = {
     ensureExtension: AsyncPort<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
   }
 }
+
 v1.Extension(
-  module,
-  {
-    name: '@moodlenet/webapp',
-    version: '1.0.0',
-  },
+  module,webappExtId
+  ,
   {
     async start({ shell }) {
       v1.watchExt<MNPriHttpExt>(shell, '@moodlenet/pri-http', priHttp => {
@@ -61,37 +60,41 @@ v1.Extension(
 )
 
 // let runWp:Promise<webpack.Stats>|undefined
-const build = debounce( async () => {
-  console.log('BUILD WEBAPP')
+const build = debounce(
+  async () => {
+    console.log('BUILD WEBAPP')
 
-  const extensionsJsFileName = resolve(__dirname, '..', 'extensions.js' /* 'src', 'webapp', 'extensions.ts' */)
-  console.log(`generate extensions.js ....`, { extensionsJsFileName })
-  await writeFile(extensionsJsFileName, extensionsJsString(), { encoding: 'utf8' })
+    const extensionsJsFileName = resolve(__dirname, '..', 'extensions.js' /* 'src', 'webapp', 'extensions.ts' */)
+    console.log(`generate extensions.js ....`, { extensionsJsFileName })
+    await writeFile(extensionsJsFileName, extensionsJsString(), { encoding: 'utf8' })
 
-  const config: webpack.Configuration = wpCfg({}, { mode: 'production', watch: false })
-  const webpackAliases = Object.entries(extAliases).reduce(
-    (aliases, [pkgName, { moduleLoc }]) => ({
-      ...aliases,
-      [pkgName]: moduleLoc,
-    }),
-    {},
-  )
-  config.resolve!.alias = { ...config.resolve!.alias, ...webpackAliases }
-  console.log(`Extension aliases ....`, inspect({ /* config,  */ extAliases, webpackAliases }, false, 6, true))
+    const config: webpack.Configuration = wpCfg({}, { mode: 'production', watch: false })
+    const webpackAliases = Object.entries(extAliases).reduce(
+      (aliases, [pkgName, { moduleLoc }]) => ({
+        ...aliases,
+        [pkgName]: moduleLoc,
+      }),
+      {},
+    )
+    config.resolve!.alias = { ...config.resolve!.alias, ...webpackAliases }
+    console.log(`Extension aliases ....`, inspect({ /* config,  */ extAliases, webpackAliases }, false, 6, true))
 
-  const wp = webpack(config)
-  const runWp = promisify(wp.run.bind(wp))
-  const stats = await runWp()
-  if (stats?.hasErrors()) {
-    throw new Error(`Webpack build error: ${stats.toString()}`)
-  }
-  console.log(`Webpack build done`)
-  await rename(latestBuildFolder, oldLatestBuildFolder)
-  console.log(`renaming output to latestBuildFolder..`)
-  await rename(config.output!.path!, latestBuildFolder)
-  removeOldLatestBuildFolder()
-  console.log(`build done`)
-},3000,{trailing:true})
+    const wp = webpack(config)
+    const runWp = promisify(wp.run.bind(wp))
+    const stats = await runWp()
+    if (stats?.hasErrors()) {
+      throw new Error(`Webpack build error: ${stats.toString()}`)
+    }
+    console.log(`Webpack build done`)
+    await rename(latestBuildFolder, oldLatestBuildFolder)
+    console.log(`renaming output to latestBuildFolder..`)
+    await rename(config.output!.path!, latestBuildFolder)
+    removeOldLatestBuildFolder()
+    console.log(`build done`)
+  },
+  3000,
+  { trailing: true },
+)
 
 function removeOldLatestBuildFolder() {
   console.log(`removing oldLatestBuildFolder..`)

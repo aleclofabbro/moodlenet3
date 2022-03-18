@@ -5,8 +5,8 @@ import { resolve } from 'path'
 import { getRegisteredExtension } from './extension-registry/lib'
 import { Extension } from './extension/extension'
 import type { ExtensionId, ExtIdOf } from './extension/types'
-import { watchExt } from './lib/flow'
-import { AsyncPort, asyncRequest, asyncRespond } from './lib/port'
+import { useExtension } from './lib/flow'
+import { asyncFn, AsyncPort, handleAll } from './lib/port'
 import { createMessage, makeShell, pushMessage } from './message'
 import { FullPortAddress, PortAddress } from './port-address/types'
 
@@ -45,36 +45,38 @@ export type KernelExt = {
   }
 }
 
+// type Point<NodeType extends TopologyNode=Port<any>>= <Ext extends ExtensionDef>(
+//   name: Ext['name']
+// ) => <Path extends ExtPointerPaths<Ext,NodeType>>(_: Path) => Pointer<Ext,NodeType,Path>
+
+// declare const point:Point<AsyncPort<any>>
+// const pointer = point<KernelExt>('@moodlenet/kernel')('extensions.installAndActivate')
+
 //TODO: returns something to pkgmng ?
 export const boot: Boot = async pkgMng => {
   const extRequire = createRequire(pkgMng?.nodeModulesDir ?? process.cwd())
 
   Extension<KernelExt>(module, kernelExtId, {
     async start({ shell }) {
-      watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
-        if (!webapp?.active) {
-          return
-        }
-        asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
+      useExtension<WebappExt>(shell, '@moodlenet/webapp', () => {
+        asyncFn<WebappExt>(
+          shell,
+          '@moodlenet/webapp::ensureExtension',
+        )({
           extId: kernelExtId,
           moduleLoc: resolve(__dirname, '..', '..'),
           cmpPath: 'lib/v1/webapp',
         })
       })
 
-      asyncRespond<KernelExt>({
-        extName: '@moodlenet/kernel',
-        shell,
-      })({
-        path: 'extensions.installAndActivate',
-        afnPort:
+      handleAll<KernelExt>(shell, '@moodlenet/kernel', {
+        'extensions.installAndActivate':
           _shell =>
           async ({ extId, pkgLoc = `${extId.name}@${extId.version}` }) => {
             const installResp = await pkgMng.install([pkgLoc])
             console.log(installResp.all)
             extRequire(extId.name)
             startExtension(extId.name)
-            // return 1
           },
       })
 
