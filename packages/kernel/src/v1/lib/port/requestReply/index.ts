@@ -31,14 +31,14 @@ export type AsyncPort<Afn extends AsyncFn> = {
 
 export type AsyncPortFnOf<T> = (shell: PortShell<{ asyncPortReqArgs: Parameters<AsyncFnOf<T>> }>) => AsyncFnOf<T>
 
-export const handle =
+export const reply =
   <Ext extends ExtensionDef>(shell: PortShell, pointer: ExtAsyncPortPaths<Ext>) =>
   (afnPort: AsyncPortFnOf<TypeofPath<Ext['ports'], typeof pointer>>) => {
     const [extName, path]: any[] = pointer.split('::')
     return asyncRespond({ extName, shell })({ afnPort: afnPort as any, path })
   }
 
-export const handleAll = <Ext extends ExtensionDef>(
+export const replyAll = <Ext extends ExtensionDef>(
   shell: PortShell,
   extName: Ext['name'],
   handles: {
@@ -50,7 +50,7 @@ export const handleAll = <Ext extends ExtensionDef>(
       const fullPath = `${extName}::${path}`
       return {
         ...__,
-        [fullPath]: handle(shell, fullPath as any)(port as any),
+        [fullPath]: reply(shell, fullPath as any)(port as any),
       }
     },
     {} as {
@@ -97,9 +97,9 @@ export type AsyncRequest = <ExtDef extends ExtensionDef>(_: {
 export const asyncRequest: AsyncRequest =
   ({ extName, shell }) =>
   ({ path }) =>
-    asyncFn(shell, `${extName}::${path}`)
+    request(shell, `${extName}::${path}`)
 
-export const asyncFn = <Ext extends ExtensionDef>(
+export const request = <Ext extends ExtensionDef>(
   shell: PortShell,
   pointer: `${Ext['name']}::${ExtAsyncPortPaths<Ext>}`,
 ): AsyncFnOf<TypeofPath<Ext['ports'], typeof pointer extends `${Ext['name']}::${infer Rest}` ? Rest : never>> => {

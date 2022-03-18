@@ -6,7 +6,7 @@ import { getRegisteredExtension } from './extension-registry/lib'
 import { Extension } from './extension/extension'
 import type { ExtensionId, ExtIdOf } from './extension/types'
 import { useExtension } from './lib/flow'
-import { asyncFn, AsyncPort, handleAll } from './lib/port'
+import { AsyncPort, replyAll, request } from './lib/port'
 import { createMessage, makeShell, pushMessage } from './message'
 import { FullPortAddress, PortAddress } from './port-address/types'
 
@@ -59,7 +59,7 @@ export const boot: Boot = async pkgMng => {
   Extension<KernelExt>(module, kernelExtId, {
     async start({ shell }) {
       useExtension<WebappExt>(shell, '@moodlenet/webapp', () => {
-        asyncFn<WebappExt>(
+        request<WebappExt>(
           shell,
           '@moodlenet/webapp::ensureExtension',
         )({
@@ -69,7 +69,7 @@ export const boot: Boot = async pkgMng => {
         })
       })
 
-      handleAll<KernelExt>(shell, '@moodlenet/kernel', {
+      replyAll<KernelExt>(shell, '@moodlenet/kernel', {
         'extensions.installAndActivate':
           _shell =>
           async ({ extId, pkgLoc = `${extId.name}@${extId.version}` }) => {

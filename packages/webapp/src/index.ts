@@ -2,6 +2,7 @@ import { v1 } from '@moodlenet/kernel/lib'
 import type { AsyncPort, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
 import { asyncRequest, asyncRespond } from '@moodlenet/kernel/lib/v1'
 import type { MNPriHttpExt } from '@moodlenet/pri-http/pkg'
+import { existsSync } from 'fs'
 import { rename, rm, writeFile } from 'fs/promises'
 import { debounce } from 'lodash'
 import { join, resolve } from 'path'
@@ -29,35 +30,31 @@ export type WebappExt = {
   }
 }
 
-v1.Extension(
-  module,webappExtId
-  ,
-  {
-    async start({ shell }) {
-      v1.watchExt<MNPriHttpExt>(shell, '@moodlenet/pri-http', priHttp => {
-        // console.log('webapp watched priHttp ', priHttp)
-        if (!priHttp?.active) {
-          return
-        }
-        asyncRequest<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({ path: 'setWebAppRootFolder' })({
-          folder: latestBuildFolder,
-        })
+v1.Extension(module, webappExtId, {
+  async start({ shell }) {
+    v1.watchExt<MNPriHttpExt>(shell, '@moodlenet/pri-http', priHttp => {
+      // console.log('webapp watched priHttp ', priHttp)
+      if (!priHttp?.active) {
+        return
+      }
+      asyncRequest<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({ path: 'setWebAppRootFolder' })({
+        folder: latestBuildFolder,
       })
-      asyncRespond<WebappExt>({ extName: '@moodlenet/webapp', shell })({
-        path: 'ensureExtension',
-        afnPort:
-          _shell =>
-          async ({ cmpPath, extId, moduleLoc }) => {
-            extAliases[extId.name] = { moduleLoc, cmpPath }
-            build()
-          },
-      })
-      await build()
-      await removeOldLatestBuildFolder()
-      return async () => {}
-    },
+    })
+    asyncRespond<WebappExt>({ extName: '@moodlenet/webapp', shell })({
+      path: 'ensureExtension',
+      afnPort:
+        _shell =>
+        async ({ cmpPath, extId, moduleLoc }) => {
+          extAliases[extId.name] = { moduleLoc, cmpPath }
+          build()
+        },
+    })
+    await build()
+    await removeOldLatestBuildFolder()
+    return async () => {}
   },
-)
+})
 
 // let runWp:Promise<webpack.Stats>|undefined
 const build = debounce(
@@ -86,7 +83,9 @@ const build = debounce(
       throw new Error(`Webpack build error: ${stats.toString()}`)
     }
     console.log(`Webpack build done`)
-    await rename(latestBuildFolder, oldLatestBuildFolder)
+    if (existsSync(latestBuildFolder)) {
+      await rename(latestBuildFolder, oldLatestBuildFolder)
+    }
     console.log(`renaming output to latestBuildFolder..`)
     await rename(config.output!.path!, latestBuildFolder)
     removeOldLatestBuildFolder()
