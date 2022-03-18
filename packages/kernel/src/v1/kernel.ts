@@ -6,7 +6,7 @@ import { getRegisteredExtension } from './extension-registry/lib'
 import { Extension } from './extension/extension'
 import type { ExtensionId, ExtIdOf } from './extension/types'
 import { useExtension } from './lib/flow'
-import { AsyncPort, replyAll, request } from './lib/port'
+import { AsyncPort, reply, replyAll, request } from './lib/port'
 import { createMessage, makeShell, pushMessage } from './message'
 import { FullPortAddress, PortAddress } from './port-address/types'
 
@@ -42,6 +42,7 @@ export type KernelExt = {
     extensions: {
       installAndActivate: AsyncPort<(_: { pkgLoc?: string; extId: ExtensionId }) => Promise<void>>
     }
+    ___CONTROL_PORT_REMOVE_ME_LATER___: AsyncPort<<T>(_: T) => Promise<{ _: T }>>
   }
 }
 
@@ -59,14 +60,13 @@ export const boot: Boot = async pkgMng => {
   Extension<KernelExt>(module, kernelExtId, {
     async start({ shell }) {
       useExtension<WebappExt>(shell, '@moodlenet/webapp', () => {
-        request<WebappExt>(
-          shell,
-          '@moodlenet/webapp::ensureExtension',
-        )({
+        request<WebappExt>(shell)('@moodlenet/webapp::ensureExtension')({
           extId: kernelExtId,
           moduleLoc: resolve(__dirname, '..', '..'),
           cmpPath: 'lib/v1/webapp',
         })
+
+        request<WebappExt>(shell)('@moodlenet/webapp::___CONTROL_PORT_REMOVE_ME_LATER___')('2').then(_ => _)
       })
 
       replyAll<KernelExt>(shell, '@moodlenet/kernel', {
@@ -78,8 +78,12 @@ export const boot: Boot = async pkgMng => {
             extRequire(extId.name)
             startExtension(extId.name)
           },
+        '___CONTROL_PORT_REMOVE_ME_LATER___': _shell => async _ => ({ _ }),
       })
 
+      reply<KernelExt>(shell)('@moodlenet/kernel::extensions.installAndActivate')(_s => async _a => {
+        ;`${_a.extId}`
+      })
       await startCoreExtensions()
 
       return async () => {}

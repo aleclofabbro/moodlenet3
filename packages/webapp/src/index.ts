@@ -27,6 +27,7 @@ export type WebappExt = {
   version: '1.0.0'
   ports: {
     ensureExtension: AsyncPort<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
+    ___CONTROL_PORT_REMOVE_ME_LATER___: AsyncPort<<T>(_: T) => Promise<{ _: T }>>
   }
 }
 

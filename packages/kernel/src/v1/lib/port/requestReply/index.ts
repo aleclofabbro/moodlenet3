@@ -32,10 +32,11 @@ export type AsyncPort<Afn extends AsyncFn> = {
 export type AsyncPortFnOf<T> = (shell: PortShell<{ asyncPortReqArgs: Parameters<AsyncFnOf<T>> }>) => AsyncFnOf<T>
 
 export const reply =
-  <Ext extends ExtensionDef>(shell: PortShell, pointer: ExtAsyncPortPaths<Ext>) =>
-  (afnPort: AsyncPortFnOf<TypeofPath<Ext['ports'], typeof pointer>>) => {
-    const [extName, path]: any[] = pointer.split('::')
-    return asyncRespond({ extName, shell })({ afnPort: afnPort as any, path })
+  <Ext extends ExtensionDef>(shell: PortShell) =>
+  <Path extends ExtAsyncPortPaths<Ext>>(pointer: `${Ext['name']}::${Path}`) =>
+  (afnPort: AsyncPortFnOf<TypeofPath<Ext['ports'], Path>>) => {
+    const [extName, path] = pointer.split('::') as [Ext['name'], Path]
+    return asyncRespond<Ext>({ extName, shell })<Path>({ afnPort: afnPort as any, path: path as any })
   }
 
 export const replyAll = <Ext extends ExtensionDef>(
@@ -50,7 +51,7 @@ export const replyAll = <Ext extends ExtensionDef>(
       const fullPath = `${extName}::${path}`
       return {
         ...__,
-        [fullPath]: reply(shell, fullPath as any)(port as any),
+        [fullPath]: reply(shell)(fullPath as any)(port as any),
       }
     },
     {} as {
@@ -94,43 +95,52 @@ export type AsyncRequest = <ExtDef extends ExtensionDef>(_: {
 >(_: {
   path: Path
 }) => Afn
-export const asyncRequest: AsyncRequest =
-  ({ extName, shell }) =>
-  ({ path }) =>
-    request(shell, `${extName}::${path}`)
 
-export const request = <Ext extends ExtensionDef>(
-  shell: PortShell,
-  pointer: `${Ext['name']}::${ExtAsyncPortPaths<Ext>}`,
-): AsyncFnOf<TypeofPath<Ext['ports'], typeof pointer extends `${Ext['name']}::${infer Rest}` ? Rest : never>> => {
-  const [extName, path]: any[] = pointer.split('::')
-  return ((asyncPortReqArgs: never) =>
-    new Promise((resolve, reject) => {
-      const { requestPath, responsePath } = paths(path)
-      const payload = { asyncPortReqArgs } as never // ^^'
-      const requestMessage = shell.push(extName, requestPath, payload)
-      const unsub = listenPort({
-        extName,
-        path: responsePath,
-        shell,
-        listener: responseListenerShell => {
-          const message = responseListenerShell.message
-          if (message.parentMsgId !== requestMessage.id) {
-            return
-          }
-          unsub()
-          const asyncResponse = message.payload as any
-          // console.log({ asyncResponse })
-          if ('asyncPortRespError' in asyncResponse) {
-            reject(asyncResponse.asyncPortRespError)
-          } else {
-            resolve(asyncResponse.asyncPortRespValue)
-          }
-        },
-      })
-      return unsub
-    })) as any
-}
+export const asyncRequest =
+  <ExtDef extends ExtensionDef>({ extName, shell }: { shell: PortShell; extName: ExtDef['name'] }) =>
+  <
+    Path extends ExtAsyncPortPaths<ExtDef>,
+    //Afn extends ExtPathAsyncFn<ExtDef, Path> = ExtPathAsyncFn<ExtDef, Path>,
+  >({
+    path,
+  }: {
+    path: Path
+  }) =>
+    request<ExtDef>(shell)<Path>(`${extName}::${path}`)
+
+export const request =
+  <Ext extends ExtensionDef>(shell: PortShell) =>
+  <Path extends ExtAsyncPortPaths<Ext>>(
+    pointer: `${Ext['name']}::${Path}`,
+  ): AsyncFnOf<TypeofPath<Ext['ports'], Path>> => {
+    const [extName, path]: any[] = pointer.split('::')
+    return ((asyncPortReqArgs: never) =>
+      new Promise((resolve, reject) => {
+        const { requestPath, responsePath } = paths(path)
+        const payload = { asyncPortReqArgs } as never // ^^'
+        const requestMessage = shell.push(extName, requestPath, payload)
+        const unsub = listenPort({
+          extName,
+          path: responsePath,
+          shell,
+          listener: responseListenerShell => {
+            const message = responseListenerShell.message
+            if (message.parentMsgId !== requestMessage.id) {
+              return
+            }
+            unsub()
+            const asyncResponse = message.payload as any
+            // console.log({ asyncResponse })
+            if ('asyncPortRespError' in asyncResponse) {
+              reject(asyncResponse.asyncPortRespError)
+            } else {
+              resolve(asyncResponse.asyncPortRespValue)
+            }
+          },
+        })
+        return unsub
+      })) as any
+  }
 
 function paths(path: string) {
   return {
