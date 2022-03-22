@@ -1,11 +1,8 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { AsyncPort, asyncRespond, PortShell } from '@moodlenet/kernel/lib/v1'
+import { AsyncPort, PortShell, replyAll } from '@moodlenet/kernel/lib/v1'
 import { json } from 'body-parser'
-import express, { Express } from 'express'
-import type { Server } from 'http'
+import express from 'express'
 
-let app: Express | undefined
-let server: Server | undefined
 export type MNPriHttpExt = {
   name: '@moodlenet/pri-http'
   version: '1.0.0'
@@ -25,12 +22,11 @@ v1.Extension<MNPriHttpExt>(
       const rootPath = shell.env.rootPath
       const extPortsApp = makeExtPortsApp(shell)
 
-      app = express().use(`${rootPath}/`, (_, __, next) => next())
+      const app = express().use(`${rootPath}/`, (_, __, next) => next())
       app.use(`/_srv`, extPortsApp)
-      server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
-      asyncRespond<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({
-        path: 'setWebAppRootFolder',
-        afnPort: _shell => async p => {
+      const server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
+      replyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http', {
+        setWebAppRootFolder: _shell => async p => {
           console.log({ p })
           const staticApp = express.static(p.folder)
           app?.get(`/*`, staticApp)

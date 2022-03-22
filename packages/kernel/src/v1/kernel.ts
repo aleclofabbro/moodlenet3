@@ -40,18 +40,11 @@ export type KernelExt = {
   version: '1.0.0'
   ports: {
     extensions: {
-      installAndActivate: AsyncPort<(_: { pkgLoc?: string; extId: ExtensionId }) => Promise<void>>
+      installAndActivate: AsyncPort<(_: { pkgLoc?: string; extId: ExtensionId }) => Promise<number>> // returning a number for testing race condition !
     }
     ___CONTROL_PORT_REMOVE_ME_LATER___: AsyncPort<<T>(_: T) => Promise<{ _: T }>>
   }
 }
-
-// type Point<NodeType extends TopologyNode=Port<any>>= <Ext extends ExtensionDef>(
-//   name: Ext['name']
-// ) => <Path extends ExtPointerPaths<Ext,NodeType>>(_: Path) => Pointer<Ext,NodeType,Path>
-
-// declare const point:Point<AsyncPort<any>>
-// const pointer = point<KernelExt>('@moodlenet/kernel')('extensions.installAndActivate')
 
 //TODO: returns something to pkgmng ?
 export const boot: Boot = async pkgMng => {
@@ -77,12 +70,15 @@ export const boot: Boot = async pkgMng => {
             console.log(installResp.all)
             extRequire(extId.name)
             startExtension(extId.name)
+            return 1
           },
         '___CONTROL_PORT_REMOVE_ME_LATER___': _shell => async _ => ({ _ }),
       })
 
       reply<KernelExt>(shell)('@moodlenet/kernel::extensions.installAndActivate')(_s => async _a => {
-        ;`${_a.extId}`
+        // Race condition replying this port ! ^^' :)
+        // TODO: BTW remove me ^^'
+        return 2
       })
       await startCoreExtensions()
 
