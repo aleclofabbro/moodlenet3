@@ -47,8 +47,3 @@ export type PushMessage = <
   path: Path,
   payload: PathPayload<ExtDef, Path>,
 ) => PathPayload<ExtDef, Path> extends Obj ? Message<PathPayload<ExtDef, Path>> : never
-
-export type Session = {
-  user: User
-}
-export type User = {}

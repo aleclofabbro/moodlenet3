@@ -3,7 +3,7 @@ import { ExtensionDef } from '../extension'
 import { assertRegisteredExtension, getRegisteredExtension } from '../extension-registry/lib'
 import { extEnv } from '../kernel'
 import { FullPortAddress, PortAddress } from '../port-address/types'
-import { LookupExt, LookupPort, PortListener, PortShell, PushMessage, Session } from '../types'
+import { LookupExt, LookupPort, PortListener, PortShell, PushMessage } from '../types'
 import { Message, Obj } from './types'
 
 export const pushMessage = <P extends Obj>(message: Message<P>) => {
@@ -57,7 +57,6 @@ export function makeShell<P extends Obj = Obj>({
       createMessage({
         payload: payload as any,
         target: { extName, path },
-        session: message.session,
         source: cwAddress,
         parentMsgId: message.id,
       }),
@@ -110,10 +109,8 @@ export function createMessage<P extends Obj>({
   payload,
   source,
   target,
-  session,
   parentMsgId,
 }: {
-  session: Session
   payload: P
   source: FullPortAddress
   target: PortAddress
@@ -123,7 +120,6 @@ export function createMessage<P extends Obj>({
     id: newId(),
     ctx: {},
     payload,
-    session,
     source,
     target,
     parentMsgId,
