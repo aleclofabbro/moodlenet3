@@ -1,5 +1,5 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import type { AsyncPort, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
+import type { AsyncPort, ExtensionDef, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
 import { asyncRequest, asyncRespond } from '@moodlenet/kernel/lib/v1'
 import type { MNPriHttpExt } from '@moodlenet/pri-http/pkg'
 import { existsSync } from 'fs'
@@ -22,15 +22,15 @@ export const webappExtId: ExtIdOf<WebappExt> = {
   name: '@moodlenet/webapp',
   version: '1.0.0',
 } as const
-export type WebappExt = {
-  name: '@moodlenet/webapp'
-  version: '1.0.0'
-  ports: {
+
+export type WebappExt = ExtensionDef<
+  '@moodlenet/webapp',
+  '1.0.0',
+  {
     ensureExtension: AsyncPort<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
     ___CONTROL_PORT_REMOVE_ME_LATER___: AsyncPort<<T>(_: T) => Promise<{ _: T }>>
   }
-}
-
+>
 v1.Extension(module, webappExtId, {
   async start({ shell }) {
     v1.watchExt<MNPriHttpExt>(shell, '@moodlenet/pri-http', priHttp => {

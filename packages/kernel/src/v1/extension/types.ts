@@ -9,13 +9,17 @@ export type ExtensionId<Name extends ExtName = ExtName, Version extends ExtVersi
   version: Version
 }
 export type ExtIdOf<ExtDef extends ExtensionDef> = Pick<ExtDef, keyof ExtensionId>
+export type ExtNameOf<ExtDef extends ExtensionDef> = ExtDef['name']
+export type ExtCacheOf<ExtDef extends ExtensionDef> = ExtDef['cache']
 
 export type ExtensionDef<
   Name extends ExtName = ExtName,
   Version extends ExtVersion = ExtVersion,
   PortsTopo extends PortsTopology = PortsTopology,
+  Cache = unknown,
 > = ExtensionId<Name, Version> & {
   ports: PortsTopo
+  cache: Cache
 }
 
 export type PortPath = string

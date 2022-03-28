@@ -2,9 +2,9 @@ import type { Boot } from '@moodlenet/pkg-mng/lib/v1/types'
 import type { WebappExt } from '@moodlenet/webapp/lib'
 import { createRequire } from 'module'
 import { resolve } from 'path'
-import { getRegisteredExtension } from './extension-registry/lib'
+import { createLocalExtensionRegistry } from './extension-registry/lib'
 import { Extension } from './extension/extension'
-import type { ExtensionId, ExtIdOf } from './extension/types'
+import type { ExtensionDef, ExtensionId, ExtIdOf } from './extension/types'
 import { useExtension } from './lib/flow'
 import { AsyncPort, reply, replyAll, request } from './lib/port'
 import { createMessage, makeShell, pushMessage } from './message'
@@ -35,19 +35,26 @@ export const kernelExtId: ExtIdOf<KernelExt> = {
   version: '1.0.0',
 } as const
 
-export type KernelExt = {
-  name: '@moodlenet/kernel'
-  version: '1.0.0'
-  ports: {
+export type KernelExt = ExtensionDef<
+  '@moodlenet/kernel',
+  '1.0.0',
+  {
     extensions: {
       installAndActivate: AsyncPort<(_: { pkgLoc?: string; extId: ExtensionId }) => Promise<number>> // returning a number for testing race condition !
     }
     ___CONTROL_PORT_REMOVE_ME_LATER___: AsyncPort<<T>(_: T) => Promise<{ _: T }>>
   }
-}
+>
 
-//TODO: returns something to pkgmng ?
+// export type ModuleCache = {
+//   get<Ext extends ExtensionDef>(extName: ExtNameOf<Ext>): Promise<ExtCacheOf<Ext>>
+//   set<Ext extends ExtensionDef>(extName: ExtNameOf<Ext>, cache: ExtCacheOf<Ext>): Promise<ExtCacheOf<Ext>>
+// }
+// export type Cfg = {
+//   moduleCache: ModuleCache
+// }
 export const boot: Boot = async pkgMng => {
+  const localExtReg = createLocalExtensionRegistry()
   const extRequire = createRequire(pkgMng?.nodeModulesDir ?? process.cwd())
 
   Extension<KernelExt>(module, kernelExtId, {
@@ -106,7 +113,7 @@ export const boot: Boot = async pkgMng => {
   }
 
   async function startExtension(extIdName: string) {
-    const extReg = getRegisteredExtension(extIdName)
+    const extReg = localExtReg.getRegisteredExtension(extIdName)
     if (!extReg) {
       throw new Error(`Extension [${extIdName}] not installed`)
     }

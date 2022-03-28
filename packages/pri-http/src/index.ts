@@ -1,15 +1,16 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import { AsyncPort, PortShell, replyAll } from '@moodlenet/kernel/lib/v1'
+import type { AsyncPort, ExtensionDef, PortShell } from '@moodlenet/kernel/lib/v1'
+import { replyAll } from '@moodlenet/kernel/lib/v1'
 import { json } from 'body-parser'
 import express from 'express'
 
-export type MNPriHttpExt = {
-  name: '@moodlenet/pri-http'
-  version: '1.0.0'
-  ports: {
+export type MNPriHttpExt = ExtensionDef<
+  '@moodlenet/pri-http',
+  '1.0.0',
+  {
     setWebAppRootFolder: AsyncPort<(_: { folder: string }) => Promise<void>>
   }
-}
+>
 v1.Extension<MNPriHttpExt>(
   module,
   {
