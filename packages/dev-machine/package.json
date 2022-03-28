@@ -8,13 +8,12 @@
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
     "@moodlenet/pkg-mng": "^1.0.0",
+    "@moodlenet/kernel": "^1.0.0",
     "dotenv": "^16.0.0",
     "dotenv-expand": "^8.0.1"
   },
   "scripts": {
-    "build-dev": "tsc --watch",
     "start": "node index.js",
-    "clean": "shx rm -rf lib",
     "start-dev": "node-dev --trace-warnings --inspect --deps 4 --respawn --notify=false ./index.js"
   }
 }

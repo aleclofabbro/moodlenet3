@@ -125,7 +125,6 @@ export const boot: Boot = async pkgMng => {
     pushMessage(
       createMessage({
         payload: {},
-        session: { user: {} },
         source: { extId: extReg.id, path: 'activated' },
         target: { extName: kernelExtId.name, path: 'extensions.activated' },
         parentMsgId: null,
@@ -145,7 +144,6 @@ export const boot: Boot = async pkgMng => {
     }
     const startMessage = createMessage({
       payload: {},
-      session: { user: {} },
       source: { extId: kernelExtId, path: '' },
       target: startExtAddress,
       parentMsgId: null,
