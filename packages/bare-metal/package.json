@@ -1,20 +1,16 @@
 {
-  "name": "@moodlenet/pkg-mng",
+  "name": "@moodlenet/bare-metal",
   "version": "1.0.0",
   "main": "index.js",
   "license": "AGPL-3.0",
-  "description": "moodlenet pkg-mng package",
+  "description": "moodlenet bare-metal package",
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
     "@types/esm": "^3.2.0",
-    "bullmq": "^1.74.2",
     "dotenv": "^16.0.0",
     "dotenv-expand": "^8.0.1",
     "esm": "^3.2.25",
-    "execa": "^5.1.1",
-    "lmify": "^0.3.0",
-    "npm": "^8.5.4",
     "pkg-dir": "^5"
   },
   "devDependencies": {
@@ -26,9 +22,7 @@
     "typescript": "^4.6.2"
   },
   "scripts": {
-    "build-dev": "tsc --watch",
     "start": "node index.js",
-    "clean": "shx rm -rf lib",
     "start-dev": "node-dev --trace-warnings --inspect --deps 4 --respawn --notify=false ./index.js"
   }
 }

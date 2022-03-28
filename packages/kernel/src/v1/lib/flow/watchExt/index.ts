@@ -1,7 +1,7 @@
 import { ExtensionDef } from '../../../extension'
 import { LookupResult, PortShell } from '../../../types'
 
-type Watcher<Ext extends ExtensionDef> = (_: LookupResult<Ext>) => void
+type Watcher<Ext extends ExtensionDef> = (_: LookupResult<Ext> | undefined) => void
 export const watchExt = <Ext extends ExtensionDef>(shell: PortShell, extName: Ext['name'], watcher: Watcher<Ext>) => {
   trigWatch()
   return shell.listen(listenShell => {
@@ -18,19 +18,21 @@ export const watchExt = <Ext extends ExtensionDef>(shell: PortShell, extName: Ex
 }
 
 type Cleanup = () => any
-type ExtUser<Ext extends ExtensionDef> = (_: LookupResult<Ext>) => Cleanup | void
+type MCleanup = Cleanup | void
+type PMCleanup = MCleanup | Promise<MCleanup>
+type ExtUser<Ext extends ExtensionDef> = (_: LookupResult<Ext>) => PMCleanup
 export const useExtension = <Ext extends ExtensionDef>(
   shell: PortShell,
   extName: Ext['name'],
   extUser: ExtUser<Ext>,
 ) => {
-  let cleanup: Cleanup | void
-  return watchExt<Ext>(shell, extName, ext => {
+  let cleanup: PMCleanup
+  return watchExt<Ext>(shell, extName, async ext => {
     // if (!ext) {
     //   throw new Error(`TODO: Not ${extName} installed`)
     // }
     if (!ext?.active) {
-      cleanup?.()
+      ;(await cleanup)?.()
     } else {
       cleanup = extUser(ext)
     }

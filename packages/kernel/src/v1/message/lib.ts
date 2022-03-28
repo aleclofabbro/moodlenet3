@@ -1,12 +1,11 @@
 import { MsgID } from '.'
 import { ExtensionDef } from '../extension'
-import { assertRegisteredExtension, getRegisteredExtension } from '../extension-registry/lib'
-import { extEnv } from '../kernel'
+import { ExtensionRegistry } from '../extension-registry'
 import { FullPortAddress, PortAddress } from '../port-address/types'
-import { LookupExt, LookupPort, PortListener, PortShell, PushMessage } from '../types'
+import { LookupExt, PortListener, PortShell, PushMessage } from '../types'
 import { Message, Obj } from './types'
 
-export const pushMessage = <P extends Obj>(message: Message<P>) => {
+export const pushMessage = <P extends Obj>(message: Message<P>, extReg: ExtensionRegistry) => {
   console.log(
     `
 +++++++++++++++++++++++
@@ -17,15 +16,15 @@ pushMessage`,
 `,
   )
   const { target, source } = message
-  const sourceExt = getRegisteredExtension(source.extId.name)
-  const targetExt = getRegisteredExtension(target.extName)
+  const sourceExt = extReg.getRegisteredExtension(source.extId.name)
+  const targetExt = extReg.getRegisteredExtension(target.extName)
 
   if (!(targetExt && sourceExt)) {
     throw new Error(`source or target extensions not available`)
   }
 
   msgListeners.forEach(({ listener, cwAddress }) => {
-    const listenerExt = getRegisteredExtension(cwAddress.extId.name)
+    const listenerExt = extReg.getRegisteredExtension(cwAddress.extId.name)
     if (!listenerExt?.deployment) {
       //TODO: WARN
       return
@@ -33,6 +32,7 @@ pushMessage`,
     const shell = makeShell({
       cwAddress,
       message,
+      extReg,
     })
     if (cwAddress.extId.name === message.target.extName && cwAddress.path === message.target.path) {
       setImmediate(() => listener(shell))
@@ -46,11 +46,16 @@ pushMessage`,
 export function makeShell<P extends Obj = Obj>({
   message,
   cwAddress,
+  extReg,
 }: {
   message: Message<P>
   cwAddress: FullPortAddress
+  extReg: ExtensionRegistry
 }): PortShell<P> {
-  const ext = assertRegisteredExtension(cwAddress.extId.name)
+  const extRecord = extReg.getRegisteredExtension(cwAddress.extId.name)
+  if (!extRecord?.deployment) {
+    throw new Error(`extension ${cwAddress.extId.name} not available atm`)
+  }
   const listen = (listener: PortListener) => addListener(cwAddress, listener)
   const push: PushMessage = (extName, path, payload) =>
     pushMessage(
@@ -60,23 +65,22 @@ export function makeShell<P extends Obj = Obj>({
         source: cwAddress,
         parentMsgId: message.id,
       }),
+      extReg,
     ) as any
 
   const lookup: LookupExt = <Ext extends ExtensionDef>(extName: Ext['name']) => {
-    const regExt = getRegisteredExtension(extName)
-    if (!regExt) {
+    const extRecord = extReg.getRegisteredExtension(extName)
+    if (!extRecord) {
       // throw new Error(`${extName} extensions not available`)
       return undefined
     }
-    const port: LookupPort<Ext> = path => payload => push(regExt.id.name, path, payload)
-    return regExt.deployment
-      ? {
-          port,
-          active: true,
-        }
-      : { active: false }
+    return {
+      active: !!extRecord.deployment,
+      extId: extRecord.id,
+      pkgInfo: extRecord.pkgInfo,
+    }
   }
-  const env = extEnv(ext.id.name)
+  const env = extRecord.env
 
   return {
     env,

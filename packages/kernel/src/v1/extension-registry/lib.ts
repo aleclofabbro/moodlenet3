@@ -1,7 +1,7 @@
-import { ExtensionId, ExtLCStop, ExtLifeCycleHandle } from '../extension/types'
+import { ExtensionId, ExtEnv, ExtLCStop, ExtLifeCycleHandle } from '../extension/types'
 import { PkgInfo } from '../pkg-info/types'
 
-export type ExtensionRegistry = {
+export type ExtensionRegistryHash = {
   [ExtId in string]: ExtensionRegistryRecord
 }
 export type Deployment = {
@@ -10,12 +10,15 @@ export type Deployment = {
 }
 export type ExtensionRegistryRecord<ExtId extends ExtensionId = ExtensionId> = {
   id: ExtId
+  env: ExtEnv
   deployment: 'deploying' | Deployment | undefined
   pkgInfo: PkgInfo
   lifeCycle: ExtLifeCycleHandle
 }
+
+export type ExtensionRegistry = ReturnType<typeof createLocalExtensionRegistry>
 export const createLocalExtensionRegistry = () => {
-  const extensionRegistry: ExtensionRegistry = {}
+  const extensionRegistry: ExtensionRegistryHash = {}
 
   return {
     getExtensions,
@@ -55,10 +58,12 @@ export const createLocalExtensionRegistry = () => {
     id,
     pkgInfo,
     lifeCycle,
+    env,
   }: {
     id: ExtId
     pkgInfo: PkgInfo
     lifeCycle: ExtLifeCycleHandle
+    env: ExtEnv
   }) {
     const pkgName = pkgInfo.json.name
 
@@ -74,6 +79,7 @@ export const createLocalExtensionRegistry = () => {
       pkgInfo,
       id,
       lifeCycle,
+      env,
     }
 
     return (extensionRegistry[pkgName] = extRegRec)

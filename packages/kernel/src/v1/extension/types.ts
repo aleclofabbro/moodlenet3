@@ -11,6 +11,7 @@ export type ExtensionId<Name extends ExtName = ExtName, Version extends ExtVersi
 export type ExtIdOf<ExtDef extends ExtensionDef> = Pick<ExtDef, keyof ExtensionId>
 export type ExtNameOf<ExtDef extends ExtensionDef> = ExtDef['name']
 export type ExtCacheOf<ExtDef extends ExtensionDef> = ExtDef['cache']
+export type ExtEnv = unknown
 
 export type ExtensionDef<
   Name extends ExtName = ExtName,

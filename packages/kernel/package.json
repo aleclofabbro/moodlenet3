@@ -17,6 +17,7 @@
   "dependencies": {
     "arangojs": "^7.7.0",
     "bullmq": "^1.74.2",
+    "execa": "^5.1.1",
     "pkg-dir": "^5",
     "rxjs": "^7.5.4",
     "rxjs-compat": "^6.6.7"
@@ -30,7 +31,7 @@
     "@types/react-router-dom": "^5.3.3"
   },
   "devDependencies": {
-    "@moodlenet/pkg-mng": "^1.0.0",
+    "@moodlenet/bare-metal": "^1.0.0",
     "@moodlenet/webapp": "^1.0.0",
     "node-dev": "^7.1.0",
     "shx": "^0.3.4",

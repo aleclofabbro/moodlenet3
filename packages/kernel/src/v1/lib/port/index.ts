@@ -1,1 +1,1 @@
-export * from './requestReply'
+export * from './rpc'

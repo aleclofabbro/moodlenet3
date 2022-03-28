@@ -1,6 +1,6 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import type { AsyncPort, ExtensionDef, PortShell } from '@moodlenet/kernel/lib/v1'
-import { replyAll } from '@moodlenet/kernel/lib/v1'
+import type { ExtensionDef, PortShell, RpcPort } from '@moodlenet/kernel/lib/v1'
+import { rpcReplyAll } from '@moodlenet/kernel/lib/v1'
 import { json } from 'body-parser'
 import express from 'express'
 
@@ -8,7 +8,7 @@ export type MNPriHttpExt = ExtensionDef<
   '@moodlenet/pri-http',
   '1.0.0',
   {
-    setWebAppRootFolder: AsyncPort<(_: { folder: string }) => Promise<void>>
+    setWebAppRootFolder: RpcPort<(_: { folder: string }) => Promise<void>>
   }
 >
 v1.Extension<MNPriHttpExt>(
@@ -26,7 +26,7 @@ v1.Extension<MNPriHttpExt>(
       const app = express().use(`${rootPath}/`, (_, __, next) => next())
       app.use(`/_srv`, extPortsApp)
       const server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
-      replyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http', {
+      rpcReplyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http', {
         setWebAppRootFolder: _shell => async p => {
           console.log({ p })
           const staticApp = express.static(p.folder)
@@ -64,7 +64,7 @@ function makeExtPortsApp(shell: PortShell) {
     }
     console.log('*********body', req.body)
     try {
-      const response = await (v1.request(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
+      const response = await (v1.rpcRequest(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
       //(shell ,`${extName}::${path.join('.')}`)(req.body)
       res.json(response)
     } catch (err) {

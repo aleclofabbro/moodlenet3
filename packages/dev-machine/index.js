@@ -6,4 +6,4 @@ var { expand } = require('dotenv-expand')
 var myEnv = dotenv.config()
 expand(myEnv)
 
-require("@moodlenet/pkg-mng")
+require("@moodlenet/bare-metal")

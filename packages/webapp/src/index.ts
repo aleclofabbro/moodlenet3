@@ -1,6 +1,5 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import type { AsyncPort, ExtensionDef, ExtensionId, ExtIdOf } from '@moodlenet/kernel/lib/v1'
-import { asyncRequest, asyncRespond } from '@moodlenet/kernel/lib/v1'
+import type { ExtensionDef, ExtensionId, ExtIdOf, RpcPort } from '@moodlenet/kernel/lib/v1'
 import type { MNPriHttpExt } from '@moodlenet/pri-http/pkg'
 import { existsSync } from 'fs'
 import { rename, rm, writeFile } from 'fs/promises'
@@ -27,8 +26,8 @@ export type WebappExt = ExtensionDef<
   '@moodlenet/webapp',
   '1.0.0',
   {
-    ensureExtension: AsyncPort<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
-    ___CONTROL_PORT_REMOVE_ME_LATER___: AsyncPort<<T>(_: T) => Promise<{ _: T }>>
+    ensureExtension: RpcPort<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
+    ___CONTROL_PORT_REMOVE_ME_LATER___: RpcPort<<T>(_: T) => Promise<{ _: T }>>
   }
 >
 v1.Extension(module, webappExtId, {
@@ -38,11 +37,13 @@ v1.Extension(module, webappExtId, {
       if (!priHttp?.active) {
         return
       }
-      asyncRequest<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({ path: 'setWebAppRootFolder' })({
+      v1.____remove_me__asyncRequest<MNPriHttpExt>({ extName: '@moodlenet/pri-http', shell })({
+        path: 'setWebAppRootFolder',
+      })({
         folder: latestBuildFolder,
       })
     })
-    asyncRespond<WebappExt>({ extName: '@moodlenet/webapp', shell })({
+    v1.___remove_me___asyncRespond<WebappExt>({ extName: '@moodlenet/webapp', shell })({
       path: 'ensureExtension',
       afnPort:
         _shell =>

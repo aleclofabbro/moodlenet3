@@ -1,22 +1,18 @@
 import { TypeofPath, TypePaths } from '../path'
-import type { ExtensionDef, ExtPortPaths, PathPayload, Port } from './extension/types'
+import type { ExtensionDef, ExtensionId, ExtPortPaths, PathPayload, Port } from './extension/types'
 import { Message, Obj } from './message/types'
+import type { PkgInfo } from './pkg-info'
 import { FullPortAddress } from './port-address/types'
 
 export type PostOpts = {}
 export type ExtensionUnavailable = undefined
 
-export type LookupExt = <Ext extends ExtensionDef>(extName: Ext['name']) => LookupResult<Ext>
-export type LookupResult<Ext extends ExtensionDef> =
-  | ExtensionUnavailable
-  | {
-      port: LookupPort<Ext>
-      active: true
-    }
-  | {
-      port?: undefined
-      active: false
-    }
+export type LookupExt = <Ext extends ExtensionDef>(extName: Ext['name']) => LookupResult<Ext> | undefined
+export type LookupResult<Ext extends ExtensionDef> = {
+  extId: ExtensionId<Ext['name']>
+  active: boolean
+  pkgInfo: PkgInfo
+}
 
 export type LookupPort<Ext extends ExtensionDef> = <Path extends TypePaths<Ext['ports'], Port<any>>>(
   path: Path,
