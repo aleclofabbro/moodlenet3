@@ -18,7 +18,7 @@ export const watchExt = <Ext extends ExtensionDef>(shell: PortShell, extName: Ex
 }
 
 type Cleanup = () => any
-type MCleanup = Cleanup | void
+type MCleanup = Cleanup | undefined | void
 type PMCleanup = MCleanup | Promise<MCleanup>
 type ExtUser<Ext extends ExtensionDef> = (_: LookupResult<Ext>) => PMCleanup
 export const useExtension = <Ext extends ExtensionDef>(

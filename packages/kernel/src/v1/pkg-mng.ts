@@ -1,47 +1,45 @@
 import execa from 'execa'
+import { resolve } from 'path'
 export type PkgMngLib = {
-  // rootDir: string
-  install: (pkgs: string[], strict?: boolean) => execa.ExecaChildProcess<string>
-  uninstall: (pkgs: string[]) => execa.ExecaChildProcess<string>
-  // nodeModulesDir: string
-  version: string
+  install: (pkgs: string, strict?: boolean) => Promise<execa.ExecaReturnValue<string>>
+  uninstall: (pkg: string) => Promise<execa.ExecaReturnValue<string>>
+  info: (pkg: string) => Promise<{ name: string; version: string }>
 }
-// export const rootDir = process.env.MOODLENET_PKG_MNG_ROOT_DIR
-// if (!rootDir) {
-//   throw new Error(`bare-metal: needs a valid process.env.PKG_MNG_ROOT_DIR : ${process.env.PKG_MNG_ROOT_DIR}`)
-// }
-// export const kernelPkg = process.env.MOODLENET_PKG_MNG_KERNEL_PKG
-// if (!kernelPkg) {
-//   throw new Error(
-//     `bare-metal: needs a valid process.env.MOODLENET_PKG_MNG_KERNEL_PKG : ${process.env.MOODLENET_PKG_MNG_KERNEL_PKG}`,
-//   )
-// }
-// export const kernelModule = process.env.MOODLENET_PKG_MNG_KERNEL_MODULE
-// if (!kernelModule) {
-//   throw new Error(
-//     `bare-metal: needs a valid process.env.MOODLENET_PKG_MNG_KERNEL_MODULE : ${process.env.MOODLENET_PKG_MNG_KERNEL_MODULE}`,
-//   )
-// }
-// const nodeModulesDir = `${rootDir}/node_modules`
 
-// console.log({
-//   rootDir,
-//   kernelPkg,
-//   kernelModule,
-//   nodeModulesDir,
-// })
-
-export const makePkgMng = (cwd: string) => {
+export const makePkgMng = (cwd: string): PkgMngLib => {
   const execa_opts: execa.Options = { cwd }
 
-  const install = (pkgs: string[], strict = true) =>
-    execa('yarn', ['install', '--force --save', ...(strict ? ['--strict-peer-deps'] : []), ...pkgs], execa_opts)
-  const uninstall = (pkgs: string[]) => execa('yarn', ['rm', ...pkgs], execa_opts)
+  const install = async (pkgLoc: string, strict = true) =>
+    execa('npm', ['i', '--force --save', ...(strict ? ['--strict-peer-deps'] : []), pkgLoc], execa_opts)
+  const uninstall = async (pkgLoc: string) => execa('npm', ['rm', pkgLoc], execa_opts)
+  const info = async (pkgLoc: string) => {
+    const isFolder = pkgLoc.startsWith('file:')
+    if (isFolder) {
+      const pkgJsonFile = resolve(pkgLoc.substring(5), 'package.json')
+      // console.log({ pkgJsonFile })
+      const pkgJson = require(pkgJsonFile)
+      return {
+        name: pkgJson.name,
+        version: pkgJson.version,
+      }
+    } else {
+      const infoData = await execa('npm', ['info', '--json', pkgLoc]).then(resp => JSON.parse(resp.stdout).data)
+      // console.log({ infoData })
+      const name = infoData.name
+      const version = infoData.version
+      return {
+        name,
+        version,
+      }
+    }
+  }
 
-  const pkgMngHandle: PkgMngLib = {
+  return {
+    info,
     install,
     uninstall,
-    version: '1',
   }
-  return pkgMngHandle
 }
+
+// FROM : https://github.com/dword-design/package-name-regex/blob/master/src/index.js
+// const pkgNameRegex = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/

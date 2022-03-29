@@ -9,6 +9,7 @@
   "dependencies": {
     "@moodlenet/bare-metal": "^1.0.0",
     "@moodlenet/kernel": "^1.0.0",
+    "@moodlenet/test-extension": "file:../test-extension",
     "dotenv": "^16.0.0",
     "dotenv-expand": "^8.0.1"
   },

@@ -1,36 +1,39 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import type { WebappExt } from '@moodlenet/webapp/lib'
-import { resolve } from 'path'
+import { ExtensionDef, RpcPort } from '@moodlenet/kernel/lib/v1'
 
-export type TestExt = {
-  name: '@moodlenet/test-extension'
-  version: '1.0.0'
-  ports: {}
-}
-export const testExtId: v1.ExtIdOf<TestExt> = {
-  name: '@moodlenet/test-extension',
-  version: '1.0.0',
-} as const
-v1.Extension(
+export type TestExt = ExtensionDef<
+  '@moodlenet/test-extension',
+  '1.0.0',
+  {
+    _test: RpcPort<<T>(_: T) => Promise<{ a: T }>>
+  }
+>
+export const testExtId: v1.ExtIdStrOf<TestExt> = '@moodlenet/test-extension@1.0.0'
+
+const extImpl: v1.ExtImplExports = {
   module,
-  {
-    name: '@moodlenet/test-extension',
-    version: '1.0.0',
-  },
-  {
-    async start({ shell }) {
-      v1.watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
-        if (!webapp?.active) {
-          return
-        }
-        v1.asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
-          extId: testExtId,
-          moduleLoc: resolve(__dirname, '..'),
-          cmpPath: 'pkg/webapp',
+  extensions: {
+    [testExtId]: {
+      async start({ shell }) {
+        console.log('I am test extension')
+        // v1.watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
+        //   if (!webapp?.active) {
+        //     return
+        //   }
+        // v1.asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
+        //   extId: testExtId,
+        //   moduleLoc: resolve(__dirname, '..'),
+        //   cmpPath: 'pkg/webapp',
+        // })
+        // })
+        v1.rpcReplyAll<TestExt>(shell, '@moodlenet/test-extension', {
+          _test: _shell => async _ => ({ a: _ }),
         })
-      })
 
-      return async () => {}
+        return async () => {}
+      },
     },
   },
-)
+}
+
+export default extImpl

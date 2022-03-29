@@ -1,6 +1,6 @@
 import { MsgID } from '.'
 import { ExtensionDef } from '../extension'
-import { ExtensionRegistry } from '../extension-registry'
+import { ExtensionRegistry, ExtensionRegistryRecord } from '../extension-registry'
 import { FullPortAddress, PortAddress } from '../port-address/types'
 import { LookupExt, PortListener, PortShell, PushMessage } from '../types'
 import { Message, Obj } from './types'
@@ -47,13 +47,18 @@ export function makeShell<P extends Obj = Obj>({
   message,
   cwAddress,
   extReg,
+  useSafeExtRecord,
 }: {
   message: Message<P>
   cwAddress: FullPortAddress
   extReg: ExtensionRegistry
+  useSafeExtRecord?: ExtensionRegistryRecord
 }): PortShell<P> {
-  const extRecord = extReg.getRegisteredExtension(cwAddress.extId.name)
-  if (!extRecord?.deployment) {
+  // console.log(extReg.getExtensions())
+  const extRecord = useSafeExtRecord ?? extReg.getRegisteredExtension(cwAddress.extId.name)
+  if (!extRecord) {
+    throw new Error(`extension ${cwAddress.extId.name} not installed`)
+  } else if (!extRecord.deployment && !useSafeExtRecord) {
     throw new Error(`extension ${cwAddress.extId.name} not available atm`)
   }
   const listen = (listener: PortListener) => addListener(cwAddress, listener)

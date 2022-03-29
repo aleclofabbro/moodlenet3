@@ -70,6 +70,12 @@ export type PathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPaths<E
 
 export type ExtLCStart = (startArg: { shell: PortShell }) => Promise<ExtLCStop>
 export type ExtLCStop = () => Promise<void>
-export type ExtLifeCycleHandle = {
+export type ExtImpl = {
   start: ExtLCStart
+  description?: string
 }
+
+type ExtIdStr = string
+  
+  export type ExtImplExports = {module: NodeModule,extensions:Record<ExtIdStr, ExtImpl>}
+export type ExtIdStrOf<ExtDef extends ExtensionDef> = `${ExtDef['name']}@${ExtDef['version']}`

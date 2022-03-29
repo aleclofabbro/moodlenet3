@@ -1,10 +1,10 @@
 import type { Boot } from '@moodlenet/bare-metal/lib/types'
-import { createLocalExtensionRegistry } from './extension-registry/lib'
-import { Extension } from './extension/extension'
-import type { ExtCacheOf, ExtensionDef, ExtensionId, ExtIdOf, ExtNameOf } from './extension/types'
+import { createLocalExtensionRegistry, ExtensionRegistryRecord } from './extension-registry/lib'
+import type { ExtCacheOf, ExtensionDef, ExtIdOf, ExtImplExports, ExtName, ExtNameOf } from './extension/types'
 import { useExtension } from './lib/flow'
-import { RpcPort, rpcReply, rpcReplyAll, rpcRequest } from './lib/port'
+import { RpcPort, rpcReplyAll, rpcRequest } from './lib/port'
 import { createMessage, makeShell, pushMessage } from './message'
+import { pkgInfoOf } from './pkg-info'
 import { makePkgMng } from './pkg-mng'
 import { FullPortAddress, PortAddress } from './port-address/types'
 
@@ -14,10 +14,10 @@ import { FullPortAddress, PortAddress } from './port-address/types'
 //   .filter(Boolean)
 //   .map(corePkg => corePkg.split('#') as [pkgLoc: string, extIdName: string])
 
-type KernelEnv = {
-  coreExts: string[]
-  activateExts: string[]
-}
+// type KernelEnv = {
+//   coreExts: string[]
+//   activateExts: string[]
+// }
 export const kernelExtId: ExtIdOf<KernelExt> = {
   name: '@moodlenet/kernel',
   version: '1.0.0',
@@ -25,10 +25,12 @@ export const kernelExtId: ExtIdOf<KernelExt> = {
 
 export type KernelExtCache = { x: number }
 export type KernelExtPorts = {
-  extensions: {
-    installAndActivate: RpcPort<(_: { pkgLoc?: string; extId: ExtensionId }) => Promise<number>> // returning a number for testing race condition !
+  packages: {
+    install: RpcPort<(_: { pkgLoc: string }) => Promise<{ records: ExtensionRegistryRecord[] }>>
   }
-  ___CONTROL_PORT_REMOVE_ME_LATER___: RpcPort<<T>(_: { _: T }) => Promise<T>>
+  extensions: {
+    activate: RpcPort<(_: { extName: ExtName }) => Promise<void>>
+  }
 }
 export type KernelExt = ExtensionDef<'@moodlenet/kernel', '1.0.0', KernelExtPorts, KernelExtCache>
 
@@ -44,67 +46,103 @@ export type KernelModuleCache = ExtensionDef<
 >
 export const boot: Boot = async bareMetal => {
   const pkgMng = makePkgMng(bareMetal.cwd)
-  const cfgPath = process.env.MN_EXT_ENV ?? `${process.cwd()}/mn-kernel-config`
+  const cfgPath = process.env.KERNEL_ENV_MOD ?? `${process.cwd()}/kernel-env-mod`
   const global_env: Record<string, any> = require(cfgPath)
 
   const extEnv = (extName: string) => global_env[extName]
   const localExtReg = createLocalExtensionRegistry()
+  async function installPkg({ pkgLoc }: { pkgLoc: string }) {
+    const [info, installResp] = await Promise.all([pkgMng.info(pkgLoc), pkgMng.install(pkgLoc)])
+    console.log(info, installResp.all)
+    const { extensions, module }: ExtImplExports = bareMetal.modRequire(info.name).default
+    const pkgInfo = pkgInfoOf(module)
 
-  Extension<KernelExt>(module, kernelExtId, {
-    async start({ shell }) {
-      useExtension<KernelModuleCache>(shell, 'kernel.module-cache', async ({ active }) => {
-        if (!active) {
-          // TODO: Throw ?
-          return
-        }
-        const cache = await rpcRequest<KernelModuleCache>(shell)('kernel.module-cache::get')<KernelExt>(
-          '@moodlenet/kernel',
-        )
+    return Object.entries(extensions).map(([fullName, impl]) => {
+      const atIndex = fullName.lastIndexOf('@')
+      const name = fullName.substring(0, atIndex)
+      const version = fullName.substring(atIndex + 1)
+      const id = {
+        name,
+        version,
+      }
+      const env = extEnv(name)
+      return localExtReg.registerExtension({
+        env,
+        id,
+        lifeCycle: impl,
+        pkgInfo,
       })
-      // useExtension<WebappExt>(shell, '@moodlenet/webapp', () => {
-      //   request<WebappExt>(shell)('@moodlenet/webapp::ensureExtension')({
-      //     extId: kernelExtId,
-      //     moduleLoc: resolve(__dirname, '..', '..'),
-      //     cmpPath: 'lib/v1/webapp',
-      //   })
+    })
+  }
+  const pkgInfo = pkgInfoOf(module)
+  const _kernelExtRec = localExtReg.registerExtension({
+    pkgInfo,
+    env: extEnv(kernelExtId.name),
+    id: kernelExtId,
+    lifeCycle: {
+      start: async ({ shell }) => {
+        useExtension<KernelModuleCache>(shell, 'kernel.module-cache', async ({ active }) => {
+          if (!active) {
+            // TODO: Throw ?
+            return
+          }
+          /* const cache = */ await rpcRequest<KernelModuleCache>(shell)('kernel.module-cache::get')<KernelExt>(
+            '@moodlenet/kernel',
+          )
+        })
+        // useExtension<WebappExt>(shell, '@moodlenet/webapp', () => {
+        //   request<WebappExt>(shell)('@moodlenet/webapp::ensureExtension')({
+        //     extId: kernelExtId,
+        //     moduleLoc: resolve(__dirname, '..', '..'),
+        //     cmpPath: 'lib/v1/webapp',
+        //   })
 
-      //   request<WebappExt>(shell)('@moodlenet/webapp::___CONTROL_PORT_REMOVE_ME_LATER___')('2').then(_ => _)
-      // })
+        //   request<WebappExt>(shell)('@moodlenet/webapp::___CONTROL_PORT_REMOVE_ME_LATER___')('2').then(_ => _)
+        // })
+        //
+        //
+        // useExtension<any>(shell, '@moodlenet/test-extension', async () => {
+        //   console.log(
+        //     await rpcRequest<any>(makeStartShell(_kernelExtRec))('@moodlenet/test-extension::_test')({ x: 2 }),
+        //   )
+        // })
 
-      rpcReplyAll<KernelExt>(shell, '@moodlenet/kernel', {
-        'extensions.installAndActivate':
-          _shell =>
-          async ({ extId, pkgLoc = `${extId.name}@${extId.version}` }) => {
-            const installResp = await pkgMng.install([pkgLoc])
-            console.log(installResp.all)
-            bareMetal.modRequire(extId.name)
-            startExtension(extId.name)
-            return 1
-          },
-        '___CONTROL_PORT_REMOVE_ME_LATER___':
-          _shell =>
-          async ({ _ }) =>
-            _,
-      })
+        rpcReplyAll<KernelExt>(shell, '@moodlenet/kernel', {
+          'packages.install':
+            _shell =>
+            async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
+          'extensions.activate':
+            _shell =>
+            async ({ extName }) => {
+              await startExtension(extName)
+            },
+        })
 
-      rpcReply<KernelExt>(shell)('@moodlenet/kernel::extensions.installAndActivate')(_s => async _a => {
-        // Race condition replying this port ! ^^' :)
-        // TODO: BTW remove me ^^'
-        return 2
-      })
-      // await startCoreExtensions()
+        // await startCoreExtensions()
 
-      return async () => {}
+        return async () => {}
+      },
     },
   })
+  await startExtension(kernelExtId.name)
 
-  const kernelEnv: KernelEnv = {
-    coreExts: [],
-    activateExts: [],
-    ...extEnv(kernelExtId.name),
-  }
-  console.log({ kernelEnv })
-
+  // const kernelEnv: KernelEnv = {
+  //   coreExts: [],
+  //   activateExts: [],
+  //   ...extEnv(kernelExtId.name),
+  // }
+  // console.log({ kernelEnv })
+  //
+  //
+  //
+  //
+  // const result = await installPkg({ pkgLoc: 'file:/home/alec/MOODLENET/repo/moodlenet3/packages/test-extension' })
+  // console.log({ result })
+  // await Promise.all(result.map(_ => startExtension(_.id.name)))
+  //
+  //
+  //
+  //
   // async function startCoreExtensions() {
   //   return Promise.all(
   //     coreExtensions.map(async ([pkgLoc, extIdName]) => {
@@ -127,7 +165,7 @@ export const boot: Boot = async bareMetal => {
     }
 
     console.log(`** KERNEL: starting ${extRecord.id.name}@${extRecord.id.version}`)
-    const shell = makeStartShell(extRecord.id)
+    const shell = makeStartShell(extRecord)
     extRecord.deployment = 'deploying'
     const stop = await extRecord.lifeCycle.start({ shell })
     extRecord.deployment = {
@@ -146,13 +184,13 @@ export const boot: Boot = async bareMetal => {
     return extRecord
   }
 
-  function makeStartShell(extId: ExtensionId) {
+  function makeStartShell(extRec: ExtensionRegistryRecord) {
     const startExtAddress: PortAddress = {
-      extName: extId.name,
+      extName: extRec.id.name,
       path: '',
     }
     const cwAddress: FullPortAddress = {
-      extId,
+      extId: extRec.id,
       path: '',
     }
     const startMessage = createMessage({
@@ -161,9 +199,7 @@ export const boot: Boot = async bareMetal => {
       target: startExtAddress,
       parentMsgId: null,
     })
-    const startShell = makeShell({ message: startMessage, cwAddress, extReg: localExtReg })
+    const startShell = makeShell({ message: startMessage, cwAddress, extReg: localExtReg, useSafeExtRecord: extRec })
     return startShell
   }
-
-  startExtension(kernelExtId.name)
 }
