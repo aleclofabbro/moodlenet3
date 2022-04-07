@@ -69,7 +69,7 @@ export const boot: Boot = async bareMetal => {
     id: kernelExtId,
     lifeCycle: {
       start: async ({ shell }) => {
-        replyAll<KernelExt>(shell, '@moodlenet/kernel', {
+        replyAll<KernelExt>(shell, '@moodlenet/kernel@1.0.0', {
           'packages.install':
             _shell =>
             async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),

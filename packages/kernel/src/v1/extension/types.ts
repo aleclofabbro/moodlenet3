@@ -1,73 +1,23 @@
-import { Opaque } from 'type-fest'
-import { TypeofPath, TypePaths } from '../../path'
-import { PortShell } from '../types'
+import type { TypeofPath, TypePaths } from '../../path'
+import type { PortShell } from '../types'
 
 export type ExtName = string
 export type ExtVersion = string
-export type ExtensionId<Name extends ExtName = ExtName, Version extends ExtVersion = ExtVersion> = {
+export type ExtensionIdObj<Name extends ExtName = ExtName, Version extends ExtVersion = ExtVersion> = {
   name: Name
   version: Version
 }
-export type ExtIdOf<ExtDef extends ExtensionDef> = Pick<ExtDef, keyof ExtensionId>
+export type ExtIdOf<ExtDef extends ExtensionDef> = Pick<ExtDef, keyof ExtensionIdObj>
 export type ExtNameOf<ExtDef extends ExtensionDef> = ExtDef['name']
-// export type ExtCacheOf<ExtDef extends ExtensionDef> = ExtDef['cache']
 export type ExtEnv = unknown
 
 export type ExtensionDef<
   Name extends ExtName = ExtName,
   Version extends ExtVersion = ExtVersion,
-  PortsTopo extends PortsTopology = PortsTopology,
-  // Cache = unknown,
-> = ExtensionId<Name, Version> & {
-  ports: PortsTopo
-  // cache: Cache
+  ExtRootTopo extends RootTopo = RootTopo,
+> = ExtensionIdObj<Name, Version> & {
+  ports: ExtRootTopo
 }
-
-export type PortPath = string
-export type Port<Payload> = Opaque<{ portPayload: Payload }>
-
-export type TopologyNode = Port<any> | PortsTopology
-export type PortsTopology = {
-  [topoNodeName in string]: TopologyNode
-}
-
-export type PortPaths<Topo extends PortsTopology, Payload = any> = TypePaths<Topo, Port<Payload>>
-export type ExtPortPaths<ExtDef extends ExtensionDef, Payload = any> = PortPaths<ExtDef['ports'], Payload>
-
-export type ExtPointerPaths<ExtDef extends ExtensionDef, TopoNode extends TopologyNode = TopologyNode> = TypePaths<
-  ExtDef['ports'],
-  TopoNode
->
-
-// export type ExtPointer<
-//   ExtDef extends ExtensionDef,
-//   TopoNode extends TopologyNode = Port<any>,
-//   P extends ExtPointerPaths<ExtDef, TopoNode> = ExtPointerPaths<ExtDef, TopoNode>,
-// > = {
-//   p: P
-//   fp: `${ExtDef['name']}/${P}`
-//   type: TypeofPath<ExtDef['ports'], P>
-// }
-
-export type Pointer<
-  Ext extends ExtensionDef,
-  NodeType extends TopologyNode,
-  Path extends ExtPointerPaths<Ext, NodeType>,
-> = [`${Ext['name']}::${Path}`, TypeofPath<Ext['ports'], Path>?]
-
-// export type ExtPointerFullPaths<
-//   ExtDef extends ExtensionDef,
-//   TopoNode extends TopologyNode = Port<any>,
-// > = `${ExtDef['name']}/${ExtPointerPaths<ExtDef, TopoNode>}`
-
-export type PortPayload<P extends Port<any>> = P extends Port<infer PL> ? PL : never
-export type PathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
-  ExtDef['ports'],
-  Path
-> extends Port<infer Payload>
-  ? Payload
-  : never
-
 export type ExtLCStart = (startArg: { shell: PortShell }) => Promise<ExtLCStop>
 export type ExtLCStop = () => Promise<void>
 export type ExtImpl = {
@@ -75,7 +25,119 @@ export type ExtImpl = {
   description?: string
 }
 
-type ExtIdStr = string
-  
-  export type ExtImplExports = {module: NodeModule,extensions:Record<ExtIdStr, ExtImpl>}
-export type ExtIdStrOf<ExtDef extends ExtensionDef> = `${ExtDef['name']}@${ExtDef['version']}`
+export type ExtImplExports = { module: NodeModule; extensions: Record<ExtId<ExtensionDef>, ExtImpl> }
+export type ExtId<Ext extends ExtensionDef> = `${Ext['name']}@${Ext['version']}` //`;)
+
+/*
+ *
+ *
+ */
+
+// export declare const PORT_NODE_SYM: unique symbol
+export declare const TOPO_BASE_SYM: unique symbol
+export declare const TOPO_NODE_SYM: unique symbol
+export declare const ROOT_TOPO_SYM: unique symbol
+// export type PORT_LEAF_SYM = typeof PORT_NODE_SYM
+export type TOPO_BASE_SYM = typeof TOPO_BASE_SYM
+export type TOPO_NODE_SYM = typeof TOPO_NODE_SYM
+export type ROOT_TOPO_SYM = typeof ROOT_TOPO_SYM
+
+export type TopoPath = string
+
+export type BaseTopoNode<CUSTOM_SYMBOL extends symbol = TOPO_BASE_SYM> = {
+  _ID?: CUSTOM_SYMBOL & TOPO_BASE_SYM
+}
+
+export type Port<Payload = any /* , CUSTOM_SYMBOL extends symbol = PORT_LEAF_SYM */> = {
+  payload: Payload
+} & BaseTopoNode /*<CUSTOM_SYMBOL & PORT_LEAF_SYM>*/
+
+export type TopoStruct = {
+  [topoElementName in string]?: TopoElement
+}
+
+export type TopoNode<CUSTOM_SYMBOL extends symbol = TOPO_NODE_SYM, Struct extends TopoStruct = TopoStruct> = Struct &
+  BaseTopoNode<CUSTOM_SYMBOL & TOPO_NODE_SYM>
+
+export type TopoElement = Port | TopoNode
+
+export type RootTopo = TopoNode<ROOT_TOPO_SYM>
+
+export type ExtPortPaths<Ext extends ExtensionDef> = TypePaths<Ext['ports'], Port, Port> //& ExtTopoPaths<Ext>
+
+export type ExtTopoPaths<Ext extends ExtensionDef, TargetTopoNode extends TopoNode = TopoNode> = TypePaths<
+  Ext['ports'],
+  TargetTopoNode,
+  Port
+>
+
+export type ExtTopoNodePaths<Ext extends ExtensionDef> = ExtTopoPaths<Ext> | ExtPortPaths<Ext>
+
+export type Pointer<
+  Ext extends ExtensionDef,
+  Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
+> = `${Ext['name']}@${Ext['version']}::${Path}` //`;)
+export type Version = string
+
+export type PortPayload<P extends Port> = P extends Port<infer PL> ? PL : never
+export type PortPathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
+  ExtDef['ports'],
+  Path
+> extends Port<infer Payload>
+  ? Payload
+  : never
+
+export const splitPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
+  pointer.split('::') as [ExtId<Ext>, Path]
+export const splitExtId = <Ext extends ExtensionDef>(extId: ExtId<Ext>) =>
+  extId.split('@') as [Ext['name'], Ext['version']]
+
+export const joinPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(
+  extId: ExtId<Ext>,
+  path: Path,
+): Pointer<Ext, Path> => `${extId}::${path}`
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+// type D = ExtensionDef<
+//   'xxxx',
+//   '1.4.3',
+//   {
+//     a: {
+//       c: Port<number>
+//       d: Port<string>
+//       q: {
+//         w: Port<number>
+//         y: Port<string>
+//       }
+//     }
+//     e: Port<boolean>
+//   }
+// >
+
+/*
+ *
+ *
+ *
+ *
+ */
+// type x = ExtTopoPaths<D> extends ExtPortPaths<D> ? 1:0
+// type y =  ExtPortPaths<D>extends ExtTopoPaths<D> ? 1:0
+// type x =TOPO_NODE_SYM  extends TOPO_BASE_SYM&TOPO_NODE_SYM ? 1 :0
+
+// type x = PortPathPayload<D, 'e'>
+// const pooooooooooooooo: ExtPortPaths<D> = 'a.d'
+// const tooooo: ExtTopoPaths<D> = 'a.q'
+// const ccc: ExtTopoNodePaths<D> = ''
+
+// const d: Pointer<D> = 'xxxx@1.4.3::a.q'

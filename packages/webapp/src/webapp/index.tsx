@@ -5,7 +5,7 @@ import App from './App'
 import { AppRouterContextProvider, RouterCtx } from './routes'
 
 const extensions = require('../../extensions')
-// fetch(`http://localhost:8888/_srv/_moodlenet_/pri-http/a/b`, {
+// fetch(`http::localhost:8888/_srv/_moodlenet_/pri-http/a/b`, {
 //   body: JSON.stringify({ k: 1111, t: 'xx' }),
 //   headers: {
 //     'Accept': 'application/json',

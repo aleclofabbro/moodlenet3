@@ -27,11 +27,11 @@ const MainLayout: FC = ({ children }) => {
       <Layout>
         {children}
         <Footer>
-          <a target="_blank" rel="noopener noreferrer" href="https://github.com/Nikhil-Kumaran/reactjs-boilerplate">
+          <a target="_blank" rel="noopener noreferrer" href="https::github.com/Nikhil-Kumaran/reactjs-boilerplate">
             GitHub
           </a>
           <span> | </span>
-          <a target="_blank" rel="noopener noreferrer" href="https://www.npmjs.com/package/reactjs-boilerplate">
+          <a target="_blank" rel="noopener noreferrer" href="https::www.npmjs.com/package/reactjs-boilerplate">
             npm
           </a>
         </Footer>

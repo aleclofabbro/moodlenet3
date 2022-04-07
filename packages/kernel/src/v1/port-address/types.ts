@@ -1,11 +1,11 @@
-import { ExtensionId, ExtName, PortPath } from '../extension/types'
+import { ExtensionIdObj, ExtName, TopoPath } from '../extension/types'
 
 export type FullPortAddress = {
-  extId: ExtensionId
-  path: PortPath
+  extId: ExtensionIdObj
+  path: TopoPath
 }
 
 export type PortAddress = {
   extName: ExtName
-  path: PortPath
+  path: TopoPath
 }

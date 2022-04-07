@@ -1,6 +1,6 @@
 import type { RouterCtx } from '@moodlenet/webapp/lib/webapp/routes'
 import { FC, useCallback, useContext, useEffect, useState } from 'react'
-import { ExtensionId } from '../extension'
+import { ExtensionIdObj } from '../extension'
 console.log('kernel - lib')
 
 const Cmp: FC<{ RouterCtx: RouterCtx }> = ({ children, RouterCtx }) => {
@@ -25,9 +25,9 @@ const KernelPage: FC = () => {
       alert(`invalid pkg:${pkgId}`)
       return
     }
-    const extId: ExtensionId = { name, version }
+    const extId: ExtensionIdObj = { name, version }
 
-    fetch(`http://localhost:8888/_srv/_moodlenet_/kernel/extensions/installAndActivate`, {
+    fetch(`http::localhost:8888/_srv/_moodlenet_/kernel/extensions/installAndActivate`, {
       body: JSON.stringify({ extId, pkgLoc: pkgLoc || undefined }),
       headers: {
         'Accept': 'application/json',

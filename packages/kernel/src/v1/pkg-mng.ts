@@ -41,5 +41,5 @@ export const makePkgMng = (cwd: string): PkgMngLib => {
   }
 }
 
-// FROM : https://github.com/dword-design/package-name-regex/blob/master/src/index.js
+// FROM : https::github.com/dword-design/package-name-regex/blob/master/src/index.js
 // const pkgNameRegex = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
