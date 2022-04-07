@@ -1,5 +1,5 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import type { ExtensionDef, ExtensionId, ExtIdOf, RpcPort } from '@moodlenet/kernel/lib/v1'
+import type { ExtensionDef, ExtensionId, ExtIdOf, RpcTopo } from '@moodlenet/kernel/lib/v1'
 import type { MNPriHttpExt } from '@moodlenet/pri-http/pkg'
 import { existsSync } from 'fs'
 import { rename, rm, writeFile } from 'fs/promises'
@@ -26,8 +26,8 @@ export type WebappExt = ExtensionDef<
   '@moodlenet/webapp',
   '1.0.0',
   {
-    ensureExtension: RpcPort<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
-    ___CONTROL_PORT_REMOVE_ME_LATER___: RpcPort<<T>(_: T) => Promise<{ _: T }>>
+    ensureExtension: RpcTopo<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
+    ___CONTROL_PORT_REMOVE_ME_LATER___: RpcTopo<<T>(_: T) => Promise<{ _: T }>>
   }
 >
 v1.Extension(module, webappExtId, {

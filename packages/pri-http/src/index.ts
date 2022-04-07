@@ -1,5 +1,5 @@
 import { v1 } from '@moodlenet/kernel/lib'
-import type { ExtensionDef, PortShell, RpcPort } from '@moodlenet/kernel/lib/v1'
+import type { ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel/lib/v1'
 import { rpcReplyAll } from '@moodlenet/kernel/lib/v1'
 import { json } from 'body-parser'
 import express from 'express'
@@ -8,43 +8,52 @@ export type MNPriHttpExt = ExtensionDef<
   '@moodlenet/pri-http',
   '1.0.0',
   {
-    setWebAppRootFolder: RpcPort<(_: { folder: string }) => Promise<void>>
+    setWebAppRootFolder: RpcTopo<(_: { folder: string }) => Promise<void>>
   }
 >
-v1.Extension<MNPriHttpExt>(
+export const priHttpExtId: v1.ExtIdStrOf<MNPriHttpExt> = '@moodlenet/pri-http@1.0.0'
+
+const extImpl: v1.ExtImplExports = {
   module,
-  {
-    name: '@moodlenet/pri-http',
-    version: '1.0.0',
-  },
-  {
-    async start({ shell }) {
-      const port = shell.env.port
-      const rootPath = shell.env.rootPath
-      const extPortsApp = makeExtPortsApp(shell)
+  extensions: {
+    [priHttpExtId]: {
+      async start({ shell }) {
+        const port = shell.env.port
+        const rootPath = shell.env.rootPath
+        const extPortsApp = makeExtPortsApp(shell)
 
-      const app = express().use(`${rootPath}/`, (_, __, next) => next())
-      app.use(`/_srv`, extPortsApp)
-      const server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
-      rpcReplyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http', {
-        setWebAppRootFolder: _shell => async p => {
-          console.log({ p })
-          const staticApp = express.static(p.folder)
-          app?.get(`/*`, staticApp)
-          app?.get(`/*`, (req, res, next) => staticApp(((req.url = '/'), req), res, next))
-        },
-      })
+        const app = express().use(`${rootPath}/`, (_, __, next) => next())
+        app.use(`/_srv`, extPortsApp)
+        const server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
+        rpcReplyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http', {
+          setWebAppRootFolder: _shell => async p => {
+            console.log({ p })
+            const staticApp = express.static(p.folder)
+            app?.get(`/*`, staticApp)
+            app?.get(`/*`, (req, res, next) => staticApp(((req.url = '/'), req), res, next))
+          },
+        })
 
-      return async () => {
-        server?.close()
-      }
+        return async () => {
+          server?.close()
+        }
+      },
     },
   },
-)
+}
+
+export default extImpl
+
 function makeExtPortsApp(shell: PortShell) {
   const srvApp = express()
   srvApp.use(json())
   srvApp.post('*', async (req, res, next) => {
+    /*
+    gets ext name&ver 
+    checks ext enabled and version match (kernel port)
+    checks port is guarded
+    pushes msg
+    */
     const path = req.path.split('/').slice(1)
     console.log('makeExtPortsApp', path, req.path)
     if (path.length < 2) {

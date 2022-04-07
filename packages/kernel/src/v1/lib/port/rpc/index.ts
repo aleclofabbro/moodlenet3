@@ -5,69 +5,37 @@ import { Unlisten } from '../../../types'
 import { listenPort } from '../listen'
 
 // export type AsyncFn = () => Promise<any>
-// export type AsyncFn<Arg extends any[] = any[], Val = any> = (...rpcPortReqArgs: Arg) => Promise<Val>
-export type RpcFn = (...rpcPortReqArgs: any) => Promise<any>
-// export type AsyncFn = (...rpcPortReqArgs: any[]) => Promise<any>
-export type RpcPortPaths<Topo extends PortsTopology> = TypePaths<Topo, RpcPort<RpcFn>>
-export type ExtRpcPortPaths<ExtDef extends ExtensionDef> = RpcPortPaths<ExtDef['ports']>
-export type ExtPathRpcFn<ExtDef extends ExtensionDef, Path extends ExtRpcPortPaths<ExtDef>> = TypeofPath<
+// export type AsyncFn<Arg extends any[] = any[], Val = any> = (...rpcTopoReqArgs: Arg) => Promise<Val>
+export type RpcFn = (...rpcTopoReqArgs: any) => Promise<any>
+// export type AsyncFn = (...rpcTopoReqArgs: any[]) => Promise<any>
+export type RpcTopoPaths<Topo extends PortsTopology> = TypePaths<Topo, RpcTopo<RpcFn>>
+export type ExtRpcTopoPaths<ExtDef extends ExtensionDef> = RpcTopoPaths<ExtDef['ports']>
+export type ExtPathRpcFn<ExtDef extends ExtensionDef, Path extends ExtRpcTopoPaths<ExtDef>> = TypeofPath<
   ExtDef['ports'],
   Path
-> extends RpcPort<infer Afn>
+> extends RpcTopo<infer Afn>
   ? Afn
   : never
-export type RpcFnOf<T> = T extends RpcPort<infer Afn> ? Afn : never
+export type RpcFnOf<T> = T extends RpcTopo<infer Afn> ? Afn : never
 
-export type RpcPortRequestPort<Afn extends RpcFn> = RawPort<{ rpcPortReqArgs: Parameters<Afn> }>
-export type RpcPortResponsePort<Afn extends RpcFn> = RawPort<
-  { rpcPortRespValue: Awaited<ReturnType<Afn>> } | { rpcPortRespError: any }
+export type RpcTopoRequestPort<Afn extends RpcFn> = RawPort<{ rpcTopoReqArgs: Parameters<Afn> }>
+export type RpcTopoResponsePort<Afn extends RpcFn> = RawPort<
+  { rpcTopoRespValue: Awaited<ReturnType<Afn>> } | { rpcTopoRespError: any }
 >
 
-export type RpcPort<Afn extends RpcFn> = {
-  rpcPortRequest: RpcPortRequestPort<Afn>
-  rpcPortResponse: RpcPortResponsePort<Afn>
-  _________________?: RawPort<Afn>
+export type RpcTopo<Afn extends RpcFn> = {
+  rpcTopoRequest: RpcTopoRequestPort<Afn>
+  rpcTopoResponse: RpcTopoResponsePort<Afn>
+  // _________________?: RawPort<Afn>
 }
 
-export type RpcPortFnOf<T> = (shell: PortShell<{ rpcPortReqArgs: Parameters<RpcFnOf<T>> }>) => RpcFnOf<T>
+export type RpcTopoFnOf<T> = (shell: PortShell<{ rpcTopoReqArgs: Parameters<RpcFnOf<T>> }>) => RpcFnOf<T>
 
-export const rpcReply =
+export const reply =
   <Ext extends ExtensionDef>(shell: PortShell) =>
-  <Path extends ExtRpcPortPaths<Ext>>(pointer: `${Ext['name']}::${Path}`) =>
-  (afnPort: RpcPortFnOf<TypeofPath<Ext['ports'], Path>>) => {
+  <Path extends ExtRpcTopoPaths<Ext>>(pointer: `${Ext['name']}::${Path}`) =>
+  (afnPort: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
     const [extName, path] = pointer.split('::') as [Ext['name'], Path]
-    return ___remove_me___asyncRespond<Ext>({ extName, shell })<Path>({ afnPort: afnPort as any, path: path as any })
-  }
-
-export const rpcReplyAll = <Ext extends ExtensionDef>(
-  shell: PortShell,
-  extName: Ext['name'],
-  handles: {
-    [Path in ExtRpcPortPaths<Ext>]: RpcPortFnOf<TypeofPath<Ext['ports'], Path>>
-  },
-) =>
-  Object.entries(handles).reduce(
-    (__, [path, port]) => {
-      const fullPath = `${extName}::${path}`
-      return {
-        ...__,
-        [fullPath]: rpcReply(shell)(fullPath as any)(port as any),
-      }
-    },
-    {} as {
-      [Path in ExtRpcPortPaths<Ext>]: Unlisten
-    },
-  )
-
-export const ___remove_me___asyncRespond =
-  <ExtDef extends ExtensionDef>({ extName, shell }: { shell: PortShell; extName: ExtDef['name'] }) =>
-  <Path extends ExtRpcPortPaths<ExtDef>, Afn extends ExtPathRpcFn<ExtDef, Path> = ExtPathRpcFn<ExtDef, Path>>({
-    path,
-    afnPort,
-  }: {
-    path: Path
-    afnPort(shell: PortShell<{ rpcPortReqArgs: Parameters<Afn> }>): Afn
-  }) => {
     const { requestPath, responsePath } = rpc_paths(path)
     return listenPort({
       extName,
@@ -75,37 +43,51 @@ export const ___remove_me___asyncRespond =
       shell,
       listener: async requestListenerShell => {
         const afn = afnPort(requestListenerShell as any)
+        const respond = requestListenerShell.push(extName)(responsePath)
         try {
-          const rpcPortRespValue = await afn(...(requestListenerShell.message.payload as any).rpcPortReqArgs)
-          requestListenerShell.push(extName, responsePath, { rpcPortRespValue } as any)
-        } catch (rpcPortRespError) {
-          requestListenerShell.push(extName, responsePath, { rpcPortRespError } as any)
+          const rpcTopoRespValue = await afn(...(requestListenerShell.message.payload as any).rpcTopoReqArgs)
+          respond({ rpcTopoRespValue } as any)
+        } catch (rpcTopoRespError) {
+          respond({ rpcTopoRespError } as any)
         }
       },
     })
   }
 
-export type RpcRequest = <ExtDef extends ExtensionDef>(_: {
-  shell: PortShell
-  extName: ExtDef['name']
-}) => <Path extends ExtRpcPortPaths<ExtDef>, Afn extends ExtPathRpcFn<ExtDef, Path> = ExtPathRpcFn<ExtDef, Path>>(_: {
-  path: Path
-}) => Afn
+export const replyAll = <Ext extends ExtensionDef>(
+  shell: PortShell,
+  extName: Ext['name'],
+  handles: {
+    [Path in ExtRpcTopoPaths<Ext>]: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>
+  },
+) =>
+  Object.entries(handles).reduce(
+    (__, [path, port]) => {
+      const fullPath = `${extName}::${path}`
+      return {
+        ...__,
+        [fullPath]: reply(shell)(fullPath as any)(port as any),
+      }
+    },
+    {} as {
+      [Path in ExtRpcTopoPaths<Ext>]: Unlisten
+    },
+  )
 
-export const ____remove_me__asyncRequest =
-  <ExtDef extends ExtensionDef>({ extName, shell }: { shell: PortShell; extName: ExtDef['name'] }) =>
-  <Path extends ExtRpcPortPaths<ExtDef>>({ path }: { path: Path }) =>
-    rpcRequest<ExtDef>(shell)<Path>(`${extName}::${path}`)
+export const ext =
+  <ExtDef extends ExtensionDef>(shell: PortShell, extName: ExtDef['name']) =>
+  <Path extends ExtRpcTopoPaths<ExtDef>>(path: Path) =>
+    call<ExtDef>(shell)<Path>(`${extName}::${path}`)
 
-export const rpcRequest =
+export const call =
   <Ext extends ExtensionDef>(shell: PortShell) =>
-  <Path extends ExtRpcPortPaths<Ext>>(pointer: `${Ext['name']}::${Path}`): RpcFnOf<TypeofPath<Ext['ports'], Path>> => {
+  <Path extends ExtRpcTopoPaths<Ext>>(pointer: `${Ext['name']}::${Path}`): RpcFnOf<TypeofPath<Ext['ports'], Path>> => {
     const [extName, path]: any[] = pointer.split('::')
-    return ((...rpcPortReqArgs: never[]) =>
+    return ((...rpcTopoReqArgs: any[]) =>
       new Promise((resolve, reject) => {
         const { requestPath, responsePath } = rpc_paths(path)
-        const payload = { rpcPortReqArgs } as never // ^^'
-        const requestMessage = shell.push(extName, requestPath, payload)
+        const requestPayload = { rpcTopoReqArgs } as never
+        const requestMessage = shell.push(extName)(requestPath)(requestPayload)
         const unsub = listenPort({
           extName,
           path: responsePath,
@@ -116,13 +98,11 @@ export const rpcRequest =
               return
             }
             unsub()
-            const rpcResponse = message.payload as any
+            const responsePayload = message.payload as any
             // console.log({ rpcResponse })
-            if ('rpcPortRespError' in rpcResponse) {
-              reject(rpcResponse.rpcPortRespError)
-            } else {
-              resolve(rpcResponse.rpcPortRespValue)
-            }
+            'rpcTopoRespError' in responsePayload
+              ? reject(responsePayload.rpcTopoRespError)
+              : resolve(responsePayload.rpcTopoRespValue)
           },
         })
         return unsub
@@ -131,7 +111,7 @@ export const rpcRequest =
 
 function rpc_paths(base_path: string) {
   return {
-    requestPath: `${base_path}.rpcPortRequest`,
-    responsePath: `${base_path}.rpcPortResponse`,
+    requestPath: `${base_path}.rpcTopoRequest`,
+    responsePath: `${base_path}.rpcTopoResponse`,
   } as any
 }

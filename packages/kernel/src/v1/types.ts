@@ -35,11 +35,9 @@ export type PortShell<Payload = any> = {
   push: PushMessage
 }
 
-export type PushMessage = <
-  ExtDef extends ExtensionDef = ExtensionDef,
-  Path extends ExtPortPaths<ExtDef> = ExtPortPaths<ExtDef>,
->(
+export type PushMessage = <ExtDef extends ExtensionDef = ExtensionDef>(
   extName: ExtDef['name'],
-  path: Path,
+) => <Path extends ExtPortPaths<ExtDef>>(
+  path: Path)=>(
   payload: PathPayload<ExtDef, Path>,
 ) => PathPayload<ExtDef, Path> extends Obj ? Message<PathPayload<ExtDef, Path>> : never

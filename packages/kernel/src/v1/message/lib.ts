@@ -62,7 +62,7 @@ export function makeShell<P extends Obj = Obj>({
     throw new Error(`extension ${cwAddress.extId.name} not available atm`)
   }
   const listen = (listener: PortListener) => addListener(cwAddress, listener)
-  const push: PushMessage = (extName, path, payload) =>
+  const push: PushMessage = extName => path => payload =>
     pushMessage(
       createMessage({
         payload: payload as any,

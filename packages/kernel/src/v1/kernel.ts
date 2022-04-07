@@ -1,8 +1,7 @@
 import type { Boot } from '@moodlenet/bare-metal/lib/types'
 import { createLocalExtensionRegistry, ExtensionRegistryRecord } from './extension-registry/lib'
-import type { ExtCacheOf, ExtensionDef, ExtIdOf, ExtImplExports, ExtName, ExtNameOf } from './extension/types'
-import { useExtension } from './lib/flow'
-import { RpcPort, rpcReplyAll, rpcRequest } from './lib/port'
+import type { ExtensionDef, ExtIdOf, ExtImplExports, ExtName } from './extension/types'
+import { replyAll, RpcTopo } from './lib/port'
 import { createMessage, makeShell, pushMessage } from './message'
 import { pkgInfoOf } from './pkg-info'
 import { makePkgMng } from './pkg-mng'
@@ -23,27 +22,16 @@ export const kernelExtId: ExtIdOf<KernelExt> = {
   version: '1.0.0',
 } as const
 
-export type KernelExtCache = { x: number }
 export type KernelExtPorts = {
   packages: {
-    install: RpcPort<(_: { pkgLoc: string }) => Promise<{ records: ExtensionRegistryRecord[] }>>
+    install: RpcTopo<(_: { pkgLoc: string }) => Promise<{ records: ExtensionRegistryRecord[] }>>
   }
   extensions: {
-    activate: RpcPort<(_: { extName: ExtName }) => Promise<void>>
+    activate: RpcTopo<(_: { extName: ExtName }) => Promise<void>>
   }
 }
-export type KernelExt = ExtensionDef<'@moodlenet/kernel', '1.0.0', KernelExtPorts, KernelExtCache>
+export type KernelExt = ExtensionDef<'@moodlenet/kernel', '1.0.0', KernelExtPorts>
 
-export type KernelModuleCache = ExtensionDef<
-  'kernel.module-cache',
-  '1.0.0',
-  {
-    get: RpcPort<<Ext extends ExtensionDef>(extName: ExtNameOf<Ext>) => Promise<undefined | ExtCacheOf<Ext>>>
-    set: RpcPort<
-      <Ext extends ExtensionDef>(extName: ExtNameOf<Ext>, cache: ExtCacheOf<Ext>) => Promise<ExtCacheOf<Ext>>
-    >
-  }
->
 export const boot: Boot = async bareMetal => {
   const pkgMng = makePkgMng(bareMetal.cwd)
   const cfgPath = process.env.KERNEL_ENV_MOD ?? `${process.cwd()}/kernel-env-mod`
@@ -75,39 +63,13 @@ export const boot: Boot = async bareMetal => {
     })
   }
   const pkgInfo = pkgInfoOf(module)
-  const _kernelExtRec = localExtReg.registerExtension({
+  /* const _kernelExtRec =  */ localExtReg.registerExtension({
     pkgInfo,
     env: extEnv(kernelExtId.name),
     id: kernelExtId,
     lifeCycle: {
       start: async ({ shell }) => {
-        useExtension<KernelModuleCache>(shell, 'kernel.module-cache', async ({ active }) => {
-          if (!active) {
-            // TODO: Throw ?
-            return
-          }
-          /* const cache = */ await rpcRequest<KernelModuleCache>(shell)('kernel.module-cache::get')<KernelExt>(
-            '@moodlenet/kernel',
-          )
-        })
-        // useExtension<WebappExt>(shell, '@moodlenet/webapp', () => {
-        //   request<WebappExt>(shell)('@moodlenet/webapp::ensureExtension')({
-        //     extId: kernelExtId,
-        //     moduleLoc: resolve(__dirname, '..', '..'),
-        //     cmpPath: 'lib/v1/webapp',
-        //   })
-
-        //   request<WebappExt>(shell)('@moodlenet/webapp::___CONTROL_PORT_REMOVE_ME_LATER___')('2').then(_ => _)
-        // })
-        //
-        //
-        // useExtension<any>(shell, '@moodlenet/test-extension', async () => {
-        //   console.log(
-        //     await rpcRequest<any>(makeStartShell(_kernelExtRec))('@moodlenet/test-extension::_test')({ x: 2 }),
-        //   )
-        // })
-
-        rpcReplyAll<KernelExt>(shell, '@moodlenet/kernel', {
+        replyAll<KernelExt>(shell, '@moodlenet/kernel', {
           'packages.install':
             _shell =>
             async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
