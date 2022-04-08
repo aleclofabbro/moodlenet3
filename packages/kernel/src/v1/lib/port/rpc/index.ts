@@ -42,11 +42,11 @@ export const reply =
   <Ext extends ExtensionDef>(shell: PortShell) =>
   <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
   (afnPort: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
-    const [extId] = splitPointer(pointer)
     const { /* requestPointer, */ responsePointer } = rpc_pointers<Ext, Path>(pointer)
     return listen.port(shell)(pointer, async requestListenerShell => {
       const afn = afnPort(requestListenerShell as any)
-      const respond = requestListenerShell.push(extId)(responsePointer)
+      const { extId, path } = splitPointer(responsePointer)
+      const respond = requestListenerShell.push(extId)(path)
       try {
         const rpcTopoRespValue = await afn(...(requestListenerShell.message.payload as any).rpcTopoReqArgs)
         respond({ rpcTopoRespValue } as any)
@@ -88,11 +88,11 @@ export const caller =
   <Ext extends ExtensionDef>(shell: PortShell) =>
   <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>): RpcFnOf<TypeofPath<Ext['ports'], Path>> => {
     const { requestPointer, responsePointer } = rpc_pointers<Ext, Path>(pointer)
-    const [extName] = splitPointer(pointer)
     return ((...rpcTopoReqArgs: any[]) =>
       new Promise((resolve, reject) => {
         const requestPayload = { rpcTopoReqArgs } as never
-        const requestMessage = shell.push(extName)(requestPointer)(requestPayload)
+        const { extId, path } = splitPointer(requestPointer)
+        const requestMessage = shell.push(extId)(path)(requestPayload)
         const unsub = listen.port(shell)(responsePointer, responseListenerShell => {
           const message = responseListenerShell.message
           if (message.parentMsgId !== requestMessage.id) {

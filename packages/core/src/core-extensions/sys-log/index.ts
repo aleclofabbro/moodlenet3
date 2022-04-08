@@ -18,7 +18,7 @@ export const logger = (
 ): {
   [level in LogLevel]: (log: Log) => void
 } => {
-  const logPort = shell.push<MoodlenetSysLogExt>('moodlenet.sys-log')
+  const logPort = shell.push<MoodlenetSysLogExt>('moodlenet.sys-log@1.0.0')
   return {
     debug: logPort('debug'),
     error: logPort('error'),

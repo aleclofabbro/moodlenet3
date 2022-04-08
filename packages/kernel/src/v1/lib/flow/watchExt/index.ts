@@ -1,37 +1,50 @@
-import { ExtensionDef } from '../../../extension'
-import { LookupResult, PortShell } from '../../../types'
+import type { ExtId, ExtNameOf, ExtTopoNodePaths } from '../../../extension'
+import { splitExtId, splitPointer } from '../../../extension'
+import { ExtensionRegistryRecord, versionSatisfies } from '../../../extension-registry'
+import type { KernelExt } from '../../../kernel'
+import type { PortShell } from '../../../types'
 
-type Watcher<Ext extends ExtensionDef> = (_: LookupResult<Ext> | undefined) => void
-export const watchExt = <Ext extends ExtensionDef>(shell: PortShell, extName: Ext['name'], watcher: Watcher<Ext>) => {
+type Watcher<_ExtId extends ExtId> = (_: ExtensionRegistryRecord<_ExtId> | undefined) => void
+
+const ACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions.activate.rpcTopoResponse'
+const DEACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions.deactivate.rpcTopoResponse'
+const KERNEL_EXT_NAME: ExtNameOf<KernelExt> = '@moodlenet/kernel'
+export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, watcher: Watcher<_ExtId>) => {
+  const splitWatchingExtId = splitExtId(extId)
   trigWatch()
   return shell.listen(listenShell => {
-    const src = listenShell.message.source
-    if (src.extId.name === extName && ['activated', 'deactivating', 'deactivated'].includes(src.path)) {
+    const srcSplitPointer = splitPointer(listenShell.message.source)
+    const trgSplitPointer = splitPointer(listenShell.message.target)
+    if (
+      srcSplitPointer.extName === splitWatchingExtId.extName &&
+      trgSplitPointer.extName === KERNEL_EXT_NAME &&
+      (ACTIVATED_PATH === trgSplitPointer.path || DEACTIVATED_PATH === trgSplitPointer.path)
+    ) {
       trigWatch()
     }
   })
 
   function trigWatch() {
-    const lookupResult = shell.lookup(extName)
-    setImmediate(() => watcher(lookupResult))
+    const extRecord = shell.registry.getRegisteredExtension(splitWatchingExtId.extName)
+    if (!extRecord) {
+      return
+    }
+    const regRecSplitExtId = splitExtId(extRecord.extId)
+    if (!versionSatisfies(regRecSplitExtId.version, splitWatchingExtId.version)) {
+      return
+    }
+    setImmediate(() => watcher(extRecord as any))
   }
 }
 
 type Cleanup = () => any
 type MCleanup = Cleanup | undefined | void
 type PMCleanup = MCleanup | Promise<MCleanup>
-type ExtUser<Ext extends ExtensionDef> = (_: LookupResult<Ext>) => PMCleanup
-export const useExtension = <Ext extends ExtensionDef>(
-  shell: PortShell,
-  extName: Ext['name'],
-  extUser: ExtUser<Ext>,
-) => {
+type ExtUser<_ExtId extends ExtId> = (_: ExtensionRegistryRecord<_ExtId>) => PMCleanup
+export const useExtension = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, extUser: ExtUser<_ExtId>) => {
   let cleanup: PMCleanup
-  return watchExt<Ext>(shell, extName, async ext => {
-    // if (!ext) {
-    //   throw new Error(`TODO: Not ${extName} installed`)
-    // }
-    if (!ext?.active) {
+  return watchExt<_ExtId>(shell, extId, async ext => {
+    if (!ext?.deployment) {
       ;(await cleanup)?.()
     } else {
       cleanup = extUser(ext)

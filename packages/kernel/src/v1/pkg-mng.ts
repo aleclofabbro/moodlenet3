@@ -1,12 +1,8 @@
 import execa from 'execa'
 import { resolve } from 'path'
-export type PkgMngLib = {
-  install: (pkgs: string, strict?: boolean) => Promise<execa.ExecaReturnValue<string>>
-  uninstall: (pkg: string) => Promise<execa.ExecaReturnValue<string>>
-  info: (pkg: string) => Promise<{ name: string; version: string }>
-}
+export type PkgMngLib = ReturnType<typeof makePkgMng>
 
-export const makePkgMng = (cwd: string): PkgMngLib => {
+export const makePkgMng = (cwd: string) => {
   const execa_opts: execa.Options = { cwd }
 
   const install = async (pkgLoc: string, strict = true) =>

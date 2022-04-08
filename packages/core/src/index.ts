@@ -8,7 +8,7 @@ export type MoodlenetCoreExt = ExtensionDef<
     _test: RpcTopo<<T>(_: T) => Promise<{ a: T }>>
   }
 >
-export const testExtId: v1.ExtIdStrOf<MoodlenetCoreExt> = '@moodlenet/core@1.0.0'
+export const testExtId: v1.ExtId<MoodlenetCoreExt> = '@moodlenet/core@1.0.0'
 
 const extImpl: v1.ExtImplExports = {
   module,
@@ -26,7 +26,7 @@ const extImpl: v1.ExtImplExports = {
         //   cmpPath: 'pkg/webapp',
         // })
         // })
-        v1.replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core', {
+        v1.replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@1.0.0', {
           _test: _shell => async _ => ({ a: _ }),
         })
 

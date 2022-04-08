@@ -34,11 +34,17 @@ export type MoodlenetBlobStorePorts = {
 
 export type MoodlenetBlobStoreExt = ExtensionDef<'moodlenet.blob-store', '1.0.0', MoodlenetBlobStorePorts>
 
-export const blobStore = <StorePath extends string>(shell: PortShell) => {
-  const read = (path: StorePath) => caller<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store::read')(path)
-  const meta = (path: StorePath) => caller<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store::meta')(path)
-  const write = (path: string, data: Buffer | Readable, meta: Pick<Meta, 'mimeType'>, opts?: Partial<WriteOptions>) =>
-    caller<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store::write')(path, data, meta, opts)
+export const blobStore = <BlobPath extends string>(shell: PortShell) => {
+  const read = (blobPath: BlobPath) =>
+    caller<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@1.0.0::read')(blobPath)
+  const meta = (blobPath: BlobPath) =>
+    caller<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@1.0.0::meta')(blobPath)
+  const write = (
+    blobPath: string,
+    data: Buffer | Readable,
+    meta: Pick<Meta, 'mimeType'>,
+    opts?: Partial<WriteOptions>,
+  ) => caller<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@1.0.0::write')(blobPath, data, meta, opts)
 
   return {
     read,

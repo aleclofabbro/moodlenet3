@@ -1,12 +1,15 @@
-import { FullPortAddress, PortAddress } from '../port-address/types'
+import { ExtId, Pointer } from '../extension'
 
 export type MsgID = string
-export type Obj = Record<string, any>
-export type Message<Payload extends Obj = Obj> = {
+export type Message<Payload> = {
   id: MsgID
-  target: PortAddress
-  source: FullPortAddress
+  target: Pointer
+  source: Pointer
   payload: Payload
-  ctx: Record<string, any>
   parentMsgId: MsgID | null
+  ctx: Record<string, any>
+  managedBy?: {
+    extId: ExtId
+    pkgId: { name: string; version: string }
+  }
 }

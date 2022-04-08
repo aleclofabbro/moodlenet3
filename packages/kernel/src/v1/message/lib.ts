@@ -1,11 +1,10 @@
 import { MsgID } from '.'
-import { ExtensionDef } from '../extension'
-import { ExtensionRegistry, ExtensionRegistryRecord } from '../extension-registry'
-import { FullPortAddress, PortAddress } from '../port-address/types'
-import { LookupExt, PortListener, PortShell, PushMessage } from '../types'
-import { Message, Obj } from './types'
+import { baseSplitPointer, joinPointer, Pointer, splitPointer } from '../extension'
+import { ExtensionRegistry } from '../extension-registry'
+import { PortListener, PortShell, PushMessage, ShellExtensionRegistry } from '../types'
+import { Message } from './types'
 
-export const pushMessage = <P extends Obj>(message: Message<P>, extReg: ExtensionRegistry) => {
+export const pushMessage = <P>(message: Message<P>, extReg: ExtensionRegistry) => {
   console.log(
     `
 +++++++++++++++++++++++
@@ -15,89 +14,78 @@ pushMessage`,
 -----------------------
 `,
   )
-  const { target, source } = message
-  const sourceExt = extReg.getRegisteredExtension(source.extId.name)
-  const targetExt = extReg.getRegisteredExtension(target.extName)
-
-  if (!(targetExt && sourceExt)) {
-    throw new Error(`source or target extensions not available`)
-  }
-
-  msgListeners.forEach(({ listener, cwAddress }) => {
-    const listenerExt = extReg.getRegisteredExtension(cwAddress.extId.name)
+  msgListeners.forEach(({ cwPointer, listener }) => {
+    const listenerP = splitPointer(cwPointer)
+    const listenerExt = extReg.getRegisteredExtension(listenerP.extName)
     if (!listenerExt?.deployment) {
-      //TODO: WARN
+      //TODO: WARN? useless check ? remove listener ?
       return
     }
     const shell = makeShell({
-      cwAddress,
+      cwPointer,
       message,
       extReg,
     })
-    if (cwAddress.extId.name === message.target.extName && cwAddress.path === message.target.path) {
-      setImmediate(() => listener(shell))
-    } else {
-      listener(shell)
-    }
+    listener(shell)
   })
 
   return message
 }
-export function makeShell<P extends Obj = Obj>({
+export function makeShell<P>({
   message,
-  cwAddress,
+  cwPointer,
   extReg,
-  useSafeExtRecord,
 }: {
   message: Message<P>
-  cwAddress: FullPortAddress
+  cwPointer: Pointer
   extReg: ExtensionRegistry
-  useSafeExtRecord?: ExtensionRegistryRecord
 }): PortShell<P> {
-  // console.log(extReg.getExtensions())
-  const extRecord = useSafeExtRecord ?? extReg.getRegisteredExtension(cwAddress.extId.name)
-  if (!extRecord) {
-    throw new Error(`extension ${cwAddress.extId.name} not installed`)
-  } else if (!extRecord.deployment && !useSafeExtRecord) {
-    throw new Error(`extension ${cwAddress.extId.name} not available atm`)
+  const cwExt = baseSplitPointer(cwPointer)
+  assertDeployed()
+  const listen = (listener: PortListener) => {
+    assertDeployed()
+    return addListener({ cwPointer, listener })
   }
-  const listen = (listener: PortListener) => addListener(cwAddress, listener)
-  const push: PushMessage = extName => path => payload =>
-    pushMessage(
+
+  const push: PushMessage = targetExtId => path => payload => {
+    assertDeployed()
+    const target = joinPointer(targetExtId, path)
+    extReg.assertCompatibleRegisteredExtension(targetExtId)
+    return pushMessage(
       createMessage({
-        payload: payload as any,
-        target: { extName, path },
-        source: cwAddress,
+        payload,
+        target,
+        source: cwPointer,
         parentMsgId: message.id,
       }),
       extReg,
     ) as any
-
-  const lookup: LookupExt = <Ext extends ExtensionDef>(extName: Ext['name']) => {
-    const extRecord = extReg.getRegisteredExtension(extName)
-    if (!extRecord) {
-      // throw new Error(`${extName} extensions not available`)
-      return undefined
-    }
-    return {
-      active: !!extRecord.deployment,
-      extId: extRecord.id,
-      pkgInfo: extRecord.pkgInfo,
-    }
   }
-  const env = extRecord.env
 
+  const extRec = extReg.assertCompatibleRegisteredExtension(cwExt.extId)
   return {
-    env,
-    lookup,
     message,
     listen,
-    cwAddress,
+    cwPointer,
     push,
+    registry: getShellExtReg(),
+    pkgInfo: extRec.pkgInfo,
+  }
+  function assertDeployed() {
+    extReg.assertCompatibleRegisteredExtension(cwExt.extId)
+    // FIXME: remove all listeners on exception ?
+  }
+  function getShellExtReg(): ShellExtensionRegistry {
+    const registry: any = { ...extReg }
+    //@ts-ignore
+    delete registry.registerExtension
+    //@ts-ignore
+    delete registry.unregisterExtension
+    return registry
   }
 }
-const addListener = (cwAddress: FullPortAddress, listener: PortListener) => {
-  const listenerRecord: PortListenerRecord = { listener, cwAddress }
+const addListener = ({ cwPointer, listener }: { listener: PortListener; cwPointer: Pointer }) => {
+  const listenerRecord: PortListenerRecord = { listener, cwPointer }
   msgListeners = [...msgListeners, listenerRecord]
   // setImmediate(() => (msgListeners = [...msgListeners, listenerRecord]))
   return () => {
@@ -106,23 +94,19 @@ const addListener = (cwAddress: FullPortAddress, listener: PortListener) => {
 }
 type PortListenerRecord = {
   listener: PortListener
-  cwAddress: FullPortAddress
+  cwPointer: Pointer
 }
 let msgListeners: PortListenerRecord[] = []
 
-function newId() {
-  return Math.random().toString(36).substring(2)
-}
-// export function createShellMessage<P extends Obj>({ shell, target }: { shell: PortShell; target: PortAddress }) {}
-export function createMessage<P extends Obj>({
+export function createMessage<P>({
   payload,
   source,
   target,
   parentMsgId,
 }: {
   payload: P
-  source: FullPortAddress
-  target: PortAddress
+  source: Pointer
+  target: Pointer
   parentMsgId: MsgID | null
 }): Message<P> {
   return {
@@ -133,4 +117,8 @@ export function createMessage<P extends Obj>({
     target,
     parentMsgId,
   }
+}
+
+function newId() {
+  return Math.random().toString(36).substring(2)
 }

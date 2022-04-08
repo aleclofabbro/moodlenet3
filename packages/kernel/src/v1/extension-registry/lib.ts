@@ -1,15 +1,16 @@
-import { ExtensionIdObj, ExtEnv, ExtImpl, ExtLCStop } from '../extension/types'
+import { satisfies } from 'semver'
+import { ExtEnv, ExtId, ExtImpl, ExtLCStop, splitExtId, Version } from '../extension/types'
 import { PkgInfo } from '../pkg-info/types'
 
 export type ExtensionRegistryHash = {
-  [ExtId in string]: ExtensionRegistryRecord
+  [ExtName in string]: ExtensionRegistryRecord
 }
 export type Deployment = {
   at: Date
   stop: ExtLCStop
 }
-export type ExtensionRegistryRecord<ExtId extends ExtensionIdObj = ExtensionIdObj> = {
-  id: ExtId
+export type ExtensionRegistryRecord<_ExtId extends ExtId = ExtId> = {
+  extId: _ExtId
   env: ExtEnv
   deployment: 'deploying' | Deployment | undefined
   pkgInfo: PkgInfo
@@ -18,33 +19,74 @@ export type ExtensionRegistryRecord<ExtId extends ExtensionIdObj = ExtensionIdOb
 
 export type ExtensionRegistry = ReturnType<typeof createLocalExtensionRegistry>
 export const createLocalExtensionRegistry = () => {
+  //FIXME: make `extensionRegistry` an ExtensionRegistryRecord[]
+  // to support multiple extension impl with same name
+  // from different packages
   const extensionRegistry: ExtensionRegistryHash = {}
+  // any subsequent query by name for a regRec would return arrays
+  // or maybe-one cross-checking the pkgName too
+  //FIXME
 
   return {
     getExtensions,
     getRegisteredExtension,
     assertRegisteredExtension,
     registerExtension,
+    //unregisterExtension,
+    getCompatibleRegisteredExtension,
+    assertCompatibleRegisteredExtension,
   }
 
   function getExtensions() {
     return Object.values(extensionRegistry)
   }
-  function getRegisteredExtension(pkgName: string) {
-    return extensionRegistry[pkgName]
+  function getRegisteredExtension(extName: string) {
+    return extensionRegistry[extName]
   }
 
-  function assertRegisteredExtension(pkgName: string) {
-    const ext = getRegisteredExtension(pkgName)
+  function getCompatibleRegisteredExtension(requestedExtId: ExtId) {
+    const reqExt = splitExtId(requestedExtId)
+    const extRecord = getRegisteredExtension(reqExt.extName)
+    if (!extRecord) {
+      return 'NOT_REGISTERED' as const
+    }
+
+    const availableExt = splitExtId(extRecord.extId)
+    if (!versionSatisfies(availableExt.version, reqExt.version)) {
+      return 'VERSION_MISMATCH' as const
+    }
+    return extRecord
+  }
+
+  function assertCompatibleRegisteredExtension(requestedExtId: ExtId, acceptUndeployed = false) {
+    const extRecord = getCompatibleRegisteredExtension(requestedExtId)
+    if (extRecord === 'NOT_REGISTERED') {
+      throw new Error(`requested extension [${requestedExtId}] not registered`)
+    } else if (extRecord === 'VERSION_MISMATCH') {
+      throw new Error(`requested extension [${requestedExtId}] registered but not compatible`)
+    }
+    if (!(acceptUndeployed || extRecord.deployment)) {
+      throw new Error(`requested extension ${requestedExtId} not deployed`)
+    }
+
+    return extRecord
+  }
+
+  function assertRegisteredExtension(extName: string, acceptUndeployed = false) {
+    const ext = getRegisteredExtension(extName)
     if (!ext) {
-      throw new Error(`extension package ${pkgName} not registered`)
+      throw new Error(`requested extension ${extName} not registered`)
+    }
+    if (!(acceptUndeployed || ext.deployment)) {
+      throw new Error(`requested extension ${extName} not deployed`)
     }
     return ext
   }
-  function assertNotRegisteredExtension(pkgName: string) {
-    const ext = getRegisteredExtension(pkgName)
+
+  function assertNotRegisteredExtension(extName: string) {
+    const ext = getRegisteredExtension(extName)
     if (ext) {
-      throw new Error(`extension package ${pkgName} already registered`)
+      throw new Error(`extension package ${extName} already registered`)
     }
   }
   // function registeredExtensionOf(node_module: NodeModule) {
@@ -54,46 +96,32 @@ export const createLocalExtensionRegistry = () => {
   //   }
   //   return getRegisteredExtension(pkgInfo?.json.name)
   // }
-  function registerExtension<ExtId extends ExtensionIdObj>({
-    id,
+  function registerExtension<_ExtId extends ExtId>({
+    extId,
     pkgInfo,
     lifeCycle,
     env,
   }: {
-    id: ExtId
+    extId: _ExtId
     pkgInfo: PkgInfo
     lifeCycle: ExtImpl
     env: ExtEnv
   }) {
     const pkgName = pkgInfo.json.name
-
-    if (id.name !== pkgName) {
-      throw new Error(`package.json name and provided extension name must exactly match !`)
-    }
-    if (id.version !== pkgInfo.json.version) {
-      throw new Error(`package.json version and provided extension version must exactly match !`)
-    }
-    assertNotRegisteredExtension(pkgName)
-    const extRegRec: ExtensionRegistryRecord<ExtId> = {
+    const { extName } = splitExtId(extId)
+    assertNotRegisteredExtension(extName)
+    const extRegRec: ExtensionRegistryRecord<_ExtId> = {
       deployment: undefined,
       pkgInfo,
-      id,
+      extId,
       lifeCycle,
       env,
     }
 
     return (extensionRegistry[pkgName] = extRegRec)
   }
+}
 
-  // function assertRegisteredExtensionOf(node_module: NodeModule) {
-  //   const ext = registeredExtensionOf(node_module)
-
-  //   if (!ext) {
-  //     throw new Error(
-  //       `No registered Extension for module ${node_module.filename}`
-  //     )
-  //   }
-
-  //   return ext
-  // }
+export function versionSatisfies(target: Version, requested: Version) {
+  return satisfies(target, `^${requested}`)
 }

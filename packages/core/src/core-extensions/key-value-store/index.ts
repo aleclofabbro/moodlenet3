@@ -13,9 +13,9 @@ export type MoodlenetKeyValueStoreExt = ExtensionDef<'moodlenet.key-value-store'
 // export const kvs = <T>(shell: PortShell, opts?:Partial<KvsOpts>) => {
 export const kvStore = <T>(shell: PortShell) => {
   const get = <K extends string & keyof T>(key: K) =>
-    caller<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store::get')<T[K]>(key)
+    caller<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@1.0.0::get')<T[K]>(key)
   const put = <K extends string & keyof T>(key: K, val: T[K]) => {
-    caller<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store::put')<T[K]>(key, val)
+    caller<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@1.0.0::put')<T[K]>(key, val)
   }
 
   return {

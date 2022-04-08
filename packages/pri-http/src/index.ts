@@ -1,6 +1,6 @@
 import { v1 } from '@moodlenet/kernel/lib'
 import type { ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel/lib/v1'
-import { rpcReplyAll } from '@moodlenet/kernel/lib/v1'
+import { replyAll } from '@moodlenet/kernel/lib/v1'
 import { json } from 'body-parser'
 import express from 'express'
 
@@ -11,21 +11,21 @@ export type MNPriHttpExt = ExtensionDef<
     setWebAppRootFolder: RpcTopo<(_: { folder: string }) => Promise<void>>
   }
 >
-export const priHttpExtId: v1.ExtIdStrOf<MNPriHttpExt> = '@moodlenet/pri-http@1.0.0'
+export const priHttpExtId: v1.ExtId<MNPriHttpExt> = '@moodlenet/pri-http@1.0.0'
 
 const extImpl: v1.ExtImplExports = {
   module,
   extensions: {
     [priHttpExtId]: {
-      async start({ shell }) {
-        const port = shell.env.port
-        const rootPath = shell.env.rootPath
+      async start({ shell, env }) {
+        const port = env.port
+        const rootPath = env.rootPath
         const extPortsApp = makeExtPortsApp(shell)
 
         const app = express().use(`${rootPath}/`, (_, __, next) => next())
         app.use(`/_srv`, extPortsApp)
         const server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
-        rpcReplyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http', {
+        replyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http@1.0.0', {
           setWebAppRootFolder: _shell => async p => {
             console.log({ p })
             const staticApp = express.static(p.folder)
@@ -67,13 +67,13 @@ function makeExtPortsApp(shell: PortShell) {
     console.log(extName)
 
     //TODO: implement shell.lookupPort(addr:PortAddress):ShellGatesTopology<any>
-    const ext = shell.lookup(extName)
-    if (!ext?.active) {
+    const ext = shell.registry.getRegisteredExtension(extName)
+    if (!ext?.deployment) {
       return next()
     }
     console.log('*********body', req.body)
     try {
-      const response = await (v1.rpcRequest(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
+      const response = await (v1.caller(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
       //(shell ,`${extName}::${path.join('.')}`)(req.body)
       res.json(response)
     } catch (err) {

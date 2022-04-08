@@ -1,33 +1,35 @@
 import type { Boot } from '@moodlenet/bare-metal/lib/types'
 import { createLocalExtensionRegistry, ExtensionRegistryRecord } from './extension-registry/lib'
-import type { ExtensionDef, ExtIdOf, ExtImplExports, ExtName } from './extension/types'
+import { ExtensionDef, ExtId, ExtIdOf, ExtImplExports, ExtName, joinPointer, splitExtId } from './extension/types'
 import { replyAll, RpcTopo } from './lib/port'
-import { createMessage, makeShell, pushMessage } from './message'
-import { pkgInfoOf } from './pkg-info'
+import { createMessage, makeShell } from './message'
+import { PkgInfo, pkgInfoOf } from './pkg-info'
 import { makePkgMng } from './pkg-mng'
-import { FullPortAddress, PortAddress } from './port-address/types'
 
-// const coreExtensions = (process.env.MOODLENET_CORE_EXTENSIONS ?? '')
-//   .split('\n')
-//   .map(_ => _.trim())
-//   .filter(Boolean)
-//   .map(corePkg => corePkg.split('#') as [pkgLoc: string, extIdName: string])
-
-// type KernelEnv = {
-//   coreExts: string[]
-//   activateExts: string[]
-// }
-export const kernelExtId: ExtIdOf<KernelExt> = {
+export const kernelExtIdObj: ExtIdOf<KernelExt> = {
   name: '@moodlenet/kernel',
   version: '1.0.0',
 } as const
+
+export const kernelExtId: ExtId<KernelExt> = '@moodlenet/kernel@1.0.0'
 
 export type KernelExtPorts = {
   packages: {
     install: RpcTopo<(_: { pkgLoc: string }) => Promise<{ records: ExtensionRegistryRecord[] }>>
   }
   extensions: {
-    activate: RpcTopo<(_: { extName: ExtName }) => Promise<void>>
+    activate: RpcTopo<
+      (_: { extName: ExtName }) => Promise<{
+        extId: ExtId
+        pkgInfo: PkgInfo
+      }>
+    >
+    deactivate: RpcTopo<
+      (_: { extName: ExtName }) => Promise<{
+        extId: ExtId
+        pkgInfo: PkgInfo
+      }>
+    >
   }
 }
 export type KernelExt = ExtensionDef<'@moodlenet/kernel', '1.0.0', KernelExtPorts>
@@ -46,17 +48,13 @@ export const boot: Boot = async bareMetal => {
     const pkgInfo = pkgInfoOf(module)
 
     return Object.entries(extensions).map(([fullName, impl]) => {
-      const atIndex = fullName.lastIndexOf('@')
-      const name = fullName.substring(0, atIndex)
-      const version = fullName.substring(atIndex + 1)
-      const id = {
-        name,
-        version,
-      }
-      const env = extEnv(name)
+      //FIXME: check fullName format to be ExtId
+      const extId = fullName as ExtId
+      const { extName } = splitExtId(extId)
+      const env = extEnv(extName)
       return localExtReg.registerExtension({
         env,
-        id,
+        extId,
         lifeCycle: impl,
         pkgInfo,
       })
@@ -65,8 +63,8 @@ export const boot: Boot = async bareMetal => {
   const pkgInfo = pkgInfoOf(module)
   /* const _kernelExtRec =  */ localExtReg.registerExtension({
     pkgInfo,
-    env: extEnv(kernelExtId.name),
-    id: kernelExtId,
+    env: extEnv(kernelExtIdObj.name),
+    extId: kernelExtId,
     lifeCycle: {
       start: async ({ shell }) => {
         replyAll<KernelExt>(shell, '@moodlenet/kernel@1.0.0', {
@@ -76,46 +74,22 @@ export const boot: Boot = async bareMetal => {
           'extensions.activate':
             _shell =>
             async ({ extName }) => {
-              await startExtension(extName)
+              const extRec = await startExtension(extName)
+              return {
+                extId: extRec.extId,
+                pkgInfo: extRec.pkgInfo,
+              }
             },
+          'extensions.deactivate': _shell => async () => {
+            throw new Error('unimplemented')
+          },
         })
-
-        // await startCoreExtensions()
 
         return async () => {}
       },
     },
   })
-  await startExtension(kernelExtId.name)
-
-  // const kernelEnv: KernelEnv = {
-  //   coreExts: [],
-  //   activateExts: [],
-  //   ...extEnv(kernelExtId.name),
-  // }
-  // console.log({ kernelEnv })
-  //
-  //
-  //
-  //
-  // const result = await installPkg({ pkgLoc: 'file:/home/alec/MOODLENET/repo/moodlenet3/packages/test-extension' })
-  // console.log({ result })
-  // await Promise.all(result.map(_ => startExtension(_.id.name)))
-  //
-  //
-  //
-  //
-  // async function startCoreExtensions() {
-  //   return Promise.all(
-  //     coreExtensions.map(async ([pkgLoc, extIdName]) => {
-  //       console.log(`** KERNEL: installing ${extIdName} from ${pkgLoc}`)
-  //       await pkgMng.install([pkgLoc])
-  //       bareMetal.modRequire(extIdName)
-  //       const extReg = await startExtension(extIdName)
-  //       return extReg
-  //     }),
-  //   )
-  // }
+  await startExtension(kernelExtIdObj.name)
 
   async function startExtension(extIdName: string) {
     const extRecord = localExtReg.getRegisteredExtension(extIdName)
@@ -126,42 +100,41 @@ export const boot: Boot = async bareMetal => {
       throw new Error(`extension [${extIdName}] already deployed`)
     }
 
-    console.log(`** KERNEL: starting ${extRecord.id.name}@${extRecord.id.version}`)
-    const shell = makeStartShell(extRecord)
+    console.log(`** KERNEL: starting ${extRecord.extId}@${extRecord.extId}`)
     extRecord.deployment = 'deploying'
-    const stop = await extRecord.lifeCycle.start({ shell })
+    const shell = makeStartShell(extRecord)
+    const env = extEnv(extIdName)
+    const stop = await extRecord.lifeCycle.start({ shell, env })
     extRecord.deployment = {
       at: new Date(),
       stop,
     }
-    pushMessage(
-      createMessage({
-        payload: {},
-        source: { extId: extRecord.id, path: 'activated' },
-        target: { extName: kernelExtId.name, path: 'extensions.activated' },
-        parentMsgId: null,
-      }),
-      localExtReg,
-    )
+
+    // pushMessage(
+    //   createMessage({
+    //     payload: null, // FIXME: Activated Message with valued payload?
+    //     source: joinPointer(extRecord.extId, ''),
+    //     target: joinPointer(kernelExtId, 'extensions.activated'),
+    //     parentMsgId: null,
+    //   }),
+    //   localExtReg,
+    // )
     return extRecord
   }
 
   function makeStartShell(extRec: ExtensionRegistryRecord) {
-    const startExtAddress: PortAddress = {
-      extName: extRec.id.name,
-      path: '',
-    }
-    const cwAddress: FullPortAddress = {
-      extId: extRec.id,
-      path: '',
-    }
-    const startMessage = createMessage({
-      payload: {},
-      source: { extId: kernelExtId, path: '' },
-      target: startExtAddress,
+    const cwPointer = joinPointer(extRec.extId, '')
+    const message = createMessage({
+      payload: null, // FIXME: startShell Message with valued payload?
+      source: joinPointer(kernelExtId, ''),
+      target: cwPointer,
       parentMsgId: null,
     })
-    const startShell = makeShell({ message: startMessage, cwAddress, extReg: localExtReg, useSafeExtRecord: extRec })
+    const startShell = makeShell({
+      message,
+      cwPointer,
+      extReg: localExtReg,
+    })
     return startShell
   }
 }

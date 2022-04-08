@@ -18,7 +18,7 @@ export type ExtensionDef<
 > = ExtensionIdObj<Name, Version> & {
   ports: ExtRootTopo
 }
-export type ExtLCStart = (startArg: { shell: PortShell }) => Promise<ExtLCStop>
+export type ExtLCStart = (startArg: { shell: PortShell; env: Record<string, any> }) => Promise<ExtLCStop>
 export type ExtLCStop = () => Promise<void>
 export type ExtImpl = {
   start: ExtLCStart
@@ -26,7 +26,7 @@ export type ExtImpl = {
 }
 
 export type ExtImplExports = { module: NodeModule; extensions: Record<ExtId<ExtensionDef>, ExtImpl> }
-export type ExtId<Ext extends ExtensionDef> = `${Ext['name']}@${Ext['version']}` //`;)
+export type ExtId<Ext extends ExtensionDef = ExtensionDef> = `${Ext['name']}@${Ext['version']}` //`;)
 
 /*
  *
@@ -74,7 +74,7 @@ export type ExtTopoPaths<Ext extends ExtensionDef, TargetTopoNode extends TopoNo
 export type ExtTopoNodePaths<Ext extends ExtensionDef> = ExtTopoPaths<Ext> | ExtPortPaths<Ext>
 
 export type Pointer<
-  Ext extends ExtensionDef,
+  Ext extends ExtensionDef = ExtensionDef,
   Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
 > = `${Ext['name']}@${Ext['version']}::${Path}` //`;)
 export type Version = string
@@ -87,10 +87,22 @@ export type PortPathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPat
   ? Payload
   : never
 
-export const splitPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
-  pointer.split('::') as [ExtId<Ext>, Path]
-export const splitExtId = <Ext extends ExtensionDef>(extId: ExtId<Ext>) =>
-  extId.split('@') as [Ext['name'], Ext['version']]
+export const baseSplitPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(
+  pointer: Pointer<Ext, Path>,
+) => {
+  const [extId, path] = pointer.split('::') as [ExtId<Ext>, Path]
+  return { extId, path }
+}
+export const splitExtId = <Ext extends ExtensionDef>(extId: ExtId<Ext>) => {
+  const [extName, version] = extId.split('@') as [Ext['name'], Ext['version']]
+  return { extName, version }
+}
+
+export const splitPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => {
+  const baspl = baseSplitPointer(pointer)
+  const idspl = splitExtId(baspl.extId)
+  return { ...baspl, ...idspl }
+}
 
 export const joinPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(
   extId: ExtId<Ext>,
