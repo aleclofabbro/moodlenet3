@@ -1,6 +1,6 @@
 {
   "name": "@moodlenet/bare-metal",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "index.js",
   "license": "AGPL-3.0",
   "description": "moodlenet bare-metal package",

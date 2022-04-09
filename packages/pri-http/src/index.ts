@@ -6,12 +6,12 @@ import express from 'express'
 
 export type MNPriHttpExt = ExtensionDef<
   '@moodlenet/pri-http',
-  '1.0.0',
+  '0.0.1',
   {
     setWebAppRootFolder: RpcTopo<(_: { folder: string }) => Promise<void>>
   }
 >
-export const priHttpExtId: v1.ExtId<MNPriHttpExt> = '@moodlenet/pri-http@1.0.0'
+export const priHttpExtId: v1.ExtId<MNPriHttpExt> = '@moodlenet/pri-http@0.0.1'
 
 const extImpl: v1.ExtImplExports = {
   module,
@@ -25,7 +25,7 @@ const extImpl: v1.ExtImplExports = {
         const app = express().use(`${rootPath}/`, (_, __, next) => next())
         app.use(`/_srv`, extPortsApp)
         const server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
-        replyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http@1.0.0', {
+        replyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http@0.0.1', {
           setWebAppRootFolder: _shell => async p => {
             console.log({ p })
             const staticApp = express.static(p.folder)

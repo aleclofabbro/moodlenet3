@@ -11,14 +11,14 @@ export type MoodlenetSysLogPorts = {
   [level in LogLevel]: Port<Log>
 }
 
-export type MoodlenetSysLogExt = ExtensionDef<'moodlenet.sys-log', '1.0.0', MoodlenetSysLogPorts>
+export type MoodlenetSysLogExt = ExtensionDef<'moodlenet.sys-log', '0.0.1', MoodlenetSysLogPorts>
 
 export const logger = (
   shell: PortShell,
 ): {
   [level in LogLevel]: (log: Log) => void
 } => {
-  const logPort = shell.push<MoodlenetSysLogExt>('moodlenet.sys-log@1.0.0')
+  const logPort = shell.push<MoodlenetSysLogExt>('moodlenet.sys-log@0.0.1')
   return {
     debug: logPort('debug'),
     error: logPort('error'),

@@ -1,12 +1,12 @@
 {
   "name": "@moodlenet/content-graph",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "license": "AGPL-3.0",
   "moodlenet": {
     "name": "Moodlenet content-graph",
     "shortDesc": "Moodlenet content-graph",
     "requires": [
-      "@moodlenet/kernel@1.0.0"
+      "@moodlenet/kernel@0.0.1"
     ]
   },
   "files": [
@@ -18,7 +18,7 @@
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "devDependencies": {
-    "@moodlenet/kernel": "^1.0.0",
+    "@moodlenet/kernel": "^0.0.1",
     "shx": "^0.3.4",
     "ts-essentials": "^9.1.2",
     "type-fest": "^2.12.1",

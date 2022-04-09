@@ -1,6 +1,6 @@
 {
   "name": "@moodlenet/pri-http",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "license": "AGPL-3.0",
   "moodlenet": {
     "name": "pri http moodlenet",
@@ -19,7 +19,7 @@
     "express": "^4.17.2"
   },
   "devDependencies": {
-    "@moodlenet/kernel": "^1.0.0",
+    "@moodlenet/kernel": "^0.0.1",
     "@types/express": "^4.17.13",
     "@types/node": "^17.0.18",
     "shx": "^0.3.4",

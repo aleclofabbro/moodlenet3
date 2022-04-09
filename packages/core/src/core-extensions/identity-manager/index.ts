@@ -9,6 +9,6 @@ export type MoodlenetIdentityManagerPorts = {
 
 export type MoodlenetIdentityManagerExt = ExtensionDef<
   'moodlenet.identity-manager',
-  '1.0.0',
+  '0.0.1',
   MoodlenetIdentityManagerPorts
 >

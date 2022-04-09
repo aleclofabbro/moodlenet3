@@ -3,12 +3,12 @@ import { ExtensionDef, RpcTopo } from '@moodlenet/kernel/lib/v1'
 
 export type TestExt = ExtensionDef<
   '@moodlenet/test-extension',
-  '1.0.0',
+  '0.0.1',
   {
     _test: RpcTopo<<T>(_: T) => Promise<{ a: T }>>
   }
 >
-export const testExtId: v1.ExtIdStrOf<TestExt> = '@moodlenet/test-extension@1.0.0'
+export const testExtId: v1.ExtIdStrOf<TestExt> = '@moodlenet/test-extension@0.0.1'
 
 const extImpl: v1.ExtImplExports = {
   module,

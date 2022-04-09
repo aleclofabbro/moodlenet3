@@ -7,8 +7,8 @@
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
-    "@moodlenet/bare-metal": "^1.0.0",
-    "@moodlenet/kernel": "^1.0.0",
+    "@moodlenet/bare-metal": "^0.0.1",
+    "@moodlenet/kernel": "^0.0.1",
     "@moodlenet/test-extension": "file:../test-extension",
     "dotenv": "^16.0.0",
     "dotenv-expand": "^8.0.1"

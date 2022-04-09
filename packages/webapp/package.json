@@ -1,6 +1,6 @@
 {
   "name": "@moodlenet/webapp",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "moodlenet": {
     "name": "moodlenet webapp",
@@ -58,8 +58,8 @@
     "@babel/plugin-proposal-class-properties": "^7.16.7",
     "@babel/preset-env": "^7.16.11",
     "@babel/preset-react": "^7.16.7",
-    "@moodlenet/kernel": "^1.0.0",
-    "@moodlenet/pri-http": "^1.0.0",
+    "@moodlenet/kernel": "^0.0.1",
+    "@moodlenet/pri-http": "^0.0.1",
     "@svgr/webpack": "^5.5.0",
     "@types/jest": "^27.4.0",
     "@types/lodash": "^4.14.179",

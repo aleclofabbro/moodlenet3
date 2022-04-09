@@ -2,7 +2,7 @@ import type { Boot } from '@moodlenet/bare-metal/lib/types'
 import type { ExtensionRegistryRecord } from './extension-registry/lib'
 import { createLocalExtensionRegistry } from './extension-registry/lib'
 import { baseSplitPointer, joinPointer, splitExtId, splitPointer } from './extension/pointer-lib'
-import type { ExtensionDef, ExtId, ExtIdOf, ExtImplExports, ExtName, Pointer } from './extension/types'
+import type { ExtensionDef, ExtId, ExtImplExports, ExtName, Pointer } from './extension/types'
 import type { RpcTopo } from './lib/port'
 import { replyAll } from './lib/port'
 import type { Message, MsgID } from './message'
@@ -11,12 +11,12 @@ import { pkgInfoOf } from './pkg-info'
 import { makePkgMng } from './pkg-mng'
 import type { PortListener, PortShell, PushMessage, ShellExtensionRegistry } from './types'
 
-export const kernelExtIdObj: ExtIdOf<KernelExt> = {
-  name: '@moodlenet/kernel',
-  version: '1.0.0',
-} as const
+// export const kernelExtIdObj: ExtIdOf<KernelExt> = {
+//   name: '@moodlenet/kernel',
+//   version: '0.0.1',
+// } as const
 
-export const kernelExtId: ExtId<KernelExt> = '@moodlenet/kernel@1.0.0'
+export const kernelExtId: ExtId<KernelExt> = '@moodlenet/kernel@0.0.1'
 
 export type KernelExtPorts = {
   packages: {
@@ -37,52 +37,62 @@ export type KernelExtPorts = {
     >
   }
 }
-export type KernelExt = ExtensionDef<'@moodlenet/kernel', '1.0.0', KernelExtPorts>
+export type KernelExt = ExtensionDef<'@moodlenet/kernel', '0.0.1', KernelExtPorts>
 
 export const boot: Boot = async bareMetal => {
   let msgListeners: PortListenerRecord[] = []
+  const kernelExtIdObj = splitExtId(kernelExtId)
   const pkgMng = makePkgMng(bareMetal.cwd)
   const cfgPath = process.env.KERNEL_ENV_MOD ?? `${process.cwd()}/kernel-env-mod`
   const global_env: Record<string, any> = require(cfgPath)
-  const extEnv = (extName: string) => global_env[extName]
   const localExtReg = createLocalExtensionRegistry()
   const pkgInfo = pkgInfoOf(module)
-
-  /* const _kernelExtRec =  */
-  localExtReg.registerExtension({
-    pkgInfo,
-    env: extEnv(kernelExtIdObj.name),
-    extId: kernelExtId,
-    lifeCycle: {
-      start: async ({ shell }) => {
-        replyAll<KernelExt>(shell, '@moodlenet/kernel@1.0.0', {
-          'packages.install':
-            _shell =>
-            async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
-          'extensions.activate':
-            _shell =>
-            async ({ extName }) => {
-              const extRec = await startExtension(extName)
-              return {
-                extId: extRec.extId,
-                pkgInfo: extRec.pkgInfo,
-              }
-            },
-          'extensions.deactivate': _shell => async () => {
-            throw new Error('unimplemented')
-          },
-        })
-
-        return async () => {}
-      },
-    },
-  })
-  await startExtension(kernelExtIdObj.name)
-
-  return void 0
+  return registerAndStartKernelExt()
 
   /*
    */
+  type PortListenerRecord = {
+    listener: PortListener
+    cwPointer: Pointer
+  }
+
+  function extEnv(extName: string) {
+    return global_env[extName]
+  }
+
+  async function registerAndStartKernelExt() {
+    localExtReg.registerExtension({
+      pkgInfo,
+      env: extEnv(kernelExtIdObj.extName),
+      extId: kernelExtId,
+      lifeCycle: {
+        start: async ({ shell }) => {
+          replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
+            'packages.install':
+              _shell =>
+              async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
+            'extensions.activate':
+              _shell =>
+              async ({ extName }) => {
+                const extRec = await startExtension(extName)
+                return {
+                  extId: extRec.extId,
+                  pkgInfo: extRec.pkgInfo,
+                }
+              },
+            'extensions.deactivate': _shell => async () => {
+              throw new Error('unimplemented')
+            },
+          })
+
+          return async () => {}
+        },
+      },
+    })
+
+    return startExtension(kernelExtIdObj.extName)
+  }
+
   async function installPkg({ pkgLoc }: { pkgLoc: string }) {
     const [info, installResp] = await Promise.all([pkgMng.info(pkgLoc), pkgMng.install(pkgLoc)])
     console.log(info, installResp.all)
@@ -102,6 +112,7 @@ export const boot: Boot = async bareMetal => {
       })
     })
   }
+
   async function startExtension(extIdName: string) {
     const extRecord = localExtReg.getRegisteredExtension(extIdName)
     if (!extRecord) {
@@ -173,6 +184,7 @@ pushMessage`,
 
     return message
   }
+
   function makeShell<P>({ message, cwPointer }: { message: Message<P>; cwPointer: Pointer }): PortShell<P> {
     const cwExt = baseSplitPointer(cwPointer)
     assertDeployed()
@@ -217,6 +229,7 @@ pushMessage`,
       return registry
     }
   }
+
   function addListener({ cwPointer, listener }: { listener: PortListener; cwPointer: Pointer }) {
     const listenerRecord: PortListenerRecord = { listener, cwPointer }
     msgListeners = [...msgListeners, listenerRecord]
@@ -224,10 +237,6 @@ pushMessage`,
     return () => {
       msgListeners = msgListeners.filter(_ => _ !== listenerRecord)
     }
-  }
-  type PortListenerRecord = {
-    listener: PortListener
-    cwPointer: Pointer
   }
 
   function createMessage<P>({

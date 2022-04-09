@@ -3,12 +3,12 @@ import { ExtensionDef, RpcTopo } from '@moodlenet/kernel/lib/v1'
 
 export type MoodlenetCoreExt = ExtensionDef<
   '@moodlenet/core',
-  '1.0.0',
+  '0.0.1',
   {
     _test: RpcTopo<<T>(_: T) => Promise<{ a: T }>>
   }
 >
-export const testExtId: v1.ExtId<MoodlenetCoreExt> = '@moodlenet/core@1.0.0'
+export const testExtId: v1.ExtId<MoodlenetCoreExt> = '@moodlenet/core@0.0.1'
 
 const extImpl: v1.ExtImplExports = {
   module,
@@ -26,7 +26,7 @@ const extImpl: v1.ExtImplExports = {
         //   cmpPath: 'pkg/webapp',
         // })
         // })
-        v1.replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@1.0.0', {
+        v1.replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@0.0.1', {
           _test: _shell => async _ => ({ a: _ }),
         })
 

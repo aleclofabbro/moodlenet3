@@ -19,12 +19,12 @@ const extAliases: {
 
 export const webappExtId: ExtIdOf<WebappExt> = {
   name: '@moodlenet/webapp',
-  version: '1.0.0',
+  version: '0.0.1',
 } as const
 
 export type WebappExt = ExtensionDef<
   '@moodlenet/webapp',
-  '1.0.0',
+  '0.0.1',
   {
     ensureExtension: RpcTopo<(_: { extId: ExtensionId; moduleLoc: string; cmpPath: string }) => Promise<void>>
     ___CONTROL_PORT_REMOVE_ME_LATER___: RpcTopo<<T>(_: T) => Promise<{ _: T }>>
