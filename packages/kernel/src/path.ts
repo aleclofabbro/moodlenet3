@@ -3,7 +3,7 @@ type Prev = [never, 0, 1, 2, 3, 4, 5, 6,  7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1
 
 type Join<K, P> = K extends string /* | number */
   ? P extends string /* | number */
-    ? `${K}${'' extends P ? '' : '.'}${P}`
+    ? `${K}${'' extends P ? '' : '/'}${P}`
     : never
   : never
 
@@ -39,7 +39,7 @@ export type TypePaths<Obj, SearchType, Primitive, Depth extends number = 10> = O
 //   ? TypeUnion<Hash, Prop>
 //   : TypeUnion<Hash, keyof Hash>
 
-export type TypeofPath<T, L extends string> = L extends `${infer P}.${infer Rest}`
+export type TypeofPath<T, L extends string> = L extends `${infer P}/${infer Rest}`
   ? P extends keyof T
     ? TypeofPath<T[P], Rest>
     : never

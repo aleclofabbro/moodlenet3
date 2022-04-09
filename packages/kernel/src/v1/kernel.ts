@@ -68,10 +68,10 @@ export const boot: Boot = async bareMetal => {
       lifeCycle: {
         start: async ({ shell }) => {
           replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
-            'packages.install':
+            'packages/install':
               _shell =>
               async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
-            'extensions.activate':
+            'extensions/activate':
               _shell =>
               async ({ extName }) => {
                 const extRec = await startExtension(extName)
@@ -80,7 +80,7 @@ export const boot: Boot = async bareMetal => {
                   pkgInfo: extRec.pkgInfo,
                 }
               },
-            'extensions.deactivate': _shell => async () => {
+            'extensions/deactivate': _shell => async () => {
               throw new Error('unimplemented')
             },
           })

@@ -111,8 +111,8 @@ export const caller =
   }
 
 const rpc_pointers = <Ext extends ExtensionDef, Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => ({
-  requestPointer: `${pointer}.rpcTopoRequest` as `${Pointer<Ext, Path>}.rpcTopoRequest`,
-  responsePointer: `${pointer}.rpcTopoResponse` as `${Pointer<Ext, Path>}.rpcTopoResponse`,
+  requestPointer: `${pointer}/rpcTopoRequest` as `${Pointer<Ext, Path>}/rpcTopoRequest`,
+  responsePointer: `${pointer}/rpcTopoResponse` as `${Pointer<Ext, Path>}/rpcTopoResponse`,
 })
 
 /*

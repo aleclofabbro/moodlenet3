@@ -6,8 +6,8 @@ import type { PortShell } from '../../../types'
 
 type Watcher<_ExtId extends ExtId> = (_: ExtensionRegistryRecord<_ExtId> | undefined) => void
 
-const ACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions.activate.rpcTopoResponse'
-const DEACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions.deactivate.rpcTopoResponse'
+const ACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions/activate/rpcTopoResponse'
+const DEACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions/deactivate/rpcTopoResponse'
 const KERNEL_EXT_NAME: ExtNameOf<KernelExt> = '@moodlenet/kernel'
 export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, watcher: Watcher<_ExtId>) => {
   const splitWatchingExtId = splitExtId(extId)
