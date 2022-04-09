@@ -1,6 +1,6 @@
 import { dirname, resolve } from 'path'
 import packageDirectory from 'pkg-dir'
-import { NodePackageJson, PkgInfo } from './types'
+import type { NodePackageJson, PkgInfo } from './types'
 
 export function pkgDirOf(node_module: NodeModule) {
   const mod_dir = dirname(node_module.filename)

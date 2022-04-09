@@ -1,7 +1,7 @@
-import { ExtensionDef, ExtId, ExtPortPaths, joinPointer, Pointer, PortPathPayload, splitPointer } from '../../extension'
+import type { ExtensionDef, ExtId, ExtPortPaths, Pointer, PortPathPayload } from '../../extension'
+import { baseSplitPointer, joinPointer, splitPointer } from '../../extension'
 import { versionSatisfies } from '../../extension-registry'
-import { baseSplitPointer } from '../../extension/types'
-import { PortShell } from '../../types'
+import type { PortShell } from '../../types'
 
 type Listener<ExtDef extends ExtensionDef = ExtensionDef, Path extends ExtPortPaths<ExtDef> = ExtPortPaths<ExtDef>> = (
   shell: PortShell<PortPathPayload<ExtDef, Path>>,

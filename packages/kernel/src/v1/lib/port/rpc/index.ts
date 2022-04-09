@@ -1,7 +1,8 @@
-import { Port, PortShell } from '../../..'
-import { TypeofPath } from '../../../../path'
-import { ExtensionDef, ExtId, ExtTopoPaths, joinPointer, Pointer, splitPointer, TopoNode } from '../../../extension'
-import { Unlisten } from '../../../types'
+import type { Port, PortShell } from '../../..'
+import type { TypeofPath } from '../../../../path'
+import type { ExtensionDef, ExtId, ExtTopoPaths, Pointer, TopoNode } from '../../../extension'
+import { joinPointer, splitPointer } from '../../../extension'
+import type { Unlisten } from '../../../types'
 import * as listen from '../listen'
 
 export declare const RPC_TOPO_SYM: symbol

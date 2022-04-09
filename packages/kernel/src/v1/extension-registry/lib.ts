@@ -1,6 +1,7 @@
 import { satisfies } from 'semver'
-import { ExtEnv, ExtId, ExtImpl, ExtLCStop, splitExtId, Version } from '../extension/types'
-import { PkgInfo } from '../pkg-info/types'
+import { splitExtId } from '../extension/pointer-lib'
+import type { ExtEnv, ExtId, ExtImpl, ExtLCStop, Version } from '../extension/types'
+import type { PkgInfo } from '../pkg-info/types'
 
 export type ExtensionRegistryHash = {
   [ExtName in string]: ExtensionRegistryRecord

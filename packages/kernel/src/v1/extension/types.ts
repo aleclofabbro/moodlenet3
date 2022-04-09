@@ -29,8 +29,7 @@ export type ExtImplExports = { module: NodeModule; extensions: Record<ExtId<Exte
 export type ExtId<Ext extends ExtensionDef = ExtensionDef> = `${Ext['name']}@${Ext['version']}` //`;)
 
 /*
- *
- *
+ * Port Topology
  */
 
 // export declare const PORT_NODE_SYM: unique symbol
@@ -86,70 +85,3 @@ export type PortPathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPat
 > extends Port<infer Payload>
   ? Payload
   : never
-
-export const baseSplitPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(
-  pointer: Pointer<Ext, Path>,
-) => {
-  const [extId, path] = pointer.split('::') as [ExtId<Ext>, Path]
-  return { extId, path }
-}
-export const splitExtId = <Ext extends ExtensionDef>(extId: ExtId<Ext>) => {
-  const [extName, version] = extId.split('@') as [Ext['name'], Ext['version']]
-  return { extName, version }
-}
-
-export const splitPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => {
-  const baspl = baseSplitPointer(pointer)
-  const idspl = splitExtId(baspl.extId)
-  return { ...baspl, ...idspl }
-}
-
-export const joinPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(
-  extId: ExtId<Ext>,
-  path: Path,
-): Pointer<Ext, Path> => `${extId}::${path}`
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-// type D = ExtensionDef<
-//   'xxxx',
-//   '1.4.3',
-//   {
-//     a: {
-//       c: Port<number>
-//       d: Port<string>
-//       q: {
-//         w: Port<number>
-//         y: Port<string>
-//       }
-//     }
-//     e: Port<boolean>
-//   }
-// >
-
-/*
- *
- *
- *
- *
- */
-// type x = ExtTopoPaths<D> extends ExtPortPaths<D> ? 1:0
-// type y =  ExtPortPaths<D>extends ExtTopoPaths<D> ? 1:0
-// type x =TOPO_NODE_SYM  extends TOPO_BASE_SYM&TOPO_NODE_SYM ? 1 :0
-
-// type x = PortPathPayload<D, 'e'>
-// const pooooooooooooooo: ExtPortPaths<D> = 'a.d'
-// const tooooo: ExtTopoPaths<D> = 'a.q'
-// const ccc: ExtTopoNodePaths<D> = ''
-
-// const d: Pointer<D> = 'xxxx@1.4.3::a.q'
