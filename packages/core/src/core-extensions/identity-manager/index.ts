@@ -1,4 +1,4 @@
-import { ExtensionDef, RpcTopo } from '@moodlenet/kernel/lib'
+import { ExtensionDef, RpcTopo } from '@moodlenet/kernel'
 
 export type Get = <T>() => Promise<T | undefined>
 export type Set = <T>(cache: T) => Promise<{ old: T | undefined }>

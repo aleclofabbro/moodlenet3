@@ -1,4 +1,4 @@
-import type { PortShell, ShellLib } from './shell'
+import type { ListenerShell } from './shell'
 import type { RootTopo } from './topo'
 
 export type ExtName = string
@@ -18,7 +18,7 @@ export type ExtensionDef<
 > = ExtensionIdObj<Name, Version> & {
   ports: ExtRootTopo
 }
-export type ExtLCStart = (startArg: { shell: PortShell; env: Record<string, any>; lib: ShellLib }) => Promise<ExtLCStop>
+export type ExtLCStart = (startArg: { shell: ListenerShell; env: Record<string, any> }) => Promise<ExtLCStop>
 export type ExtLCStop = () => Promise<void>
 export type ExtImpl = {
   start: ExtLCStart

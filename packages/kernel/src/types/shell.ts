@@ -1,6 +1,8 @@
 import type { ExtensionRegistry } from '../registry'
 import type {
-  call, extCall, extInvoke,
+  call,
+  extCall,
+  extInvoke,
   invoke,
   probeExt,
   probePort,
@@ -9,7 +11,7 @@ import type {
   retrn,
   retrnAll,
   useExtension,
-  watchExt
+  watchExt,
 } from '../shell-lib'
 import type { ExtensionDef, ExtId } from './ext'
 import type { PkgInfo } from './pkg'
@@ -19,9 +21,10 @@ export type PostOpts = {}
 export type ExtensionUnavailable = undefined
 
 export type Listen = (_: PortListener) => Unlisten
-export type PortListener = (shell: PortShell, lib: ShellLib) => void
+export type PortListener = (shell: ListenerShell) => void
 export type Unlisten = () => void
 
+export type ListenerShell = PortShell & ShellLib
 export type ShellLib = {
   replyAll: typeof replyAll
   reply: typeof reply

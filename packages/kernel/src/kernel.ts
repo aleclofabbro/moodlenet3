@@ -15,6 +15,7 @@ import type {
   PortShell,
   PushMessage,
   ShellExtensionRegistry,
+  ShellLib,
 } from './types'
 
 // export const kernelExtIdObj: ExtIdOf<KernelExt> = {
@@ -51,8 +52,8 @@ export const boot: Boot = async bareMetal => {
       env: extEnv(kernelExtIdObj.extName),
       extId: kernelExtId,
       lifeCycle: {
-        start: async ({ shell, lib }) => {
-          lib.replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
+        start: async ({ shell }) => {
+          shell.replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
             'packages/install':
               _shell =>
               async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
@@ -111,7 +112,7 @@ export const boot: Boot = async bareMetal => {
     extRecord.deployment = 'deploying'
     const shell = makeStartShell(extRecord)
     const env = extEnv(extIdName)
-    const stop = await extRecord.lifeCycle.start({ shell, env, lib: shellLib })
+    const stop = await extRecord.lifeCycle.start({ shell, env })
     extRecord.deployment = {
       at: new Date(),
       stop,
@@ -136,7 +137,7 @@ export const boot: Boot = async bareMetal => {
       target: cwPointer,
       parentMsgId: null,
     })
-    const startShell = makeShell({
+    const startShell = makeListenerShell({
       message,
       cwPointer,
     })
@@ -160,17 +161,23 @@ pushMessage`,
         //TODO: WARN? useless check ? remove listener ?
         return
       }
-      const shell = makeShell({
+      const shell = makeListenerShell({
         cwPointer,
         message,
       })
-      listener(shell, shellLib)
+      listener(shell)
     })
 
     return message
   }
 
-  function makeShell<P>({ message, cwPointer }: { message: Message<P>; cwPointer: Pointer }): PortShell<P> {
+  function makeListenerShell<P>({
+    message,
+    cwPointer,
+  }: {
+    message: Message<P>
+    cwPointer: Pointer
+  }): PortShell<P> & ShellLib {
     const cwExt = baseSplitPointer(cwPointer)
     assertDeployed()
     const listen = (listener: PortListener) => {
@@ -200,6 +207,7 @@ pushMessage`,
       push,
       registry: getShellExtReg(),
       pkgInfo: extRec.pkgInfo,
+      ...shellLib,
     }
 
     function assertDeployed() {

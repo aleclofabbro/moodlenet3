@@ -1,4 +1,4 @@
-import { call, ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel'
+import type { ExtensionDef, ListenerShell, RpcTopo } from '@moodlenet/kernel'
 import type { Readable } from 'stream'
 
 export type GenericError = {
@@ -34,15 +34,17 @@ export type MoodlenetBlobStorePorts = {
 
 export type MoodlenetBlobStoreExt = ExtensionDef<'moodlenet.blob-store', '0.0.1', MoodlenetBlobStorePorts>
 
-export const blobStore = <BlobPath extends string>(shell: PortShell) => {
-  const read = (blobPath: BlobPath) => call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::read')(blobPath)
-  const meta = (blobPath: BlobPath) => call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::meta')(blobPath)
+export const blobStore = <BlobPath extends string>(shell: ListenerShell) => {
+  const read = (blobPath: BlobPath) =>
+    shell.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::read')(blobPath)
+  const meta = (blobPath: BlobPath) =>
+    shell.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::meta')(blobPath)
   const write = (
     blobPath: string,
     data: Buffer | Readable,
     meta: Pick<Meta, 'mimeType'>,
     opts?: Partial<WriteOptions>,
-  ) => call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::write')(blobPath, data, meta, opts)
+  ) => shell.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::write')(blobPath, data, meta, opts)
 
   return {
     read,
