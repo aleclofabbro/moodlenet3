@@ -1,9 +1,16 @@
-import type { Port, PortShell } from '../../..'
-import type { ExtensionDef, ExtId, ExtTopoPaths, Pointer, TopoNode } from '../../../extension'
-import { joinPointer, splitPointer } from '../../../extension'
-import { Message } from '../../../message'
-import type { TypeofPath } from '../../../path'
-import type { Unlisten } from '../../../types'
+import { joinPointer, splitPointer } from '../../pointer'
+import type {
+  ExtensionDef,
+  ExtId,
+  ExtTopoPaths,
+  Message,
+  Pointer,
+  Port,
+  PortShell,
+  TopoNode,
+  TypeofPath,
+  Unlisten,
+} from '../../types'
 import * as probe from '../probe'
 
 export declare const FUN_TOPO_SYM: symbol
@@ -41,7 +48,7 @@ export const retrn =
   <Path extends ExtFunTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
   (funPort: FunTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
     const { /* requestPointer, */ responsePointer } = fun_pointers<Ext, Path>(pointer)
-    return probe.port(shell)(pointer, requestListenerShell => {
+    return probe.probePort(shell)(pointer, requestListenerShell => {
       const fun = funPort(requestListenerShell as any)
       const { extId, path } = splitPointer(responsePointer)
       const respond = requestListenerShell.push(extId)(path)
@@ -95,7 +102,7 @@ export const invoke =
       const _throw = (e: any) => {
         throw e
       }
-      const unsub = probe.port(shell)(
+      const unsub = probe.probePort(shell)(
         responsePointer,
         responseListenerShell => {
           const message = responseListenerShell.message

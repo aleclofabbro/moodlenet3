@@ -1,4 +1,4 @@
-import { call, ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel/lib'
+import type { ExtensionDef, PortShell, RpcTopo, ShellLib } from '@moodlenet/kernel/lib'
 
 export type Get = <T>(key: string) => Promise<T | undefined>
 export type Put = <T>(key: string, val: T) => Promise<{ old: T | undefined }>
@@ -11,11 +11,11 @@ export type MoodlenetKeyValueStoreExt = ExtensionDef<'moodlenet.key-value-store'
 
 // type KvsOpts={}
 // export const kvs = <T>(shell: PortShell, opts?:Partial<KvsOpts>) => {
-export const kvStore = <T>(shell: PortShell) => {
+export const kvStore = <T>(shell: PortShell, lib: ShellLib) => {
   const get = <K extends string & keyof T>(key: K) =>
-    call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::get')<T[K]>(key)
+    lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::get')<T[K]>(key)
   const put = <K extends string & keyof T>(key: K, val: T[K]) => {
-    call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::put')<T[K]>(key, val)
+    lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::put')<T[K]>(key, val)
   }
 
   return {

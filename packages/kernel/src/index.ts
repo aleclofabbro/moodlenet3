@@ -1,6 +1,5 @@
-export * from './extension'
-export { boot } from './kernel'
-export * from './lib/flow'
-export * from './lib/port'
+export * from './extension-registry'
+export * from './pkg'
+export * from './pointer'
+export * from './shell-lib'
 export * from './types'
-

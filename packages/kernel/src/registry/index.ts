@@ -1,23 +1,10 @@
 import { satisfies } from 'semver'
-import { splitExtId, splitPointer } from '../extension/pointer-lib'
-import type { ExtEnv, ExtId, ExtImpl, ExtLCStop, Pointer, Version } from '../extension/types'
-import type { PkgInfo } from '../pkg/types'
+import { splitExtId, splitPointer } from '../pointer'
+import type { ExtensionRegistryRecord, ExtEnv, ExtId, ExtImpl, PkgInfo, Pointer, Version } from '../types'
 
 export type ExtensionRegistryHash = {
   [ExtName in string]: ExtensionRegistryRecord
 }
-export type Deployment = {
-  at: Date
-  stop: ExtLCStop
-}
-export type ExtensionRegistryRecord<_ExtId extends ExtId = ExtId> = {
-  extId: _ExtId
-  env: ExtEnv
-  deployment: 'deploying' | Deployment | undefined
-  pkgInfo: PkgInfo
-  lifeCycle: ExtImpl
-}
-
 export type ExtensionRegistry = ReturnType<typeof createLocalExtensionRegistry>
 export const createLocalExtensionRegistry = () => {
   //FIXME: make `extensionRegistry` an ExtensionRegistryRecord[]

@@ -1,4 +1,4 @@
-import { call, ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel/lib'
+import { call, ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel'
 import type { Readable } from 'stream'
 
 export type GenericError = {

@@ -1,8 +1,15 @@
-import type { Port, PortShell } from '../../..'
-import type { ExtensionDef, ExtId, ExtTopoPaths, Pointer, TopoNode } from '../../../extension'
-import { joinPointer, splitPointer } from '../../../extension'
-import type { TypeofPath } from '../../../path'
-import type { Unlisten } from '../../../types'
+import { joinPointer, splitPointer } from '../../pointer'
+import type {
+  ExtensionDef,
+  ExtId,
+  ExtTopoPaths,
+  Pointer,
+  Port,
+  PortShell,
+  TopoNode,
+  TypeofPath,
+  Unlisten,
+} from '../../types'
 import * as probe from '../probe'
 
 export declare const RPC_TOPO_SYM: symbol
@@ -41,7 +48,7 @@ export const reply =
   <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
   (afnPort: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
     const { /* requestPointer, */ responsePointer } = rpc_pointers<Ext, Path>(pointer)
-    return probe.port(shell)(pointer, async requestListenerShell => {
+    return probe.probePort(shell)(pointer, async requestListenerShell => {
       const afn = afnPort(requestListenerShell as any)
       const { extId, path } = splitPointer(responsePointer)
       const respond = requestListenerShell.push(extId)(path)
@@ -98,7 +105,7 @@ export const call =
           reject({ msg, errorCode: 'NOT_CONSUMED' }) //TODO: define standard errors/codes
           return
         }
-        const unsub = probe.port(shell)(
+        const unsub = probe.probePort(shell)(
           responsePointer,
           responseListenerShell => {
             const message = responseListenerShell.message

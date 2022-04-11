@@ -1,7 +1,14 @@
-import type { ExtensionDef, ExtId, ExtPortPaths, Pointer, PortPathPayload, SemanticPointer } from '../../extension'
-import { joinPointer, joinSemanticPointer } from '../../extension'
-import { isBWCSemanticallySamePointers } from '../../extension-registry'
-import type { PortShell } from '../../types'
+import { joinPointer, joinSemanticPointer } from '../../pointer'
+import { isBWCSemanticallySamePointers } from '../../registry'
+import type {
+  ExtensionDef,
+  ExtId,
+  ExtPortPaths,
+  Pointer,
+  PortPathPayload,
+  PortShell,
+  SemanticPointer,
+} from '../../types'
 
 export type Listener<
   ExtDef extends ExtensionDef = ExtensionDef,
@@ -17,7 +24,7 @@ export const defListenOpts: ListenOpts = {
 
 const consumers: Record<SemanticPointer, Pointer> = {}
 
-export const port =
+export const probePort =
   <Ext extends ExtensionDef>(registererShell: PortShell) =>
   <Path extends ExtPortPaths<Ext>>(
     listenToPointer: Pointer<Ext, Path>,
@@ -67,7 +74,7 @@ already marked by @${listenShell.message.consumedBy.pointer} from pkg "${listenS
       return unsubscribe()
     }
   }
-export const ext =
+export const probeExt =
   <Ext extends ExtensionDef>(shell: PortShell, extId: ExtId<Ext>) =>
   <Path extends ExtPortPaths<Ext>>(path: Path, listener: Listener<Ext, Path>) =>
-    port<Ext>(shell)<Path>(joinPointer(extId, path), listener)
+    probePort<Ext>(shell)<Path>(joinPointer(extId, path), listener)

@@ -1,6 +1,6 @@
 import type { RouterCtx } from '@moodlenet/webapp/lib/webapp/routes'
 import { FC, useCallback, useContext, useEffect, useState } from 'react'
-import { ExtensionIdObj } from '../extension'
+import { ExtensionIdObj } from '../types'
 console.log('kernel - lib')
 
 const Cmp: FC<{ RouterCtx: RouterCtx }> = ({ children, RouterCtx }) => {

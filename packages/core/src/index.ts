@@ -1,4 +1,4 @@
-import { ExtensionDef, ExtId, ExtImplExports, replyAll, RpcTopo } from '@moodlenet/kernel/lib'
+import type { ExtensionDef, ExtId, ExtImplExports, RpcTopo } from '@moodlenet/kernel'
 
 export type MoodlenetCoreExt = ExtensionDef<
   '@moodlenet/core',
@@ -13,7 +13,7 @@ const extImpl: ExtImplExports = {
   module,
   extensions: {
     [testExtId]: {
-      async start({ shell }) {
+      async start({ shell, lib }) {
         console.log('I am core extension')
         // watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
         //   if (!webapp?.active) {
@@ -25,7 +25,7 @@ const extImpl: ExtImplExports = {
         //   cmpPath: 'pkg/webapp',
         // })
         // })
-        replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@0.0.1', {
+        lib.replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@0.0.1', {
           _test: _shell => async _ => ({ a: _ }),
         })
 

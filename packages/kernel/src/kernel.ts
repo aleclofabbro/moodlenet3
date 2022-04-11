@@ -1,15 +1,21 @@
 import type { Boot } from '@moodlenet/bare-metal/lib/types'
-import type { ExtensionRegistryRecord } from './extension-registry/lib'
-import { createLocalExtensionRegistry } from './extension-registry/lib'
-import { baseSplitPointer, joinPointer, splitExtId, splitPointer } from './extension/pointer-lib'
-import type { ExtensionDef, ExtId, ExtImplExports, ExtName, Pointer } from './extension/types'
-import type { RpcTopo } from './lib/port'
-import { replyAll } from './lib/port'
-import type { Message, MsgID } from './message'
-import type { PkgInfo } from './pkg'
-import { pkgInfoOf } from './pkg'
-import { makePkgMng } from './pkg/mng'
-import type { PortListener, PortShell, PushMessage, ShellExtensionRegistry } from './types'
+import { makePkgMng, pkgInfoOf } from './pkg'
+import { baseSplitPointer, joinPointer, splitExtId, splitPointer } from './pointer'
+import { createLocalExtensionRegistry } from './registry'
+import * as shellLib from './shell-lib'
+import type {
+  ExtensionRegistryRecord,
+  ExtId,
+  ExtImplExports,
+  KernelExt,
+  Message,
+  MsgID,
+  Pointer,
+  PortListener,
+  PortShell,
+  PushMessage,
+  ShellExtensionRegistry,
+} from './types'
 
 // export const kernelExtIdObj: ExtIdOf<KernelExt> = {
 //   name: '@moodlenet/kernel',
@@ -17,27 +23,6 @@ import type { PortListener, PortShell, PushMessage, ShellExtensionRegistry } fro
 // } as const
 
 export const kernelExtId: ExtId<KernelExt> = '@moodlenet/kernel@0.0.1'
-
-export type KernelExtPorts = {
-  packages: {
-    install: RpcTopo<(_: { pkgLoc: string }) => Promise<{ records: ExtensionRegistryRecord[] }>>
-  }
-  extensions: {
-    activate: RpcTopo<
-      (_: { extName: ExtName }) => Promise<{
-        extId: ExtId
-        pkgInfo: PkgInfo
-      }>
-    >
-    deactivate: RpcTopo<
-      (_: { extName: ExtName }) => Promise<{
-        extId: ExtId
-        pkgInfo: PkgInfo
-      }>
-    >
-  }
-}
-export type KernelExt = ExtensionDef<'@moodlenet/kernel', '0.0.1', KernelExtPorts>
 
 export const boot: Boot = async bareMetal => {
   let msgListeners: PortListenerRecord[] = []
@@ -66,8 +51,8 @@ export const boot: Boot = async bareMetal => {
       env: extEnv(kernelExtIdObj.extName),
       extId: kernelExtId,
       lifeCycle: {
-        start: async ({ shell }) => {
-          replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
+        start: async ({ shell, lib }) => {
+          lib.replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
             'packages/install':
               _shell =>
               async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
@@ -126,7 +111,7 @@ export const boot: Boot = async bareMetal => {
     extRecord.deployment = 'deploying'
     const shell = makeStartShell(extRecord)
     const env = extEnv(extIdName)
-    const stop = await extRecord.lifeCycle.start({ shell, env })
+    const stop = await extRecord.lifeCycle.start({ shell, env, lib: shellLib })
     extRecord.deployment = {
       at: new Date(),
       stop,
@@ -179,7 +164,7 @@ pushMessage`,
         cwPointer,
         message,
       })
-      listener(shell)
+      listener(shell, shellLib)
     })
 
     return message
@@ -216,6 +201,7 @@ pushMessage`,
       registry: getShellExtReg(),
       pkgInfo: extRec.pkgInfo,
     }
+
     function assertDeployed() {
       localExtReg.assertCompatibleRegisteredExtension(cwExt.extId)
       // FIXME: remove all listeners on exception ?
