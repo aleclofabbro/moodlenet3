@@ -1,7 +1,7 @@
 import type { Port, PortShell } from '../../..'
-import type { TypeofPath } from '../../../../path'
 import type { ExtensionDef, ExtId, ExtTopoPaths, Pointer, TopoNode } from '../../../extension'
 import { joinPointer, splitPointer } from '../../../extension'
+import type { TypeofPath } from '../../../path'
 import type { Unlisten } from '../../../types'
 import * as probe from '../probe'
 

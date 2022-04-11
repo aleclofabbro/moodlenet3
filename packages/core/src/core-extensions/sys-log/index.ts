@@ -1,4 +1,4 @@
-import { ExtensionDef, Port, PortShell } from '@moodlenet/kernel/lib/v1'
+import { ExtensionDef, Port, PortShell } from '@moodlenet/kernel/lib'
 
 const logLevels = ['debug', 'log', 'info', 'warn', 'error', 'fatal'] as const
 export type LogLevel = typeof logLevels extends readonly (infer Lev)[] ? Lev : never

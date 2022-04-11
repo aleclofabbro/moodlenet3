@@ -1,6 +1,5 @@
-import { v1 } from '@moodlenet/kernel/lib'
-import type { ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel/lib/v1'
-import { replyAll } from '@moodlenet/kernel/lib/v1'
+import type { ExtensionDef, ExtId, ExtImplExports, PortShell, RpcTopo } from '@moodlenet/kernel/lib'
+import { call, replyAll } from '@moodlenet/kernel/lib'
 import { json } from 'body-parser'
 import express from 'express'
 
@@ -11,9 +10,9 @@ export type MNPriHttpExt = ExtensionDef<
     setWebAppRootFolder: RpcTopo<(_: { folder: string }) => Promise<void>>
   }
 >
-export const priHttpExtId: v1.ExtId<MNPriHttpExt> = '@moodlenet/pri-http@0.0.1'
+export const priHttpExtId: ExtId<MNPriHttpExt> = '@moodlenet/pri-http@0.0.1'
 
-const extImpl: v1.ExtImplExports = {
+const extImpl: ExtImplExports = {
   module,
   extensions: {
     [priHttpExtId]: {
@@ -73,7 +72,7 @@ function makeExtPortsApp(shell: PortShell) {
     }
     console.log('*********body', req.body)
     try {
-      const response = await (v1.call(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
+      const response = await (call(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
       //(shell ,`${extName}::${path.join('.')}`)(req.body)
       res.json(response)
     } catch (err) {

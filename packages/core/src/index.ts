@@ -1,5 +1,4 @@
-import { v1 } from '@moodlenet/kernel/lib'
-import { ExtensionDef, RpcTopo } from '@moodlenet/kernel/lib/v1'
+import { ExtensionDef, ExtId, ExtImplExports, replyAll, RpcTopo } from '@moodlenet/kernel/lib'
 
 export type MoodlenetCoreExt = ExtensionDef<
   '@moodlenet/core',
@@ -8,25 +7,25 @@ export type MoodlenetCoreExt = ExtensionDef<
     _test: RpcTopo<<T>(_: T) => Promise<{ a: T }>>
   }
 >
-export const testExtId: v1.ExtId<MoodlenetCoreExt> = '@moodlenet/core@0.0.1'
+export const testExtId: ExtId<MoodlenetCoreExt> = '@moodlenet/core@0.0.1'
 
-const extImpl: v1.ExtImplExports = {
+const extImpl: ExtImplExports = {
   module,
   extensions: {
     [testExtId]: {
       async start({ shell }) {
         console.log('I am core extension')
-        // v1.watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
+        // watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
         //   if (!webapp?.active) {
         //     return
         //   }
-        // v1.asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
+        // asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
         //   extId: testExtId,
         //   moduleLoc: resolve(__dirname, '..'),
         //   cmpPath: 'pkg/webapp',
         // })
         // })
-        v1.replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@0.0.1', {
+        replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@0.0.1', {
           _test: _shell => async _ => ({ a: _ }),
         })
 

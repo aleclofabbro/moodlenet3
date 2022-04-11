@@ -1,4 +1,4 @@
-import { reply } from '@moodlenet/kernel/lib/v1/lib/port'
+import { reply } from '@moodlenet/kernel/lib/lib/port'
 import { ContentGraph } from './types'
 
 export default (pkgShell: Shell) => {

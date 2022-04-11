@@ -1,4 +1,4 @@
-import { AsyncPort, ExtensionDef } from '@moodlenet/kernel/lib/v1'
+import { AsyncPort, ExtensionDef } from '@moodlenet/kernel/lib'
 import { CreateNodePayload, GlyphData, GlyphType, Node } from './glyphs'
 
 export type ContentGraph = ExtensionDef<

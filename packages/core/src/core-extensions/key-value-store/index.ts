@@ -1,4 +1,4 @@
-import { call, ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel/lib/v1'
+import { call, ExtensionDef, PortShell, RpcTopo } from '@moodlenet/kernel/lib'
 
 export type Get = <T>(key: string) => Promise<T | undefined>
 export type Put = <T>(key: string, val: T) => Promise<{ old: T | undefined }>

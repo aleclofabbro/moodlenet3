@@ -1,4 +1,4 @@
-import type { TypeofPath, TypePaths } from '../../path'
+import type { TypeofPath, TypePaths } from '../path'
 import type { PortShell } from '../types'
 
 export type ExtName = string
