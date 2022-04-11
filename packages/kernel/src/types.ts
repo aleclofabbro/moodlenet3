@@ -1,7 +1,7 @@
 import type { ExtensionRegistry } from './extension-registry'
 import type { ExtensionDef, ExtId, ExtPortPaths, Pointer, PortPathPayload } from './extension/types'
 import type { Message } from './message/types'
-import type { PkgInfo } from './pkg-info'
+import type { PkgInfo } from './pkg'
 
 export type PostOpts = {}
 export type ExtensionUnavailable = undefined

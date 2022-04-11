@@ -6,9 +6,9 @@ import type { ExtensionDef, ExtId, ExtImplExports, ExtName, Pointer } from './ex
 import type { RpcTopo } from './lib/port'
 import { replyAll } from './lib/port'
 import type { Message, MsgID } from './message'
-import type { PkgInfo } from './pkg-info'
-import { pkgInfoOf } from './pkg-info'
-import { makePkgMng } from './pkg-mng'
+import type { PkgInfo } from './pkg'
+import { pkgInfoOf } from './pkg'
+import { makePkgMng } from './pkg/mng'
 import type { PortListener, PortShell, PushMessage, ShellExtensionRegistry } from './types'
 
 // export const kernelExtIdObj: ExtIdOf<KernelExt> = {
