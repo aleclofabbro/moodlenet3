@@ -1,4 +1,4 @@
-import { ExtId, Pointer } from '../extension'
+import { Pointer } from '../extension'
 
 export type MsgID = string
 export type Message<Payload> = {
@@ -8,8 +8,8 @@ export type Message<Payload> = {
   payload: Payload
   parentMsgId: MsgID | null
   ctx: Record<string, any>
-  managedBy?: {
-    extId: ExtId
+  consumedBy?: {
+    pointer: Pointer
     pkgId: { name: string; version: string }
   }
 }

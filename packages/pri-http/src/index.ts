@@ -73,7 +73,7 @@ function makeExtPortsApp(shell: PortShell) {
     }
     console.log('*********body', req.body)
     try {
-      const response = await (v1.caller(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
+      const response = await (v1.call(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
       //(shell ,`${extName}::${path.join('.')}`)(req.body)
       res.json(response)
     } catch (err) {

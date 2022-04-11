@@ -3,7 +3,7 @@ import type { TypeofPath } from '../../../../path'
 import type { ExtensionDef, ExtId, ExtTopoPaths, Pointer, TopoNode } from '../../../extension'
 import { joinPointer, splitPointer } from '../../../extension'
 import type { Unlisten } from '../../../types'
-import * as listen from '../listen'
+import * as probe from '../probe'
 
 export declare const RPC_TOPO_SYM: symbol
 export type RPC_TOPO_SYM = typeof RPC_TOPO_SYM
@@ -44,15 +44,17 @@ export const reply =
   <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
   (afnPort: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
     const { /* requestPointer, */ responsePointer } = rpc_pointers<Ext, Path>(pointer)
-    return listen.port(shell)(pointer, async requestListenerShell => {
+    return probe.port(shell)(pointer, async requestListenerShell => {
       const afn = afnPort(requestListenerShell as any)
       const { extId, path } = splitPointer(responsePointer)
       const respond = requestListenerShell.push(extId)(path)
+      const respondSuccess = (rpcTopoRespError: any) => respond({ rpcTopoRespError } as any)
+      const respondError = (rpcTopoRespValue: any) => respond({ rpcTopoRespValue } as any)
       try {
         const rpcTopoRespValue = await afn(...(requestListenerShell.message.payload as any).rpcTopoReqArgs)
-        respond({ rpcTopoRespValue } as any)
+        respondSuccess(rpcTopoRespValue)
       } catch (rpcTopoRespError) {
-        respond({ rpcTopoRespError } as any)
+        respondError(rpcTopoRespError)
       }
     })
   }
@@ -77,15 +79,15 @@ export const replyAll = <Ext extends ExtensionDef>(
     },
   )
 
-export const ext =
+export const extCall =
   <Ext extends ExtensionDef>(shell: PortShell, extId: ExtId<Ext>) =>
   <Path extends ExtRpcTopoPaths<Ext>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
 
-    return caller(shell)(fullPath)
+    return call(shell)(fullPath)
   }
 
-export const caller =
+export const call =
   <Ext extends ExtensionDef>(shell: PortShell) =>
   <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>): RpcFnOf<TypeofPath<Ext['ports'], Path>> => {
     const { requestPointer, responsePointer } = rpc_pointers<Ext, Path>(pointer)
@@ -94,7 +96,13 @@ export const caller =
         const requestPayload = { rpcTopoReqArgs } as never
         const { extId, path } = splitPointer(requestPointer)
         const requestMessage = shell.push(extId)(path)(requestPayload)
-        const unsub = listen.port(shell)(responsePointer, responseListenerShell => {
+        if (!requestMessage.consumedBy) {
+          const msg = `calling rpc ${pointer}, message not consumed`
+          console.error(msg, { requestMessage })
+          reject({ msg, errorCode: 'NOT_CONSUMED', requestMessage }) //TODO: define standard errors/codes
+          return
+        }
+        const unsub = probe.port(shell)(responsePointer, responseListenerShell => {
           const message = responseListenerShell.message
           if (message.parentMsgId !== requestMessage.id) {
             return

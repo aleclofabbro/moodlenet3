@@ -1,4 +1,4 @@
-import type { ExtensionDef, ExtId, ExtTopoPaths, Pointer } from './types'
+import type { ExtensionDef, ExtId, ExtTopoPaths, Pointer, SemanticPointer } from './types'
 
 export const baseSplitPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(
   pointer: Pointer<Ext, Path>,
@@ -21,6 +21,13 @@ export const joinPointer = <Ext extends ExtensionDef, Path extends ExtTopoPaths<
   extId: ExtId<Ext>,
   path: Path,
 ): Pointer<Ext, Path> => `${extId}::${path}`
+
+export function joinSemanticPointer<Ext extends ExtensionDef, Path extends ExtTopoPaths<Ext>>(
+  a: Pointer<Ext, Path>,
+): SemanticPointer<Ext, Path> {
+  const aSplit = splitPointer(a)
+  return `${aSplit.extName}::${aSplit.path}`
+}
 
 //
 //

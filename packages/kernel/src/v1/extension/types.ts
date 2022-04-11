@@ -72,6 +72,11 @@ export type ExtTopoPaths<Ext extends ExtensionDef, TargetTopoNode extends TopoNo
 
 export type ExtTopoNodePaths<Ext extends ExtensionDef> = ExtTopoPaths<Ext> | ExtPortPaths<Ext>
 
+export type SemanticPointer<
+  Ext extends ExtensionDef = ExtensionDef,
+  Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
+> = `${Ext['name']}::${Path}` //`;)
+
 export type Pointer<
   Ext extends ExtensionDef = ExtensionDef,
   Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
@@ -79,6 +84,7 @@ export type Pointer<
 export type Version = string
 
 export type PortPayload<P extends Port> = P extends Port<infer PL> ? PL : never
+
 export type PortPathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
   ExtDef['ports'],
   Path

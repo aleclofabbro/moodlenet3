@@ -1,6 +1,6 @@
 import type { ExtId, ExtNameOf, ExtTopoNodePaths } from '../../../extension'
 import { splitExtId, splitPointer } from '../../../extension'
-import { ExtensionRegistryRecord, versionSatisfies } from '../../../extension-registry'
+import { ExtensionRegistryRecord, isVerBWC } from '../../../extension-registry'
 import type { KernelExt } from '../../../kernel'
 import type { PortShell } from '../../../types'
 
@@ -20,7 +20,7 @@ export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, 
       trgSplitPointer.extName === KERNEL_EXT_NAME &&
       (ACTIVATED_PATH === trgSplitPointer.path || DEACTIVATED_PATH === trgSplitPointer.path)
     ) {
-      trigWatch()
+      setImmediate(trigWatch)
     }
   })
 
@@ -30,10 +30,10 @@ export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, 
       return
     }
     const regRecSplitExtId = splitExtId(extRecord.extId)
-    if (!versionSatisfies(regRecSplitExtId.version, splitWatchingExtId.version)) {
+    if (!isVerBWC(regRecSplitExtId.version, splitWatchingExtId.version)) {
       return
     }
-    setImmediate(() => watcher(extRecord as any))
+    watcher(extRecord as any)
   }
 }
 

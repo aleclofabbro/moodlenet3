@@ -1,6 +1,6 @@
 import { satisfies } from 'semver'
-import { splitExtId } from '../extension/pointer-lib'
-import type { ExtEnv, ExtId, ExtImpl, ExtLCStop, Version } from '../extension/types'
+import { splitExtId, splitPointer } from '../extension/pointer-lib'
+import type { ExtEnv, ExtId, ExtImpl, ExtLCStop, Pointer, Version } from '../extension/types'
 import type { PkgInfo } from '../pkg-info/types'
 
 export type ExtensionRegistryHash = {
@@ -53,7 +53,7 @@ export const createLocalExtensionRegistry = () => {
     }
 
     const availableExt = splitExtId(extRecord.extId)
-    if (!versionSatisfies(availableExt.version, reqExt.version)) {
+    if (!isVerBWC(availableExt.version, reqExt.version)) {
       return 'VERSION_MISMATCH' as const
     }
     return extRecord
@@ -123,6 +123,21 @@ export const createLocalExtensionRegistry = () => {
   }
 }
 
-export function versionSatisfies(target: Version, requested: Version) {
+export function isVerBWC(target: Version, requested: Version) {
   return satisfies(target, `^${requested}`)
+}
+
+export function isBWCSemanticallySamePointers(target: Pointer, requested: Pointer) {
+  const pointerSplits = isSemanticallySamePointers(target, requested)
+  if (!pointerSplits) {
+    return false
+  }
+  const [reqSplit, trgSplit] = pointerSplits
+  return isVerBWC(trgSplit.version, reqSplit.version) && pointerSplits
+}
+
+export function isSemanticallySamePointers(a: Pointer, b: Pointer) {
+  const aSplit = splitPointer(a)
+  const bSplit = splitPointer(b)
+  return aSplit.extName === bSplit.extName && aSplit.path === bSplit.path && ([aSplit, bSplit] as const)
 }
