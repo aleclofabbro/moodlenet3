@@ -7,10 +7,7 @@ import * as probe from '../probe'
 
 export declare const RPC_TOPO_SYM: symbol
 export type RPC_TOPO_SYM = typeof RPC_TOPO_SYM
-// export type AsyncFn = () => Promise<any>
-// export type AsyncFn<Arg extends any[] = any[], Val = any> = (...rpcTopoReqArgs: Arg) => Promise<Val>
 export type RpcFn = (...rpcTopoReqArgs: any) => Promise<any>
-// export type AsyncFn = (...rpcTopoReqArgs: any[]) => Promise<any>
 //export type RpcTopoPaths<Topo extends Topology> = TopoPaths<Topo, RPC_TOPO_SYM>
 
 export type ExtRpcTopoPaths<ExtDef extends ExtensionDef> = ExtTopoPaths<ExtDef, RpcTopo<RpcFn>> & ExtTopoPaths<ExtDef>
@@ -97,23 +94,26 @@ export const call =
         const { extId, path } = splitPointer(requestPointer)
         const requestMessage = shell.push(extId)(path)(requestPayload)
         if (!requestMessage.consumedBy) {
-          const msg = `calling rpc ${pointer}, message not consumed`
-          console.error(msg, { requestMessage })
-          reject({ msg, errorCode: 'NOT_CONSUMED', requestMessage }) //TODO: define standard errors/codes
+          const msg = `calling rpc ${pointer}, message not consumed:\n${JSON.stringify(requestMessage)}`
+          reject({ msg, errorCode: 'NOT_CONSUMED' }) //TODO: define standard errors/codes
           return
         }
-        const unsub = probe.port(shell)(responsePointer, responseListenerShell => {
-          const message = responseListenerShell.message
-          if (message.parentMsgId !== requestMessage.id) {
-            return
-          }
-          unsub()
-          const responsePayload = message.payload as any
-          // console.log({ rpcResponse })
-          'rpcTopoRespError' in responsePayload
-            ? reject(responsePayload.rpcTopoRespError)
-            : resolve(responsePayload.rpcTopoRespValue)
-        })
+        const unsub = probe.port(shell)(
+          responsePointer,
+          responseListenerShell => {
+            const message = responseListenerShell.message
+            if (message.parentMsgId !== requestMessage.id) {
+              return
+            }
+            unsub()
+            const responsePayload = message.payload as any
+            // console.log({ rpcResponse })
+            'rpcTopoRespError' in responsePayload
+              ? reject(responsePayload.rpcTopoRespError)
+              : resolve(responsePayload.rpcTopoRespValue)
+          },
+          { consume: true },
+        )
         return unsub
       })) as any
   }

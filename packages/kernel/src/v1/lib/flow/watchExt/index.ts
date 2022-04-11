@@ -1,6 +1,6 @@
 import type { ExtId, ExtNameOf, ExtTopoNodePaths } from '../../../extension'
 import { splitExtId, splitPointer } from '../../../extension'
-import { ExtensionRegistryRecord, isVerBWC } from '../../../extension-registry'
+import { ExtensionRegistryRecord } from '../../../extension-registry'
 import type { KernelExt } from '../../../kernel'
 import type { PortShell } from '../../../types'
 
@@ -12,6 +12,7 @@ const KERNEL_EXT_NAME: ExtNameOf<KernelExt> = '@moodlenet/kernel'
 export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, watcher: Watcher<_ExtId>) => {
   const splitWatchingExtId = splitExtId(extId)
   trigWatch()
+  //TODO: rather use probe() ?
   return shell.listen(listenShell => {
     const srcSplitPointer = splitPointer(listenShell.message.source)
     const trgSplitPointer = splitPointer(listenShell.message.target)
@@ -20,7 +21,7 @@ export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, 
       trgSplitPointer.extName === KERNEL_EXT_NAME &&
       (ACTIVATED_PATH === trgSplitPointer.path || DEACTIVATED_PATH === trgSplitPointer.path)
     ) {
-      setImmediate(trigWatch)
+      setImmediate(trigWatch) //TODO: WHY SET IMMEDIATE?
     }
   })
 
@@ -29,10 +30,11 @@ export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, 
     if (!extRecord) {
       return
     }
-    const regRecSplitExtId = splitExtId(extRecord.extId)
-    if (!isVerBWC(regRecSplitExtId.version, splitWatchingExtId.version)) {
-      return
-    }
+    //TODO: where to check versioning? def & impl `requires()` , `xxX()`
+    // const regRecSplitExtId = splitExtId(extRecord.extId)
+    // if (!isVerBWC(regRecSplitExtId.version, splitWatchingExtId.version)) {
+    //   return
+    // }
     watcher(extRecord as any)
   }
 }
