@@ -1,5 +1,4 @@
-export * from './extension-registry'
 export * from './pkg'
-export * from './pointer'
+export * from './registry'
 export * from './shell-lib'
 export * from './types'

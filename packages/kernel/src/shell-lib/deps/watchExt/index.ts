@@ -1,5 +1,5 @@
-import { splitExtId, splitPointer } from '../../../pointer'
 import type { ExtensionRegistryRecord, ExtId, ExtNameOf, ExtTopoNodePaths, KernelExt, PortShell } from '../../../types'
+import { splitExtId, splitPointer } from '../../pointer'
 
 type Watcher<_ExtId extends ExtId> = (_: ExtensionRegistryRecord<_ExtId> | undefined) => void
 

@@ -1,8 +1,7 @@
 import type { Boot } from '@moodlenet/bare-metal/lib/types'
 import { makePkgMng, pkgInfoOf } from './pkg'
-import { baseSplitPointer, joinPointer, splitExtId, splitPointer } from './pointer'
 import { createLocalExtensionRegistry } from './registry'
-import * as shellLib from './shell-lib'
+import * as K from './shell-lib'
 import type {
   ExtensionRegistryRecord,
   ExtId,
@@ -15,7 +14,6 @@ import type {
   PortShell,
   PushMessage,
   ShellExtensionRegistry,
-  ShellLib,
 } from './types'
 
 // export const kernelExtIdObj: ExtIdOf<KernelExt> = {
@@ -26,12 +24,13 @@ import type {
 export const kernelExtId: ExtId<KernelExt> = '@moodlenet/kernel@0.0.1'
 
 export const boot: Boot = async bareMetal => {
+  const localExtReg = createLocalExtensionRegistry()
+
   let msgListeners: PortListenerRecord[] = []
-  const kernelExtIdObj = splitExtId(kernelExtId)
+  const kernelExtIdObj = K.splitExtId(kernelExtId)
   const pkgMng = makePkgMng(bareMetal.cwd)
   const cfgPath = process.env.KERNEL_ENV_MOD ?? `${process.cwd()}/kernel-env-mod`
   const global_env: Record<string, any> = require(cfgPath)
-  const localExtReg = createLocalExtensionRegistry()
   const pkgInfo = pkgInfoOf(module)
   return registerAndStartKernelExt()
 
@@ -45,15 +44,14 @@ export const boot: Boot = async bareMetal => {
   function extEnv(extName: string) {
     return global_env[extName]
   }
-
   async function registerAndStartKernelExt() {
     localExtReg.registerExtension({
       pkgInfo,
       env: extEnv(kernelExtIdObj.extName),
       extId: kernelExtId,
       lifeCycle: {
-        start: async ({ shell }) => {
-          shell.replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
+        start: async ({ shell, K }) => {
+          K.replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
             'packages/install':
               _shell =>
               async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
@@ -88,7 +86,7 @@ export const boot: Boot = async bareMetal => {
     return Object.entries(extensions).map(([fullName, impl]) => {
       //FIXME: check fullName format to be ExtId
       const extId = fullName as ExtId
-      const { extName } = splitExtId(extId)
+      const { extName } = K.splitExtId(extId)
       const env = extEnv(extName)
       return localExtReg.registerExtension({
         env,
@@ -112,7 +110,7 @@ export const boot: Boot = async bareMetal => {
     extRecord.deployment = 'deploying'
     const shell = makeStartShell(extRecord)
     const env = extEnv(extIdName)
-    const stop = await extRecord.lifeCycle.start({ shell, env })
+    const stop = await extRecord.lifeCycle.start({ shell, env, K })
     extRecord.deployment = {
       at: new Date(),
       stop,
@@ -121,8 +119,8 @@ export const boot: Boot = async bareMetal => {
     pushMessage(
       createMessage({
         payload: null, // FIXME: Activated Message with valued payload?
-        source: joinPointer(extRecord.extId, ''),
-        target: joinPointer(kernelExtId, 'extensions.activated'),
+        source: K.joinPointer(extRecord.extId, ''),
+        target: K.joinPointer(kernelExtId, 'extensions.activated'),
         parentMsgId: null,
       }),
     )
@@ -130,14 +128,14 @@ export const boot: Boot = async bareMetal => {
   }
 
   function makeStartShell(extRec: ExtensionRegistryRecord) {
-    const cwPointer = joinPointer(extRec.extId, '')
+    const cwPointer = K.joinPointer(extRec.extId, '')
     const message = createMessage({
       payload: null, // FIXME: startShell Message with valued payload?
-      source: joinPointer(kernelExtId, ''),
+      source: K.joinPointer(kernelExtId, ''),
       target: cwPointer,
       parentMsgId: null,
     })
-    const startShell = makeListenerShell({
+    const startShell = makePortShell({
       message,
       cwPointer,
     })
@@ -155,13 +153,13 @@ pushMessage`,
 `,
     )
     msgListeners.forEach(({ cwPointer, listener }) => {
-      const listenerP = splitPointer(cwPointer)
+      const listenerP = K.splitPointer(cwPointer)
       const listenerExt = localExtReg.getRegisteredExtension(listenerP.extName)
       if (!listenerExt?.deployment) {
         //TODO: WARN? useless check ? remove listener ?
         return
       }
-      const shell = makeListenerShell({
+      const shell = makePortShell({
         cwPointer,
         message,
       })
@@ -171,14 +169,8 @@ pushMessage`,
     return message
   }
 
-  function makeListenerShell<P>({
-    message,
-    cwPointer,
-  }: {
-    message: Message<P>
-    cwPointer: Pointer
-  }): PortShell<P> & ShellLib {
-    const cwExt = baseSplitPointer(cwPointer)
+  function makePortShell<P>({ message, cwPointer }: { message: Message<P>; cwPointer: Pointer }): PortShell<P> {
+    const cwExt = K.baseSplitPointer(cwPointer)
     assertDeployed()
     const listen = (listener: PortListener) => {
       assertDeployed()
@@ -187,7 +179,7 @@ pushMessage`,
 
     const push: PushMessage = targetExtId => path => payload => {
       assertDeployed()
-      const target = joinPointer(targetExtId, path)
+      const target = K.joinPointer(targetExtId, path)
       localExtReg.assertCompatibleRegisteredExtension(targetExtId)
       return pushMessage(
         createMessage({
@@ -202,26 +194,25 @@ pushMessage`,
     const extRec = localExtReg.assertCompatibleRegisteredExtension(cwExt.extId)
     return {
       message,
-      listen,
       cwPointer,
+      pkgInfo: extRec.pkgInfo,
+      listen,
       push,
       registry: getShellExtReg(),
-      pkgInfo: extRec.pkgInfo,
-      ...shellLib,
     }
 
     function assertDeployed() {
       localExtReg.assertCompatibleRegisteredExtension(cwExt.extId)
       // FIXME: remove all listeners on exception ?
     }
-    function getShellExtReg(): ShellExtensionRegistry {
-      const registry: any = { ...localExtReg }
-      //@ts-ignore
-      delete registry.registerExtension
-      //@ts-ignore
-      delete registry.unregisterExtension
-      return registry
-    }
+  }
+  function getShellExtReg(): ShellExtensionRegistry {
+    const registry: any = { ...localExtReg }
+    //@ts-ignore
+    delete registry.registerExtension
+    //@ts-ignore
+    delete registry.unregisterExtension
+    return registry
   }
 
   function addListener({ cwPointer, listener }: { listener: PortListener; cwPointer: Pointer }) {

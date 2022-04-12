@@ -1,11 +1,12 @@
 import { satisfies } from 'semver'
-import { splitExtId, splitPointer } from '../pointer'
+import { splitExtId, splitPointer } from '../shell-lib/pointer'
 import type { ExtensionRegistryRecord, ExtEnv, ExtId, ExtImpl, PkgInfo, Pointer, Version } from '../types'
 
 export type ExtensionRegistryHash = {
   [ExtName in string]: ExtensionRegistryRecord
 }
 export type ExtensionRegistry = ReturnType<typeof createLocalExtensionRegistry>
+
 export const createLocalExtensionRegistry = () => {
   //FIXME: make `extensionRegistry` an ExtensionRegistryRecord[]
   // to support multiple extension impl with same name

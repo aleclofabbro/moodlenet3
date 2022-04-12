@@ -1,4 +1,3 @@
-import { joinPointer, splitPointer } from '../../pointer'
 import type {
   ExtensionDef,
   ExtId,
@@ -10,10 +9,11 @@ import type {
   TypeofPath,
   Unlisten,
 } from '../../types'
+import { joinPointer, splitPointer } from '../pointer'
 import * as probe from '../probe'
 
-export declare const RPC_TOPO_SYM: symbol
-export type RPC_TOPO_SYM = typeof RPC_TOPO_SYM
+// export declare const RPC_TOPO_SYM: symbol
+// export type RPC_TOPO_SYM = typeof RPC_TOPO_SYM
 export type RpcFn = (...rpcTopoReqArgs: any) => Promise<any>
 //export type RpcTopoPaths<Topo extends Topology> = TopoPaths<Topo, RPC_TOPO_SYM>
 
@@ -32,14 +32,12 @@ export type RpcTopoResponsePort<Afn extends RpcFn> = Port<
   { rpcTopoRespValue: Awaited<ReturnType<Afn>> } | { rpcTopoRespError: any }
 >
 
-export type RpcTopo<Afn extends RpcFn> = TopoNode<
-  RPC_TOPO_SYM,
-  {
-    rpcTopoRequest: RpcTopoRequestPort<Afn>
-    rpcTopoResponse: RpcTopoResponsePort<Afn>
-    // _________________?: RawPort<Afn>
-  }
->
+export type RpcTopo<Afn extends RpcFn> = TopoNode<// RPC_TOPO_SYM,
+{
+  rpcTopoRequest: RpcTopoRequestPort<Afn>
+  rpcTopoResponse: RpcTopoResponsePort<Afn>
+  // _________________?: RawPort<Afn>
+}>
 
 export type RpcTopoFnOf<T> = (shell: PortShell<{ rpcTopoReqArgs: Parameters<RpcFnOf<T>> }>) => RpcFnOf<T>
 
@@ -83,7 +81,7 @@ export const replyAll = <Ext extends ExtensionDef>(
     },
   )
 
-export const extCall =
+export const caller =
   <Ext extends ExtensionDef>(shell: PortShell, extId: ExtId<Ext>) =>
   <Path extends ExtRpcTopoPaths<Ext>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
@@ -141,22 +139,24 @@ const rpc_pointers = <Ext extends ExtensionDef, Path extends ExtRpcTopoPaths<Ext
 //   '1.4.3',
 //   {
 //     d: Port<string>
-//     a: RpcTopo<C>
+//     a: RpcTopo<Q>
 //     s: {
 //       g: Port<11>
 //       v: {
 //         l: Port<string>
-//         a: RpcTopo<C>
+//         a: RpcTopo<Q>
 //       }
+//       // a: FunTopo<C>
 //     }
 //   }
 // >
 // declare const s: any
 
+// type C = <T>(t: T) => { _: T }
+// type Q = <T>(t: T) => Promise<{ _: T }>
+
+// const g = call<D>(s)('xxxx@1.4.3::s/v/a')('1002')
+
+// const j: ExtRpcTopoPaths<D> = 's/v/a'
 // listen.port<D>(s)('xxxx@1.4.3::s.v.l', ({ message: { payload } }) => {})
 // listen.ext<D>(s, 'xxxx@1.4.3')('s.g', ({ message: { payload } }) => {})
-// type C = <T>(t: T) => Promise<{ _: T }>
-
-// const g = caller<D>(s)('xxxx@1.4.3::s.v.a')(100)
-
-// const j: ExtRpcTopoPaths<D> = 's.v.a'

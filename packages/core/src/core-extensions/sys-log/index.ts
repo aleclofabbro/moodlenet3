@@ -1,6 +1,5 @@
-import type { ExtensionDef, ListenerShell, Port } from '@moodlenet/kernel'
+import type { ExtensionDef, Port, PortShell } from '@moodlenet/kernel'
 
-const logLevels = ['debug', 'log', 'info', 'warn', 'error', 'fatal'] as const
 export type LogLevel = typeof logLevels extends readonly (infer Lev)[] ? Lev : never
 
 export type LogOptions = {}
@@ -13,8 +12,9 @@ export type MoodlenetSysLogPorts = {
 
 export type MoodlenetSysLogExt = ExtensionDef<'moodlenet.sys-log', '0.0.1', MoodlenetSysLogPorts>
 
+const logLevels = ['debug', 'log', 'info', 'warn', 'error', 'fatal'] as const
 export const logger = (
-  shell: ListenerShell,
+  shell: PortShell,
 ): {
   [level in LogLevel]: (log: Log) => void
 } => {

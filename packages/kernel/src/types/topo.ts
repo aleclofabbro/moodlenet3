@@ -6,34 +6,34 @@ import type { ExtensionDef } from './ext'
  */
 
 // export declare const PORT_NODE_SYM: unique symbol
-export declare const TOPO_BASE_SYM: unique symbol
-export declare const TOPO_NODE_SYM: unique symbol
-export declare const ROOT_TOPO_SYM: unique symbol
+// export declare const TOPO_BASE_SYM: unique symbol
+// export declare const TOPO_NODE_SYM: unique symbol
+// export declare const ROOT_TOPO_SYM: unique symbol
 // export type PORT_LEAF_SYM = typeof PORT_NODE_SYM
-export type TOPO_BASE_SYM = typeof TOPO_BASE_SYM
-export type TOPO_NODE_SYM = typeof TOPO_NODE_SYM
-export type ROOT_TOPO_SYM = typeof ROOT_TOPO_SYM
+// export type TOPO_BASE_SYM = typeof TOPO_BASE_SYM
+// export type TOPO_NODE_SYM = typeof TOPO_NODE_SYM
+// export type ROOT_TOPO_SYM = typeof ROOT_TOPO_SYM
 
 export type TopoPath = string
 
-export type BaseTopoNode<CUSTOM_SYMBOL extends symbol = TOPO_BASE_SYM> = {
-  _ID?: CUSTOM_SYMBOL & TOPO_BASE_SYM
-}
+// export type BaseTopoNode<CUSTOM_SYMBOL extends symbol = TOPO_BASE_SYM> = {
+//   _ID?: CUSTOM_SYMBOL & TOPO_BASE_SYM
+// }
 
 export type Port<Payload = any /* , CUSTOM_SYMBOL extends symbol = PORT_LEAF_SYM */> = {
   payload: Payload
-} & BaseTopoNode /*<CUSTOM_SYMBOL & PORT_LEAF_SYM>*/
+} //& BaseTopoNode /*<CUSTOM_SYMBOL & PORT_LEAF_SYM>*/
 
 export type TopoStruct = {
-  [topoElementName in string]?: TopoElement
+  [topoElementName in string]?: Port | TopoNode//TopoElement
 }
+// export type TopoElement = Port | TopoNode
 
-export type TopoNode<CUSTOM_SYMBOL extends symbol = TOPO_NODE_SYM, Struct extends TopoStruct = TopoStruct> = Struct &
-  BaseTopoNode<CUSTOM_SYMBOL & TOPO_NODE_SYM>
+export type TopoNode</* CUSTOM_SYMBOL extends symbol = TOPO_NODE_SYM,  */Struct extends TopoStruct = TopoStruct> = Struct 
+  // & BaseTopoNode<CUSTOM_SYMBOL & TOPO_NODE_SYM>
 
-export type TopoElement = Port | TopoNode
 
-export type RootTopo = TopoNode<ROOT_TOPO_SYM>
+export type RootTopo = TopoNode//<ROOT_TOPO_SYM>
 
 export type ExtPortPaths<Ext extends ExtensionDef> = TypePaths<Ext['ports'], Port, Port> //& ExtTopoPaths<Ext>
 

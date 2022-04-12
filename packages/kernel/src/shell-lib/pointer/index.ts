@@ -1,4 +1,4 @@
-import * as T from '../types'
+import * as T from '../../types'
 
 export const baseSplitPointer = <Ext extends T.ExtensionDef, Path extends T.ExtTopoPaths<Ext>>(
   pointer: T.Pointer<Ext, Path>,
@@ -24,9 +24,9 @@ export const joinPointer = <Ext extends T.ExtensionDef, Path extends T.ExtTopoPa
   path: Path,
 ): T.Pointer<Ext, Path> => `${extId}::${path}`
 
-export function joinSemanticPointer<Ext extends T.ExtensionDef, Path extends T.ExtTopoPaths<Ext>>(
+export const joinSemanticPointer = <Ext extends T.ExtensionDef, Path extends T.ExtTopoPaths<Ext>>(
   a: T.Pointer<Ext, Path>,
-): T.SemanticPointer<Ext, Path> {
+): T.SemanticPointer<Ext, Path> => {
   const aSplit = splitPointer(a)
   return `${aSplit.extName}::${aSplit.path}`
 }

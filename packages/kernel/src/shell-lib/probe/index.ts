@@ -1,4 +1,3 @@
-import { joinPointer, joinSemanticPointer } from '../../pointer'
 import { isBWCSemanticallySamePointers } from '../../registry'
 import type {
   ExtensionDef,
@@ -9,6 +8,7 @@ import type {
   PortShell,
   SemanticPointer,
 } from '../../types'
+import { joinPointer, joinSemanticPointer } from '../pointer'
 
 export type Listener<
   ExtDef extends ExtensionDef = ExtensionDef,
