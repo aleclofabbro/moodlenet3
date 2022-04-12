@@ -1,44 +1,15 @@
-import type { ExtensionDef, KernelLib, PortShell, RpcTopo } from '@moodlenet/kernel'
+import type { ExtensionDef, ExtId, ExtImplExports, FunTopo, PortShell } from '@moodlenet/kernel'
 import type { Readable } from 'stream'
+import { Meta, MoodlenetBlobStoreExtImpl, PutError, WriteOptions } from './impl'
 
-export type GenericError = {
-  message: string
-}
-export type PutError = GenericError
-
-export type MetaMimeType = string
-
-export type Create = (storeName: string) => Promise<void>
-export type Exists = (storeName: string) => Promise<boolean>
-
-export type Meta = {
-  mimeType: MetaMimeType
-}
-
-export type WriteOptions = {
-  expiresSecs: number
-}
-export type WriteRpc = (
-  storeName: string,
-  path: string,
-  data: Buffer | Readable,
-  meta: Pick<Meta, 'mimeType'>,
-  opts?: Partial<WriteOptions>,
-) => Promise<{ done: true; meta: Meta } | { done: false; err: PutError }>
-
-export type MetaRpc = (storeName: string, path: string) => Promise<Meta | undefined>
-
-export type ReadRpc = (storeName: string, path: string) => Promise<Readable | null>
-
-export type MoodlenetBlobStorePorts = {
-  meta: RpcTopo<MetaRpc>
-  read: RpcTopo<ReadRpc>
-  write: RpcTopo<WriteRpc>
-  create: RpcTopo<Create>
-  exists: RpcTopo<Exists>
-}
-
-export type MoodlenetBlobStoreExt = ExtensionDef<'moodlenet.blob-store', '0.0.1', MoodlenetBlobStorePorts>
+export type MoodlenetBlobStoreExt = ExtensionDef<
+  'moodlenet.blob-store',
+  '0.0.1',
+  {
+    lib: FunTopo<() => MoodlenetBlobStoreLib>
+  }
+>
+export const moodlenetBlobStoreExtId: ExtId<MoodlenetBlobStoreExt> = 'moodlenet.blob-store@0.0.1'
 
 export type MoodlenetBlobStoreLib = {
   read(blobPath: string): Promise<Readable | null>
@@ -53,32 +24,49 @@ export type MoodlenetBlobStoreLib = {
   exists(): Promise<boolean>
 }
 
-export const moodlenetBlobStoreLib = (shell: PortShell, lib: KernelLib): MoodlenetBlobStoreLib => {
-  const { extName: storeName } = lib.splitPointer(shell.cwPointer)
+const extImpl: ExtImplExports = {
+  module,
+  extensions: {
+    [moodlenetBlobStoreExtId]: {
+      async start({ K, mainShell }) {
+        // TODO FIXME: requires('moodlenet.blob-store-impl@0.0.1')
+        K.retrnAll<MoodlenetBlobStoreExt>(mainShell, 'moodlenet.blob-store@0.0.1', {
+          lib,
+        })
 
-  const exists = () => lib.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::exists')(storeName)
+        return async () => {}
 
-  const create = () => lib.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::create')(storeName)
+        function lib(shell: PortShell) {
+          const { extName: storeName } = K.splitPointer(shell.cwPointer)
 
-  const read = (blobPath: string) =>
-    lib.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::read')(storeName, blobPath)
+          // TODO: should use mainShell for calls?
+          const bsImplCall = K.caller<MoodlenetBlobStoreExtImpl>(shell, 'moodlenet.blob-store-impl@0.0.1')
 
-  const meta = (blobPath: string) =>
-    lib.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::meta')(storeName, blobPath)
+          const exists: MoodlenetBlobStoreLib['exists'] = () => bsImplCall('exists')(storeName)
 
-  const write = (
-    blobPath: string,
-    data: Buffer | Readable,
-    meta: Pick<Meta, 'mimeType'>,
-    opts?: Partial<WriteOptions>,
-  ) =>
-    lib.call<MoodlenetBlobStoreExt>(shell)('moodlenet.blob-store@0.0.1::write')(storeName, blobPath, data, meta, opts)
+          const create: MoodlenetBlobStoreLib['create'] = () => bsImplCall('create')(storeName)
 
-  return {
-    read,
-    meta,
-    write,
-    exists,
-    create,
-  }
+          const read: MoodlenetBlobStoreLib['read'] = (blobPath: string) => bsImplCall('read')(storeName, blobPath)
+
+          const meta: MoodlenetBlobStoreLib['meta'] = (blobPath: string) => bsImplCall('meta')(storeName, blobPath)
+
+          const write: MoodlenetBlobStoreLib['write'] = (
+            blobPath: string,
+            data: Buffer | Readable,
+            meta: Pick<Meta, 'mimeType'>,
+            opts?: Partial<WriteOptions>,
+          ) => bsImplCall('write')(storeName, blobPath, data, meta, opts)
+
+          return (): MoodlenetBlobStoreLib => ({
+            read,
+            meta,
+            write,
+            exists,
+            create,
+          })
+        }
+      },
+    },
+  },
 }
+export default extImpl

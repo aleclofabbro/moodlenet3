@@ -13,7 +13,7 @@ import type {
   PortListener,
   PortShell,
   PushMessage,
-  ShellExtensionRegistry,
+  ShellExtensionRegistry
 } from './types'
 
 // export const kernelExtIdObj: ExtIdOf<KernelExt> = {
@@ -50,8 +50,8 @@ export const boot: Boot = async bareMetal => {
       env: extEnv(kernelExtIdObj.extName),
       extId: kernelExtId,
       lifeCycle: {
-        start: async ({ shell, K }) => {
-          K.replyAll<KernelExt>(shell, '@moodlenet/kernel@0.0.1', {
+        start: async ({ mainShell, K }) => {
+          K.replyAll<KernelExt>(mainShell, '@moodlenet/kernel@0.0.1', {
             'packages/install':
               _shell =>
               async ({ pkgLoc }) => ({ records: await installPkg({ pkgLoc }) }),
@@ -110,7 +110,7 @@ export const boot: Boot = async bareMetal => {
     extRecord.deployment = 'deploying'
     const shell = makeStartShell(extRecord)
     const env = extEnv(extIdName)
-    const stop = await extRecord.lifeCycle.start({ shell, env, K })
+    const stop = await extRecord.lifeCycle.start({ mainShell: shell, env, K })
     extRecord.deployment = {
       at: new Date(),
       stop,

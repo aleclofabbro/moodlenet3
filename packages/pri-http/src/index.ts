@@ -1,5 +1,4 @@
-import type { ExtensionDef, ExtId, ExtImplExports, PortShell, RpcTopo } from '@moodlenet/kernel/lib'
-import { call, replyAll } from '@moodlenet/kernel/lib'
+import type { ExtensionDef, ExtId, ExtImplExports, PortShell, RpcTopo } from '@moodlenet/kernel'
 import { json } from 'body-parser'
 import express from 'express'
 

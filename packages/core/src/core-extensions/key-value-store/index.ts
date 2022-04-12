@@ -1,21 +1,16 @@
-import type { ExtensionDef, FunTopo, KernelLib, PortShell, RpcTopo } from '@moodlenet/kernel'
+import type { ExtensionDef, ExtId, ExtImplExports, FunTopo, PortShell } from '@moodlenet/kernel'
+import type { MoodlenetKeyValueStoreExtImpl } from './impl'
 
-export type MoodlenetKeyValueStoreExt = ExtensionDef<'moodlenet.key-value-store', '0.0.1', MoodlenetKeyValueStorePorts>
+export type MoodlenetKeyValueStoreExt = ExtensionDef<
+  'moodlenet.key-value-store',
+  '0.0.1',
+  {
+    lib: FunTopo<<KVMap>() => MoodlenetKeyValueStoreLib<KVMap>>
+  }
+>
+export const moodlenetKeyValueStoreExtId: ExtId<MoodlenetKeyValueStoreExt> = 'moodlenet.key-value-store@0.0.1'
 
-export type MoodlenetKeyValueStorePorts = {
-  get: RpcTopo<Get>
-  put: RpcTopo<Put>
-  create: RpcTopo<Create>
-  exists: RpcTopo<Exists>
-  lib: FunTopo<<KVMap>() => MoodlenetKeyValueStoreLib<KVMap>>
-}
-
-export type Get = <T>(storeName: string, key: string) => Promise<T | undefined>
-export type Put = <T>(storeName: string, key: string, val: T) => Promise<{ old: T | undefined }>
-export type Create = (storeName: string) => Promise<void>
-export type Exists = (storeName: string) => Promise<boolean>
-
-export type MoodlenetKeyValueStoreLib<KVMap> = {
+export type MoodlenetKeyValueStoreLib<KVMap = {}> = {
   get<K extends string & keyof KVMap>(key: K): Promise<KVMap[K] | undefined>
   put<K extends string & keyof KVMap>(
     key: K,
@@ -27,28 +22,42 @@ export type MoodlenetKeyValueStoreLib<KVMap> = {
   exists(): Promise<boolean>
 }
 
-export const moodlenetKeyValueStoreLib = <KVMap>(
-  shell: PortShell,
-  lib: KernelLib,
-): MoodlenetKeyValueStoreLib<KVMap> => {
-  const { extName: storeName } = lib.splitPointer(shell.cwPointer)
+const extImpl: ExtImplExports = {
+  module,
+  extensions: {
+    [moodlenetKeyValueStoreExtId]: {
+      async start({ K, mainShell }) {
+        // TODO FIXME: requires('moodlenet.key-value-store-impl@0.0.1')
+        K.retrnAll<MoodlenetKeyValueStoreExt>(mainShell, 'moodlenet.key-value-store@0.0.1', {
+          lib,
+        })
 
-  const get: MoodlenetKeyValueStoreLib<KVMap>['get'] = key =>
-    lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::get')(storeName, key)
+        return async () => {}
 
-  const put: MoodlenetKeyValueStoreLib<KVMap>['put'] = (key, val) =>
-    lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::put')(storeName, key, val)
+        function lib(shell: PortShell) {
+          const { extName: storeName } = K.splitPointer(shell.cwPointer)
 
-  const create: MoodlenetKeyValueStoreLib<KVMap>['create'] = () =>
-    lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::create')(storeName)
+          // TODO: should use mainShell for calls?
+          const kvsImplCall = K.caller<MoodlenetKeyValueStoreExtImpl>(shell, 'moodlenet.key-value-store-impl@0.0.1')
 
-  const exists: MoodlenetKeyValueStoreLib<KVMap>['exists'] = () =>
-    lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::exists')(storeName)
+          const get: MoodlenetKeyValueStoreLib['get'] = key => kvsImplCall('get')(storeName, key)
 
-  return {
-    get,
-    put,
-    create,
-    exists,
-  }
+          const put: MoodlenetKeyValueStoreLib['put'] = (key, val) => kvsImplCall('put')(storeName, key, val)
+
+          const create: MoodlenetKeyValueStoreLib['create'] = () => kvsImplCall('create')(storeName)
+
+          const exists: MoodlenetKeyValueStoreLib['exists'] = () => kvsImplCall('exists')(storeName)
+
+          return <KVMap>(): MoodlenetKeyValueStoreLib<KVMap> => ({
+            get,
+            put,
+            create,
+            exists,
+          })
+        }
+      },
+    },
+  },
 }
+
+export default extImpl

@@ -7,7 +7,7 @@ import type {
   PortShell,
   TopoNode,
   TypeofPath,
-  Unlisten,
+  Unlisten
 } from '../../types'
 import { joinPointer, splitPointer } from '../pointer'
 import * as probe from '../probe'
@@ -86,7 +86,7 @@ export const caller =
   <Path extends ExtRpcTopoPaths<Ext>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
 
-    return call(shell)(fullPath)
+    return call<Ext>(shell)<Path>(fullPath)
   }
 
 export const call =

@@ -1,10 +1,9 @@
-import { ExtensionDef, RpcTopo } from '@moodlenet/kernel'
+import type { ExtensionDef, FunTopo } from '@moodlenet/kernel'
 
-export type Get = <T>() => Promise<T | undefined>
-export type Set = <T>(cache: T) => Promise<{ old: T | undefined }>
+export type Session = { a: 1 }
 
 export type MoodlenetIdentityManagerPorts = {
-  ____: RpcTopo<Set>
+  ____: FunTopo<() => 0>
 }
 
 export type MoodlenetIdentityManagerExt = ExtensionDef<
@@ -12,3 +11,9 @@ export type MoodlenetIdentityManagerExt = ExtensionDef<
   '0.0.1',
   MoodlenetIdentityManagerPorts
 >
+
+declare module '@moodlenet/kernel' {
+  interface PortShell {
+    session: Session
+  }
+}

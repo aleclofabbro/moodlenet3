@@ -6,16 +6,15 @@ import type { ExtPortPaths, Pointer, PortPathPayload } from './topo'
 export type PostOpts = {}
 export type ExtensionUnavailable = undefined
 
-export type PortShell<Payload = any> = {
+export interface PortShell<Payload = any> {
   message: Message<Payload>
   cwPointer: Pointer
   pkgInfo: PkgInfo
-
   listen: Listen
   push: PushMessage
-
   registry: ShellExtensionRegistry
 }
+
 export type ShellExtensionRegistry = Omit<ExtensionRegistry, 'unregisterExtension' | 'registerExtension'>
 
 export type Listen<Payload = any> = (_: PortListener<Payload>) => Unlisten

@@ -13,7 +13,7 @@ const extImpl: ExtImplExports = {
   module,
   extensions: {
     [testExtId]: {
-      async start({ shell, K }) {
+      async start({ mainShell, K }) {
         console.log('I am core extension')
         // watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
         //   if (!webapp?.active) {
@@ -25,7 +25,7 @@ const extImpl: ExtImplExports = {
         //   cmpPath: 'pkg/webapp',
         // })
         // })
-        K.replyAll<MoodlenetCoreExt>(shell, '@moodlenet/core@0.0.1', {
+        K.replyAll<MoodlenetCoreExt>(mainShell, '@moodlenet/core@0.0.1', {
           _test: _test_shell => async _ => ({ a: _ }),
         })
 
