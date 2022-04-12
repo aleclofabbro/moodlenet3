@@ -1,17 +1,12 @@
-import type { ExtensionDef, ExtId, ExtImplExports, FunTopo, PortShell } from '@moodlenet/kernel'
+import type { Ext, ExtDef, FunTopo, PortShell } from '@moodlenet/kernel'
 import type { Readable } from 'stream'
 import { Meta, MoodlenetBlobStoreExtImpl, PutError, WriteOptions } from './impl'
 
-export type MoodlenetBlobStoreExt = ExtensionDef<
-  'moodlenet.blob-store',
-  '0.0.1',
-  {
-    lib: FunTopo<() => MoodlenetBlobStoreLib>
-  }
->
-export const moodlenetBlobStoreExtId: ExtId<MoodlenetBlobStoreExt> = 'moodlenet.blob-store@0.0.1'
+export type MoodlenetBlobStoreExtDef = Def
+type Def = ExtDef<'moodlenet.blob-store', '0.0.1', { lib: FunTopo<() => Lib> }>
 
-export type MoodlenetBlobStoreLib = {
+export type MoodlenetBlobStoreLib = Lib
+type Lib = {
   read(blobPath: string): Promise<Readable | null>
   meta(blobPath: string): Promise<Meta | undefined>
   write(
@@ -24,49 +19,48 @@ export type MoodlenetBlobStoreLib = {
   exists(): Promise<boolean>
 }
 
-const extImpl: ExtImplExports = {
-  module,
-  extensions: {
-    [moodlenetBlobStoreExtId]: {
-      async start({ K, mainShell }) {
-        // TODO FIXME: requires('moodlenet.blob-store-impl@0.0.1')
-        K.retrnAll<MoodlenetBlobStoreExt>(mainShell, 'moodlenet.blob-store@0.0.1', {
-          lib,
-        })
+const extImpl: Ext<Def, [MoodlenetBlobStoreExtImpl]> = {
+  id: 'moodlenet.blob-store@0.0.1',
+  name: '',
+  requires: ['moodlenet.blob-store-impl@0.0.1'],
+  description: '',
+  start({ K, mainShell }) {
+    // TODO FIXME: requires('moodlenet.blob-store-impl@0.0.1')
+    K.retrnAll<Def>(mainShell, 'moodlenet.blob-store@0.0.1', {
+      lib,
+    })
 
-        return async () => {}
+    return
 
-        function lib(shell: PortShell) {
-          const { extName: storeName } = K.splitPointer(shell.cwPointer)
+    function lib(shell: PortShell) {
+      const { extName: storeName } = K.splitPointer(shell.cwPointer)
 
-          // TODO: should use mainShell for calls?
-          const bsImplCall = K.caller<MoodlenetBlobStoreExtImpl>(shell, 'moodlenet.blob-store-impl@0.0.1')
+      // TODO: should use mainShell for calls?
+      const bsImplCall = K.caller<MoodlenetBlobStoreExtImpl>(shell, 'moodlenet.blob-store-impl@0.0.1')
 
-          const exists: MoodlenetBlobStoreLib['exists'] = () => bsImplCall('exists')(storeName)
+      const exists: Lib['exists'] = () => bsImplCall('exists')(storeName)
 
-          const create: MoodlenetBlobStoreLib['create'] = () => bsImplCall('create')(storeName)
+      const create: Lib['create'] = () => bsImplCall('create')(storeName)
 
-          const read: MoodlenetBlobStoreLib['read'] = (blobPath: string) => bsImplCall('read')(storeName, blobPath)
+      const read: Lib['read'] = (blobPath: string) => bsImplCall('read')(storeName, blobPath)
 
-          const meta: MoodlenetBlobStoreLib['meta'] = (blobPath: string) => bsImplCall('meta')(storeName, blobPath)
+      const meta: Lib['meta'] = (blobPath: string) => bsImplCall('meta')(storeName, blobPath)
 
-          const write: MoodlenetBlobStoreLib['write'] = (
-            blobPath: string,
-            data: Buffer | Readable,
-            meta: Pick<Meta, 'mimeType'>,
-            opts?: Partial<WriteOptions>,
-          ) => bsImplCall('write')(storeName, blobPath, data, meta, opts)
+      const write: Lib['write'] = (
+        blobPath: string,
+        data: Buffer | Readable,
+        meta: Pick<Meta, 'mimeType'>,
+        opts?: Partial<WriteOptions>,
+      ) => bsImplCall('write')(storeName, blobPath, data, meta, opts)
 
-          return (): MoodlenetBlobStoreLib => ({
-            read,
-            meta,
-            write,
-            exists,
-            create,
-          })
-        }
-      },
-    },
+      return (): Lib => ({
+        read,
+        meta,
+        write,
+        exists,
+        create,
+      })
+    }
   },
 }
-export default extImpl
+export default [extImpl]

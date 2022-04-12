@@ -1,6 +1,6 @@
-import type { ExtensionDef, ExtId, RpcTopo } from '@moodlenet/kernel'
+import type { ExtDef, RpcTopo } from '@moodlenet/kernel'
 
-export type MoodlenetKeyValueStoreExtImpl = ExtensionDef<
+export type MoodlenetKeyValueStoreExtImpl = ExtDef<
   'moodlenet.key-value-store-impl',
   '0.0.1',
   {
@@ -10,8 +10,6 @@ export type MoodlenetKeyValueStoreExtImpl = ExtensionDef<
     exists: RpcTopo<Exists>
   }
 >
-export const moodlenetKeyValueStoreExtImplId: ExtId<MoodlenetKeyValueStoreExtImpl> =
-  'moodlenet.key-value-store-impl@0.0.1'
 
 export type Get = <T>(storeName: string, key: string) => Promise<T | undefined>
 export type Put = <T>(storeName: string, key: string, val: T) => Promise<{ old: T | undefined }>

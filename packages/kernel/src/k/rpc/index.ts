@@ -1,14 +1,4 @@
-import type {
-  ExtensionDef,
-  ExtId,
-  ExtTopoPaths,
-  Pointer,
-  Port,
-  PortShell,
-  TopoNode,
-  TypeofPath,
-  Unlisten
-} from '../../types'
+import type { ExtDef, ExtId, ExtTopoPaths, Pointer, Port, PortShell, TopoNode, TypeofPath, Unlisten } from '../../types'
 import { joinPointer, splitPointer } from '../pointer'
 import * as probe from '../probe'
 
@@ -17,8 +7,8 @@ import * as probe from '../probe'
 export type RpcFn = (...rpcTopoReqArgs: any) => Promise<any>
 //export type RpcTopoPaths<Topo extends Topology> = TopoPaths<Topo, RPC_TOPO_SYM>
 
-export type ExtRpcTopoPaths<ExtDef extends ExtensionDef> = ExtTopoPaths<ExtDef, RpcTopo<RpcFn>> & ExtTopoPaths<ExtDef>
-export type ExtPathRpcFn<ExtDef extends ExtensionDef, Path extends ExtRpcTopoPaths<ExtDef>> = TypeofPath<
+export type ExtRpcTopoPaths<ExtDef extends ExtDef> = ExtTopoPaths<ExtDef, RpcTopo<RpcFn>> & ExtTopoPaths<ExtDef>
+export type ExtPathRpcFn<ExtDef extends ExtDef, Path extends ExtRpcTopoPaths<ExtDef>> = TypeofPath<
   ExtDef['ports'],
   Path
 > extends RpcTopo<infer Afn>
@@ -42,7 +32,7 @@ export type RpcTopo<Afn extends RpcFn> = TopoNode<// RPC_TOPO_SYM,
 export type RpcTopoFnOf<T> = (shell: PortShell<{ rpcTopoReqArgs: Parameters<RpcFnOf<T>> }>) => RpcFnOf<T>
 
 export const reply =
-  <Ext extends ExtensionDef>(shell: PortShell) =>
+  <Ext extends ExtDef>(shell: PortShell) =>
   <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
   (afnPort: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
     const { /* requestPointer, */ responsePointer } = rpc_pointers<Ext, Path>(pointer)
@@ -61,7 +51,7 @@ export const reply =
     })
   }
 
-export const replyAll = <Ext extends ExtensionDef>(
+export const replyAll = <Ext extends ExtDef>(
   shell: PortShell,
   extId: ExtId<Ext>,
   handles: {
@@ -82,7 +72,7 @@ export const replyAll = <Ext extends ExtensionDef>(
   )
 
 export const caller =
-  <Ext extends ExtensionDef>(shell: PortShell, extId: ExtId<Ext>) =>
+  <Ext extends ExtDef>(shell: PortShell, extId: ExtId<Ext>) =>
   <Path extends ExtRpcTopoPaths<Ext>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
 
@@ -90,7 +80,7 @@ export const caller =
   }
 
 export const call =
-  <Ext extends ExtensionDef>(shell: PortShell) =>
+  <Ext extends ExtDef>(shell: PortShell) =>
   <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>): RpcFnOf<TypeofPath<Ext['ports'], Path>> => {
     const { requestPointer, responsePointer } = rpc_pointers<Ext, Path>(pointer)
     return ((...rpcTopoReqArgs: any[]) =>
@@ -123,7 +113,7 @@ export const call =
       })) as any
   }
 
-const rpc_pointers = <Ext extends ExtensionDef, Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => ({
+const rpc_pointers = <Ext extends ExtDef, Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => ({
   requestPointer: `${pointer}/rpcTopoRequest` as `${Pointer<Ext, Path>}/rpcTopoRequest`,
   responsePointer: `${pointer}/rpcTopoResponse` as `${Pointer<Ext, Path>}/rpcTopoResponse`,
 })

@@ -1,6 +1,6 @@
 import { satisfies } from 'semver'
-import { splitExtId, splitPointer } from '../shell-lib/pointer'
-import type { ExtensionRegistryRecord, ExtEnv, ExtId, ExtImpl, PkgInfo, Pointer, Version } from '../types'
+import { splitExtId, splitPointer } from '../k/pointer'
+import type { Ext, ExtensionRegistryRecord, ExtId, PkgInfo, Pointer, Version } from '../types'
 
 export type ExtensionRegistryHash = {
   [ExtName in string]: ExtensionRegistryRecord
@@ -89,12 +89,10 @@ export const createLocalExtensionRegistry = () => {
     extId,
     pkgInfo,
     lifeCycle,
-    env,
   }: {
     extId: _ExtId
     pkgInfo: PkgInfo
-    lifeCycle: ExtImpl
-    env: ExtEnv
+    lifeCycle: Ext
   }) {
     const pkgName = pkgInfo.json.name
     const { extName } = splitExtId(extId)
@@ -104,7 +102,6 @@ export const createLocalExtensionRegistry = () => {
       pkgInfo,
       extId,
       lifeCycle,
-      env,
     }
 
     return (extensionRegistry[pkgName] = extRegRec)

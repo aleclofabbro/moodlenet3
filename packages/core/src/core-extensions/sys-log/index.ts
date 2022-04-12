@@ -1,4 +1,4 @@
-import type { ExtensionDef, FunTopo, Port, PortShell } from '@moodlenet/kernel'
+import type { ExtDef, FunTopo, Port, PortShell } from '@moodlenet/kernel'
 
 export type LogLevel = typeof logLevels extends readonly (infer Lev)[] ? Lev : never
 
@@ -6,11 +6,11 @@ export type LogOptions = {}
 
 export type Log = {} | { _logOpts: LogOptions }
 
-export type MoodlenetSysLogPorts = {
-  [level in LogLevel]: Port<Log>
-} & { lib: FunTopo<() => MoodlenetSysLogLib> }
-
-export type MoodlenetSysLogExt = ExtensionDef<'moodlenet.sys-log', '0.0.1', MoodlenetSysLogPorts>
+export type MoodlenetSysLogExt = ExtDef<
+  'moodlenet.sys-log',
+  '0.0.1',
+  { [level in LogLevel]: Port<Log> } & { lib: FunTopo<() => MoodlenetSysLogLib> }
+>
 
 export type MoodlenetSysLogLib = {
   [level in LogLevel]: (log: Log) => void

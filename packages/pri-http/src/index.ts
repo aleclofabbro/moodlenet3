@@ -15,7 +15,7 @@ const extImpl: ExtImplExports = {
   module,
   extensions: {
     [priHttpExtId]: {
-      async start({ mainShell, K, env }) {
+      start({ mainShell, K, env }) {
         const port = env.port
         const rootPath = env.rootPath
         const extPortsApp = makeExtPortsApp(mainShell, K)
@@ -32,9 +32,7 @@ const extImpl: ExtImplExports = {
           },
         })
 
-        return async () => {
-          server?.close()
-        }
+        return server?.close
       },
     },
   },

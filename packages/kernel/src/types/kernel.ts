@@ -1,6 +1,6 @@
-import type { RpcTopo } from '../shell-lib'
+import type { RpcTopo } from '../k'
 import type { PkgInfo } from './'
-import type { ExtensionDef, ExtId, ExtName } from './ext'
+import type { ExtDef, ExtId, ExtName } from './ext'
 import type { ExtensionRegistryRecord } from './reg'
 
 export type KernelExtPorts = {
@@ -22,4 +22,4 @@ export type KernelExtPorts = {
     >
   }
 }
-export type KernelExt = ExtensionDef<'@moodlenet/kernel', '0.0.1', KernelExtPorts>
+export type KernelExt = ExtDef<'@moodlenet/kernel', '0.0.1', KernelExtPorts>

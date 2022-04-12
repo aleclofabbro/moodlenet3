@@ -1,7 +1,7 @@
 import type { Boot } from '@moodlenet/bare-metal/lib/types'
+import * as K from './k'
 import { makePkgMng, pkgInfoOf } from './pkg'
 import { createLocalExtensionRegistry } from './registry'
-import * as K from './shell-lib'
 import type {
   ExtensionRegistryRecord,
   ExtId,
@@ -13,13 +13,8 @@ import type {
   PortListener,
   PortShell,
   PushMessage,
-  ShellExtensionRegistry
+  ShellExtensionRegistry,
 } from './types'
-
-// export const kernelExtIdObj: ExtIdOf<KernelExt> = {
-//   name: '@moodlenet/kernel',
-//   version: '0.0.1',
-// } as const
 
 export const kernelExtId: ExtId<KernelExt> = '@moodlenet/kernel@0.0.1'
 

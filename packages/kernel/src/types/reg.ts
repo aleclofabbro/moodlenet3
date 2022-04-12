@@ -1,14 +1,13 @@
-import type { ExtEnv, ExtId, ExtImpl, ExtLCStop } from './ext'
+import type { Ext, ExtDef, ExtId, ExtLCStop } from './ext'
 import type { PkgInfo } from './pkg'
 
 export type Deployment = {
   at: Date
   stop: ExtLCStop
 }
-export type ExtensionRegistryRecord<_ExtId extends ExtId = ExtId> = {
-  extId: _ExtId
-  env: ExtEnv
+export type ExtensionRegistryRecord<Def extends ExtDef = ExtDef> = {
+  extId: ExtId<ExtDef>
   deployment: 'deploying' | Deployment | undefined
   pkgInfo: PkgInfo
-  lifeCycle: ExtImpl
+  lifeCycle: Ext<Def>
 }

@@ -1,5 +1,5 @@
 import type { TypeofPath, TypePaths } from './crawl-path'
-import type { ExtensionDef } from './ext'
+import type { ExtDef } from './ext'
 
 /*
  * Port Topology
@@ -25,40 +25,40 @@ export type Port<Payload = any /* , CUSTOM_SYMBOL extends symbol = PORT_LEAF_SYM
 } //& BaseTopoNode /*<CUSTOM_SYMBOL & PORT_LEAF_SYM>*/
 
 export type TopoStruct = {
-  [topoElementName in string]?: Port | TopoNode//TopoElement
+  [topoElementName in string]?: Port | TopoNode //TopoElement
 }
 // export type TopoElement = Port | TopoNode
 
-export type TopoNode</* CUSTOM_SYMBOL extends symbol = TOPO_NODE_SYM,  */Struct extends TopoStruct = TopoStruct> = Struct 
-  // & BaseTopoNode<CUSTOM_SYMBOL & TOPO_NODE_SYM>
+export type TopoNode</* CUSTOM_SYMBOL extends symbol = TOPO_NODE_SYM,  */ Struct extends TopoStruct = TopoStruct> =
+  Struct
+// & BaseTopoNode<CUSTOM_SYMBOL & TOPO_NODE_SYM>
 
+export type RootTopo = TopoNode //<ROOT_TOPO_SYM>
 
-export type RootTopo = TopoNode//<ROOT_TOPO_SYM>
+export type ExtPortPaths<Ext extends ExtDef> = TypePaths<Ext['ports'], Port, Port> //& ExtTopoPaths<Ext>
 
-export type ExtPortPaths<Ext extends ExtensionDef> = TypePaths<Ext['ports'], Port, Port> //& ExtTopoPaths<Ext>
-
-export type ExtTopoPaths<Ext extends ExtensionDef, TargetTopoNode extends TopoNode = TopoNode> = TypePaths<
+export type ExtTopoPaths<Ext extends ExtDef, TargetTopoNode extends TopoNode = TopoNode> = TypePaths<
   Ext['ports'],
   TargetTopoNode,
   Port
 >
 
-export type ExtTopoNodePaths<Ext extends ExtensionDef> = ExtTopoPaths<Ext> | ExtPortPaths<Ext>
+export type ExtTopoNodePaths<Ext extends ExtDef> = ExtTopoPaths<Ext> | ExtPortPaths<Ext>
 
 export type SemanticPointer<
-  Ext extends ExtensionDef = ExtensionDef,
+  Ext extends ExtDef = ExtDef,
   Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
 > = `${Ext['name']}::${Path}` //`;)
 
 export type Pointer<
-  Ext extends ExtensionDef = ExtensionDef,
+  Ext extends ExtDef = ExtDef,
   Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
 > = `${Ext['name']}@${Ext['version']}::${Path}` //`;)
 export type Version = string
 
 export type PortPayload<P extends Port> = P extends Port<infer PL> ? PL : never
 
-export type PortPathPayload<ExtDef extends ExtensionDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
+export type PortPathPayload<ExtDef extends ExtDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
   ExtDef['ports'],
   Path
 > extends Port<infer Payload>

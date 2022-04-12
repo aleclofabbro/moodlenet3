@@ -1,6 +1,17 @@
-import { ExtensionDef, ExtId, RpcTopo } from '@moodlenet/kernel'
+import { ExtDef, RpcTopo } from '@moodlenet/kernel'
 import { Readable } from 'stream'
 
+export type MoodlenetBlobStoreExtImpl = ExtDef<
+  'moodlenet.blob-store-impl',
+  '0.0.1',
+  {
+    meta: RpcTopo<MetaRpc>
+    read: RpcTopo<ReadRpc>
+    write: RpcTopo<WriteRpc>
+    create: RpcTopo<CreateRpc>
+    exists: RpcTopo<ExistsRpc>
+  }
+>
 export type GenericError = {
   message: string
 }
@@ -29,14 +40,3 @@ export type WriteRpc = (
 export type MetaRpc = (storeName: string, path: string) => Promise<Meta | undefined>
 
 export type ReadRpc = (storeName: string, path: string) => Promise<Readable | null>
-
-export type MoodlenetBlobStoreImplPorts = {
-  meta: RpcTopo<MetaRpc>
-  read: RpcTopo<ReadRpc>
-  write: RpcTopo<WriteRpc>
-  create: RpcTopo<CreateRpc>
-  exists: RpcTopo<ExistsRpc>
-}
-
-export type MoodlenetBlobStoreExtImpl = ExtensionDef<'moodlenet.blob-store-impl', '0.0.1', MoodlenetBlobStoreImplPorts>
-export const moodlenetBlobStoreExtImplId: ExtId<MoodlenetBlobStoreExtImpl> = 'moodlenet.blob-store-impl@0.0.1'

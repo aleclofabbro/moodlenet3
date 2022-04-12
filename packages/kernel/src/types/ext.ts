@@ -1,50 +1,44 @@
-import type * as K from '../shell-lib'
+import type * as K from '../k'
 import type { PortShell } from './shell'
 import type { RootTopo } from './topo'
 
+export type KernelLib = typeof K
 export type ExtName = string
 export type ExtVersion = string
-export type ExtensionIdObj<Name extends ExtName = ExtName, Version extends ExtVersion = ExtVersion> = {
-  name: Name
-  version: Version
-}
-export type ExtIdOf<ExtDef extends ExtensionDef> = Pick<ExtDef, keyof ExtensionIdObj>
-export type ExtNameOf<ExtDef extends ExtensionDef> = ExtDef['name']
-export type ExtEnv = unknown
+export type ExtId<Def = ExtDef> = Def extends ExtDef ? `${Def['name']}@${Def['version']}` : never
 
-export type ExtensionDef<
+export type ExtDef<
   Name extends ExtName = ExtName,
   Version extends ExtVersion = ExtVersion,
   ExtRootTopo extends RootTopo = RootTopo,
-> = ExtensionIdObj<Name, Version> & {
+> = {
+  name: Name
+  version: Version
   ports: ExtRootTopo
 }
-export type ExtLCStart = (startArg: { mainShell: PortShell; env: Record<string, any>; K: KernelLib }) => Promise<ExtLCStop>
-export type ExtLCStop = () => Promise<void>
-export type ExtImpl = {
+
+export type Ext<Def extends ExtDef, Requires extends readonly ExtDef[] = []> = {
+  id: ExtId<Def>
+  name: string
+  requires: { [Index in keyof Requires]: ExtId<Requires[Index]> }
   start: ExtLCStart
   description?: string
 }
 
-export type ExtImplExports = { module: NodeModule; extensions: Record<ExtId<ExtensionDef>, ExtImpl> }
-export type ExtId<Ext extends ExtensionDef = ExtensionDef> = `${Ext['name']}@${Ext['version']}` //`;)
+export type ExtLCStart = (startArg: {
+  mainShell: PortShell
+  env: Record<string, unknown>
+  K: KernelLib
+}) => ExtLCStop | void
 
-export type KernelLib = typeof K /* {
-  replyAll: typeof K.replyAll
-  reply: typeof K.reply
-  useExtension: typeof K.useExtension
-  watchExt: typeof K.watchExt
-  retrn: typeof K.retrn
-  retrnAll: typeof K.retrnAll
-  extInvoke: typeof K.extInvoke
-  invoke: typeof K.invoke
-  probePort: typeof K.probePort
-  probeExt: typeof K.probeExt
-  call: typeof K.call
-  caller: typeof K.caller
-  baseSplitPointer: typeof K.baseSplitPointer
-  splitExtId: typeof K.splitExtId
-  splitPointer: typeof K.splitPointer
-  joinPointer: typeof K.joinPointer
-  joinSemanticPointer: typeof K.joinSemanticPointer
-} */
+export type StopObj = { reason: StopReason }
+export type ExtLCStop = (stopObj: StopObj) => Promise<unknown> | unknown
+
+export type StopReason =
+  | 'REQUIRED_EXTENSION_DISABLED'
+  | 'USER_REQUEST'
+  | 'SHUTDOWN'
+  | 'UNKNOWN'
+  | 'UNKNOWN'
+  | 'UNKNOWN'
+  | 'UNKNOWN'

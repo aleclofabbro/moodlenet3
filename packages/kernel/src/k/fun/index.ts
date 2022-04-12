@@ -1,5 +1,5 @@
 import type {
-  ExtensionDef,
+  ExtDef,
   ExtId,
   ExtTopoPaths,
   Message,
@@ -17,8 +17,8 @@ import * as probe from '../probe'
 // export type FUN_TOPO_SYM = typeof FUN_TOPO_SYM
 export type Fun = (...funTopoReqArgs: any) => any
 
-export type ExtFunTopoPaths<ExtDef extends ExtensionDef> = ExtTopoPaths<ExtDef, FunTopo<Fun>> & ExtTopoPaths<ExtDef>
-export type ExtPathFunFn<ExtDef extends ExtensionDef, Path extends ExtFunTopoPaths<ExtDef>> = TypeofPath<
+export type ExtFunTopoPaths<ExtDef extends ExtDef> = ExtTopoPaths<ExtDef, FunTopo<Fun>> & ExtTopoPaths<ExtDef>
+export type ExtPathFunFn<ExtDef extends ExtDef, Path extends ExtFunTopoPaths<ExtDef>> = TypeofPath<
   ExtDef['ports'],
   Path
 > extends FunTopo<infer Fn>
@@ -42,7 +42,7 @@ export type FunTopo<Fn extends Fun> = TopoNode<// FUN_TOPO_SYM,
 export type FunTopoFnOf<T> = (shell: PortShell<{ funTopoReqArgs: Parameters<FunOf<T>> }>) => FunOf<T>
 
 export const retrn =
-  <Ext extends ExtensionDef>(shell: PortShell) =>
+  <Ext extends ExtDef>(shell: PortShell) =>
   <Path extends ExtFunTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
   (funPort: FunTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
     const { /* requestPointer, */ responsePointer } = fun_pointers<Ext, Path>(pointer)
@@ -61,7 +61,7 @@ export const retrn =
     })
   }
 
-export const retrnAll = <Ext extends ExtensionDef>(
+export const retrnAll = <Ext extends ExtDef>(
   shell: PortShell,
   extId: ExtId<Ext>,
   handles: {
@@ -82,7 +82,7 @@ export const retrnAll = <Ext extends ExtensionDef>(
   )
 
 export const extInvoke =
-  <Ext extends ExtensionDef>(shell: PortShell, extId: ExtId<Ext>) =>
+  <Ext extends ExtDef>(shell: PortShell, extId: ExtId<Ext>) =>
   <Path extends ExtFunTopoPaths<Ext>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
 
@@ -90,7 +90,7 @@ export const extInvoke =
   }
 
 export const invoke =
-  <Ext extends ExtensionDef>(shell: PortShell) =>
+  <Ext extends ExtDef>(shell: PortShell) =>
   <Path extends ExtFunTopoPaths<Ext>>(pointer: Pointer<Ext, Path>): FunOf<TypeofPath<Ext['ports'], Path>> => {
     const { requestPointer, responsePointer } = fun_pointers<Ext, Path>(pointer)
     return ((...funTopoReqArgs: any[]) => {
@@ -131,7 +131,7 @@ export const invoke =
     }) as any
   }
 
-const fun_pointers = <Ext extends ExtensionDef, Path extends ExtFunTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => ({
+const fun_pointers = <Ext extends ExtDef, Path extends ExtFunTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => ({
   requestPointer: `${pointer}/funTopoRequest` as `${Pointer<Ext, Path>}/funTopoRequest`,
   responsePointer: `${pointer}/funTopoResponse` as `${Pointer<Ext, Path>}/funTopoResponse`,
 })
