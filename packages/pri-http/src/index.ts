@@ -1,4 +1,4 @@
-import type { ExtensionDef, ExtId, ExtImplExports, PortShell, RpcTopo } from '@moodlenet/kernel'
+import type { ExtensionDef, ExtId, ExtImplExports, KernelLib, PortShell, RpcTopo } from '@moodlenet/kernel'
 import { json } from 'body-parser'
 import express from 'express'
 
@@ -15,15 +15,15 @@ const extImpl: ExtImplExports = {
   module,
   extensions: {
     [priHttpExtId]: {
-      async start({ shell, env }) {
+      async start({ mainShell, K, env }) {
         const port = env.port
         const rootPath = env.rootPath
-        const extPortsApp = makeExtPortsApp(shell)
+        const extPortsApp = makeExtPortsApp(mainShell, K)
 
         const app = express().use(`${rootPath}/`, (_, __, next) => next())
         app.use(`/_srv`, extPortsApp)
         const server = app.listen(port, () => console.log(`http listening :${port}/${rootPath} !! :)`))
-        replyAll<MNPriHttpExt>(shell, '@moodlenet/pri-http@0.0.1', {
+        K.replyAll<MNPriHttpExt>(mainShell, '@moodlenet/pri-http@0.0.1', {
           setWebAppRootFolder: _shell => async p => {
             console.log({ p })
             const staticApp = express.static(p.folder)
@@ -42,7 +42,7 @@ const extImpl: ExtImplExports = {
 
 export default extImpl
 
-function makeExtPortsApp(shell: PortShell) {
+function makeExtPortsApp(shell: PortShell, K: KernelLib) {
   const srvApp = express()
   srvApp.use(json())
   srvApp.post('*', async (req, res, next) => {
@@ -71,7 +71,7 @@ function makeExtPortsApp(shell: PortShell) {
     }
     console.log('*********body', req.body)
     try {
-      const response = await (call(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
+      const response = await (K.call(shell)(`${extName}::${path.join('.')}` as never) as any)(req.body)
       //(shell ,`${extName}::${path.join('.')}`)(req.body)
       res.json(response)
     } catch (err) {
