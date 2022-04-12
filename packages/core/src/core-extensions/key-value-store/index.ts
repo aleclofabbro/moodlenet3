@@ -7,16 +7,15 @@ export type MoodlenetKeyValueStorePorts = {
   put: RpcTopo<Put>
   create: RpcTopo<Create>
   exists: RpcTopo<Exists>
-  lib: FunTopo<LibFn>
+  lib: FunTopo<<KVMap>() => MoodlenetKeyValueStoreLib<KVMap>>
 }
 
 export type Get = <T>(storeName: string, key: string) => Promise<T | undefined>
 export type Put = <T>(storeName: string, key: string, val: T) => Promise<{ old: T | undefined }>
 export type Create = (storeName: string) => Promise<void>
 export type Exists = (storeName: string) => Promise<boolean>
-export type LibFn = <KVMap>() => Lib<KVMap>
 
-export type Lib<KVMap> = {
+export type MoodlenetKeyValueStoreLib<KVMap> = {
   get<K extends string & keyof KVMap>(key: K): Promise<KVMap[K] | undefined>
   put<K extends string & keyof KVMap>(
     key: K,
@@ -28,19 +27,22 @@ export type Lib<KVMap> = {
   exists(): Promise<boolean>
 }
 
-export const lib = <KVMap>(shell: PortShell, lib: KernelLib): Lib<KVMap> => {
+export const moodlenetKeyValueStoreLib = <KVMap>(
+  shell: PortShell,
+  lib: KernelLib,
+): MoodlenetKeyValueStoreLib<KVMap> => {
   const { extName: storeName } = lib.splitPointer(shell.cwPointer)
 
-  const get: Lib<KVMap>['get'] = key =>
+  const get: MoodlenetKeyValueStoreLib<KVMap>['get'] = key =>
     lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::get')(storeName, key)
 
-  const put: Lib<KVMap>['put'] = (key, val) =>
+  const put: MoodlenetKeyValueStoreLib<KVMap>['put'] = (key, val) =>
     lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::put')(storeName, key, val)
 
-  const create: Lib<KVMap>['create'] = () =>
+  const create: MoodlenetKeyValueStoreLib<KVMap>['create'] = () =>
     lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::create')(storeName)
 
-  const exists: Lib<KVMap>['exists'] = () =>
+  const exists: MoodlenetKeyValueStoreLib<KVMap>['exists'] = () =>
     lib.call<MoodlenetKeyValueStoreExt>(shell)('moodlenet.key-value-store@0.0.1::exists')(storeName)
 
   return {
