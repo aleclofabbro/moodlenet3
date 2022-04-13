@@ -1,39 +1,59 @@
 import execa from 'execa'
-import { resolve } from 'path'
+import { createRequire } from 'module'
+import { Ext, ExtPackage } from '../types'
+import { pkgDiskInfoOf } from './info'
 export type PkgMngLib = ReturnType<typeof makePkgMng>
 
-export const makePkgMng = (cwd: string) => {
+export function makePkgMng(cwd: string) {
   const execa_opts: execa.Options = { cwd }
-
-  const install = async (pkgLoc: string, strict = true) =>
-    execa('npm', ['i', '--force --save', ...(strict ? ['--strict-peer-deps'] : []), pkgLoc], execa_opts)
-  const uninstall = async (pkgLoc: string) => execa('npm', ['rm', pkgLoc], execa_opts)
-  const info = async (pkgLoc: string) => {
-    const isFolder = pkgLoc.startsWith('file:')
-    if (isFolder) {
-      const pkgJsonFile = resolve(pkgLoc.substring(5), 'package.json')
-      // console.log({ pkgJsonFile })
-      const pkgJson = require(pkgJsonFile)
-      return {
-        name: pkgJson.name,
-        version: pkgJson.version,
-      }
-    } else {
-      const infoData = await execa('npm', ['info', '--json', pkgLoc]).then(resp => JSON.parse(resp.stdout).data)
-      // console.log({ infoData })
-      const name = infoData.name
-      const version = infoData.version
-      return {
-        name,
-        version,
-      }
-    }
-  }
+  const localRequire = createRequire(cwd)
 
   return {
     info,
     install,
     uninstall,
+    localRequire,
+  }
+
+  async function install(pkgName: string, strict = true): Promise<ExtPackage> {
+    await execa('npm', ['i', '--force --save', ...(strict ? ['--strict-peer-deps'] : []), pkgName], execa_opts)
+    const mainModPath = localRequire.resolve(pkgName)
+    const pkgDiskInfo = pkgDiskInfoOf(mainModPath)
+    if (pkgDiskInfo instanceof Error) {
+      throw pkgDiskInfo
+    }
+    const exts: Ext[] = localRequire(pkgName).default
+    const pkgRegistryRecord: ExtPackage = {
+      pkgDiskInfo,
+      exts,
+    }
+    return pkgRegistryRecord
+  }
+
+  async function uninstall(pkgName: string) {
+    return execa('npm', ['rm', '--josn', pkgName], execa_opts)
+  }
+
+  async function info(pkgId: string) {
+    // const isFolder = pkgId.startsWith('file:')
+    // if (isFolder) {
+    //   const pkgJsonFile = resolve(pkgId.substring(5), 'package.json')
+    //   // console.log({ pkgJsonFile })
+    //   const pkgJson = require(pkgJsonFile)
+    //   return {
+    //     name: pkgJson.name,
+    //     version: pkgJson.version,
+    //   }
+    // } else {
+    const infoData = await execa('npm', ['info', '--json', pkgId]).then(resp => JSON.parse(resp.stdout).data)
+    // console.log({ infoData })
+    const name = infoData.name
+    const version = infoData.version
+    return {
+      name,
+      version,
+    }
+    // }
   }
 }
 

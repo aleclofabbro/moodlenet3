@@ -8,19 +8,19 @@ export type Listener<Def extends ExtDef = ExtDef, Path extends ExtPortPaths<Def>
 export type ListenOpts = {
   consume: boolean
 }
-export const defListenOpts: ListenOpts = {
-  consume: false,
-}
 
 const consumers: Record<SemanticPointer, Pointer> = {}
 
-export const probePort =
-  <Ext extends ExtDef>(registererShell: PortShell) =>
-  <Path extends ExtPortPaths<Ext>>(
+export function probePort<Ext extends ExtDef>(registererShell: PortShell) {
+  return <Path extends ExtPortPaths<Ext>>(
     listenToPointer: Pointer<Ext, Path>,
     listener: Listener<Ext, Path>,
     _opts?: Partial<ListenOpts>,
   ) => {
+    const defListenOpts: ListenOpts = {
+      consume: false,
+    }
+
     const opts: ListenOpts = { ...defListenOpts, ..._opts }
     const listeningSemanticPointer = joinSemanticPointer(listenToPointer)
     if (opts.consume) {
@@ -68,7 +68,8 @@ already marked by @${listenShell.message.consumedBy.pointer} from pkg "${listenS
       return unsubscribe()
     }
   }
-export const probeExt =
-  <Ext extends ExtDef>(shell: PortShell, extId: ExtId<Ext>) =>
-  <Path extends ExtPortPaths<Ext>>(path: Path, listener: Listener<Ext, Path>) =>
+}
+export function probeExt<Ext extends ExtDef>(shell: PortShell, extId: ExtId<Ext>) {
+  return <Path extends ExtPortPaths<Ext>>(path: Path, listener: Listener<Ext, Path>) =>
     probePort<Ext>(shell)<Path>(joinPointer(extId, path), listener)
+}

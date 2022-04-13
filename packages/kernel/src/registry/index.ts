@@ -1,5 +1,5 @@
 import { isVerBWC, splitExtId } from '../k/pointer'
-import type { DeploymentActionResult, Ext, ExtDef, ExtDeployment, ExtId, ExtLCStop, ExtName, PkgInfo } from '../types'
+import type { DeploymentActionResult, ExtDef, ExtDeployment, ExtId, ExtLCStop, ExtName, ExtPkgInfo } from '../types'
 
 export type ExtLocalDeploymentRegistry = ReturnType<typeof createLocalDeploymentRegistry>
 
@@ -56,15 +56,14 @@ export const createLocalDeploymentRegistry = () => {
     return deployment
   }
 
-  function deploying<Def extends ExtDef>(ext: Ext<Def>, pkgInfo: PkgInfo): DeploymentActionResult<Def> {
-    const currDeployment = get(ext.id)
+  function deploying<Def extends ExtDef>(extPkgInfo: ExtPkgInfo<Def>): DeploymentActionResult<Def> {
+    const currDeployment = get(extPkgInfo.ext.id)
     if (currDeployment) {
       return { done: false, currDeployment }
     }
     const deployment: ExtDeployment<Def> = {
-      ext,
-      pkgInfo,
-      at: new Date(),
+      ...extPkgInfo,
+      startAt: new Date(),
       status: 'deploying',
       stop: undefined,
     }
@@ -80,6 +79,7 @@ export const createLocalDeploymentRegistry = () => {
     }
     const deployment: ExtDeployment<Def> = {
       ...currDeployment,
+      stopAt: new Date(),
       status: 'undeploying',
     }
     set(deployment)

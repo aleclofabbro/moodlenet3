@@ -1,31 +1,33 @@
 import { satisfies } from 'semver'
 import type * as T from '../../types'
 
-export const baseSplitPointer = <Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(
+export function baseSplitPointer<Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(
   pointer: T.Pointer<Ext, Path>,
-) => {
+) {
   const [extId, path] = pointer.split('::') as [T.ExtId<Ext>, Path]
   return { extId, path }
 }
-export const splitExtId = <Ext extends T.ExtDef>(extId: T.ExtId<Ext>) => {
+export function splitExtId<Ext extends T.ExtDef>(extId: T.ExtId<Ext>) {
   const [extName, version] = extId.split('@') as [Ext['name'], Ext['version']]
   return { extName, version }
 }
 
-export const splitPointer = <Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(pointer: T.Pointer<Ext, Path>) => {
+export function splitPointer<Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(pointer: T.Pointer<Ext, Path>) {
   const baspl = baseSplitPointer(pointer)
   const idspl = splitExtId(baspl.extId)
   return { ...baspl, ...idspl }
 }
 
-export const joinPointer = <Def extends T.ExtDef, Path extends T.ExtTopoPaths<Def>>(
+export function joinPointer<Def extends T.ExtDef, Path extends T.ExtTopoPaths<Def>>(
   extId: T.ExtId<Def>,
   path: Path,
-): T.Pointer<Def, Path> => `${extId}::${path}`
+): T.Pointer<Def, Path> {
+  return `${extId}::${path}`
+}
 
-export const joinSemanticPointer = <Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(
+export function joinSemanticPointer<Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(
   a: T.Pointer<Ext, Path>,
-): T.SemanticPointer<Ext, Path> => {
+): T.SemanticPointer<Ext, Path> {
   const aSplit = splitPointer(a)
   return `${aSplit.extName}::${aSplit.path}`
 }

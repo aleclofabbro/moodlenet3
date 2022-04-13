@@ -7,6 +7,7 @@ import type {
   ExtDeployment,
   ExtId,
   ExtLocalDeploymentRegistry,
+  ExtPkgInfo,
   KernelExt,
   Message,
   MsgID,
@@ -31,10 +32,7 @@ export const create = (bareMetal: BareMetalHandle) => {
     requires: [],
     start: ({ mainShell, K }) => {
       K.retrnAll<KernelExt>(mainShell, kernelExtId, {
-        'extension/start':
-          _shell =>
-          ({ ext, pkgInfo }) =>
-            startExtension(ext, pkgInfo),
+        'extension/start': _shell => extPkgInfo => startExtension(extPkgInfo),
         'extension/stop':
           _shell =>
           ({ extId }) =>
@@ -44,7 +42,7 @@ export const create = (bareMetal: BareMetalHandle) => {
       return
     },
   }
-  return startExtension(kernelExt, MN_K_PKG_INFO)
+  return startExtension({ ext: kernelExt, pkgInfo: MN_K_PKG_INFO })
 
   /*
    */
@@ -61,13 +59,13 @@ export const create = (bareMetal: BareMetalHandle) => {
     const deplRes = localDeplReg.undeploying(extId)
     return deplRes
   }
-  function startExtension<Def extends ExtDef = ExtDef>(ext: Ext<Def>, pkgInfo: PkgInfo) {
-    const deplRes = localDeplReg.deploying(ext, pkgInfo)
+  function startExtension<Def extends ExtDef = ExtDef>(extPkgInfo: ExtPkgInfo<Def>) {
+    const deplRes = localDeplReg.deploying(extPkgInfo)
 
     if (!deplRes.done) {
       return deplRes
     }
-
+    const { ext } = extPkgInfo
     console.log(`** KERNEL: starting ${ext.id}`)
     const shell = makeStartShell(deplRes.deployment)
     const env = extEnv(ext.id)

@@ -3,7 +3,7 @@ import packageDirectory from 'pkg-dir'
 import type { PackageJson as NodePackageJson } from 'type-fest'
 import type { PkgDiskInfo } from '../types'
 
-export function pkgInfoOf(mainModPath: string): PkgDiskInfo | Error {
+export function pkgDiskInfoOf(mainModPath: string): PkgDiskInfo {
   const main_mod_dir = dirname(mainModPath)
   try {
     const rootDir = packageDirectory.sync(main_mod_dir)
@@ -24,21 +24,6 @@ export function pkgInfoOf(mainModPath: string): PkgDiskInfo | Error {
     return pkgInfo
   } catch (e) {
     const cause = e instanceof Error ? e : new Error(String(e))
-    return new Error(`couldn't get pkgInfo for main_mod_dir:${main_mod_dir}`, { cause })
+    throw new Error(`couldn't get PkgDiskInfo for mainModPath:${mainModPath}`, { cause })
   }
 }
-
-// FIXME: use manifest
-// function isMNPackageJsonExt(_: any): _ is MNPackageJsonExt {
-//   return (
-//     !!_ &&
-//     isOptString(_, 'displayName') &&
-//     isOptString(_, 'description') &&
-//     isOptString(_, 'webappExtensionFile') &&
-//     isOptString(_, 'shortDesc')
-//   )
-// }
-
-// function isOptString(_: any, p: string) {
-//   return !!_ && (p in _ ? typeof _[p] === 'string' : true)
-// }
