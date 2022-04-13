@@ -1,9 +1,8 @@
-import { isBWCSemanticallySamePointers } from '../../registry'
 import type { ExtDef, ExtId, ExtPortPaths, Pointer, PortPathPayload, PortShell, SemanticPointer } from '../../types'
-import { joinPointer, joinSemanticPointer } from '../pointer'
+import { isBWCSemanticallySamePointers, joinPointer, joinSemanticPointer } from '../pointer'
 
-export type Listener<ExtDef extends ExtDef = ExtDef, Path extends ExtPortPaths<ExtDef> = ExtPortPaths<ExtDef>> = (
-  shell: PortShell<PortPathPayload<ExtDef, Path>>,
+export type Listener<Def extends ExtDef = ExtDef, Path extends ExtPortPaths<Def> = ExtPortPaths<Def>> = (
+  shell: PortShell<PortPathPayload<Def, Path>>,
 ) => void
 
 export type ListenOpts = {
@@ -50,7 +49,11 @@ already marked by @${listenShell.message.consumedBy.pointer} from pkg "${listenS
           }
           listenShell.message.consumedBy = {
             pointer: registererShell.cwPointer,
-            pkgId: registererShell.pkgInfo.json,
+            pkgId: {
+              name: registererShell.pkgInfo.name,
+              version: registererShell.pkgInfo.version,
+              //TODO: processId: getProcessId()
+            },
           }
           listener(listenShell)
         })

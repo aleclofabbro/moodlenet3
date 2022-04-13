@@ -10,7 +10,7 @@
     "pkg/",
     "index.js"
   ],
-  "main": "index.js",
+  "main": "pkg/index.js",
   "description": "moodlenet core package",
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",

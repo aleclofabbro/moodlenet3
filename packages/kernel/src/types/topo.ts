@@ -46,20 +46,20 @@ export type ExtTopoPaths<Ext extends ExtDef, TargetTopoNode extends TopoNode = T
 export type ExtTopoNodePaths<Ext extends ExtDef> = ExtTopoPaths<Ext> | ExtPortPaths<Ext>
 
 export type SemanticPointer<
-  Ext extends ExtDef = ExtDef,
-  Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
-> = `${Ext['name']}::${Path}` //`;)
+  Def extends ExtDef = ExtDef,
+  Path extends ExtTopoNodePaths<Def> = ExtTopoNodePaths<Def>,
+> = `${Def['name']}::${Path}` //`;)
 
 export type Pointer<
-  Ext extends ExtDef = ExtDef,
-  Path extends ExtTopoNodePaths<Ext> = ExtTopoNodePaths<Ext>,
-> = `${Ext['name']}@${Ext['version']}::${Path}` //`;)
+  Def extends ExtDef = ExtDef,
+  Path extends ExtTopoNodePaths<Def> = ExtTopoNodePaths<Def>,
+> = `${Def['name']}@${Def['version']}::${Path}` //`;)
 export type Version = string
 
 export type PortPayload<P extends Port> = P extends Port<infer PL> ? PL : never
 
-export type PortPathPayload<ExtDef extends ExtDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
-  ExtDef['ports'],
+export type PortPathPayload<Def extends ExtDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
+  Def['ports'],
   Path
 > extends Port<infer Payload>
   ? Payload

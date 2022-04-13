@@ -7,9 +7,9 @@ import * as probe from '../probe'
 export type RpcFn = (...rpcTopoReqArgs: any) => Promise<any>
 //export type RpcTopoPaths<Topo extends Topology> = TopoPaths<Topo, RPC_TOPO_SYM>
 
-export type ExtRpcTopoPaths<ExtDef extends ExtDef> = ExtTopoPaths<ExtDef, RpcTopo<RpcFn>> & ExtTopoPaths<ExtDef>
-export type ExtPathRpcFn<ExtDef extends ExtDef, Path extends ExtRpcTopoPaths<ExtDef>> = TypeofPath<
-  ExtDef['ports'],
+export type ExtRpcTopoPaths<Def extends ExtDef> = ExtTopoPaths<Def, RpcTopo<RpcFn>> & ExtTopoPaths<Def>
+export type ExtPathRpcFn<Def extends ExtDef, Path extends ExtRpcTopoPaths<Def>> = TypeofPath<
+  Def['ports'],
   Path
 > extends RpcTopo<infer Afn>
   ? Afn
@@ -32,10 +32,10 @@ export type RpcTopo<Afn extends RpcFn> = TopoNode<// RPC_TOPO_SYM,
 export type RpcTopoFnOf<T> = (shell: PortShell<{ rpcTopoReqArgs: Parameters<RpcFnOf<T>> }>) => RpcFnOf<T>
 
 export const reply =
-  <Ext extends ExtDef>(shell: PortShell) =>
-  <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) =>
-  (afnPort: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>) => {
-    const { /* requestPointer, */ responsePointer } = rpc_pointers<Ext, Path>(pointer)
+  <Def extends ExtDef>(shell: PortShell) =>
+  <Path extends ExtRpcTopoPaths<Def>>(pointer: Pointer<Def, Path>) =>
+  (afnPort: RpcTopoFnOf<TypeofPath<Def['ports'], Path>>) => {
+    const { /* requestPointer, */ responsePointer } = rpc_pointers<Def, Path>(pointer)
     return probe.probePort(shell)(pointer, async requestListenerShell => {
       const afn = afnPort(requestListenerShell as any)
       const { extId, path } = splitPointer(responsePointer)
@@ -51,11 +51,11 @@ export const reply =
     })
   }
 
-export const replyAll = <Ext extends ExtDef>(
+export const replyAll = <Def extends ExtDef>(
   shell: PortShell,
-  extId: ExtId<Ext>,
+  extId: ExtId<Def>,
   handles: {
-    [Path in ExtRpcTopoPaths<Ext>]: RpcTopoFnOf<TypeofPath<Ext['ports'], Path>>
+    [Path in ExtRpcTopoPaths<Def>]: RpcTopoFnOf<TypeofPath<Def['ports'], Path>>
   },
 ) =>
   Object.entries(handles).reduce(
@@ -67,22 +67,22 @@ export const replyAll = <Ext extends ExtDef>(
       }
     },
     {} as {
-      [Path in ExtRpcTopoPaths<Ext>]: Unlisten
+      [Path in ExtRpcTopoPaths<Def>]: Unlisten
     },
   )
 
 export const caller =
-  <Ext extends ExtDef>(shell: PortShell, extId: ExtId<Ext>) =>
-  <Path extends ExtRpcTopoPaths<Ext>>(path: Path) => {
+  <Def extends ExtDef>(shell: PortShell, extId: ExtId<Def>) =>
+  <Path extends ExtRpcTopoPaths<Def>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
 
-    return call<Ext>(shell)<Path>(fullPath)
+    return call<Def>(shell)<Path>(fullPath)
   }
 
 export const call =
-  <Ext extends ExtDef>(shell: PortShell) =>
-  <Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>): RpcFnOf<TypeofPath<Ext['ports'], Path>> => {
-    const { requestPointer, responsePointer } = rpc_pointers<Ext, Path>(pointer)
+  <Def extends ExtDef>(shell: PortShell) =>
+  <Path extends ExtRpcTopoPaths<Def>>(pointer: Pointer<Def, Path>): RpcFnOf<TypeofPath<Def['ports'], Path>> => {
+    const { requestPointer, responsePointer } = rpc_pointers<Def, Path>(pointer)
     return ((...rpcTopoReqArgs: any[]) =>
       new Promise((resolve, reject) => {
         const requestPayload = { rpcTopoReqArgs } as never
@@ -113,9 +113,9 @@ export const call =
       })) as any
   }
 
-const rpc_pointers = <Ext extends ExtDef, Path extends ExtRpcTopoPaths<Ext>>(pointer: Pointer<Ext, Path>) => ({
-  requestPointer: `${pointer}/rpcTopoRequest` as `${Pointer<Ext, Path>}/rpcTopoRequest`,
-  responsePointer: `${pointer}/rpcTopoResponse` as `${Pointer<Ext, Path>}/rpcTopoResponse`,
+const rpc_pointers = <Def extends ExtDef, Path extends ExtRpcTopoPaths<Def>>(pointer: Pointer<Def, Path>) => ({
+  requestPointer: `${pointer}/rpcTopoRequest` as `${Pointer<Def, Path>}/rpcTopoRequest`,
+  responsePointer: `${pointer}/rpcTopoResponse` as `${Pointer<Def, Path>}/rpcTopoResponse`,
 })
 
 /*

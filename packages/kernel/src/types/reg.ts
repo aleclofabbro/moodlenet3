@@ -1,13 +1,26 @@
-import type { Ext, ExtDef, ExtId, ExtLCStop } from './ext'
-import type { PkgInfo } from './pkg'
+import type { Ext, ExtDef, ExtLCStop } from './ext'
+import type { PkgDiskInfo, PkgInfo } from './pkg'
+export type { ExtLocalDeploymentRegistry } from '../registry'
 
-export type Deployment = {
-  at: Date
-  stop: ExtLCStop
-}
-export type ExtensionRegistryRecord<Def extends ExtDef = ExtDef> = {
-  extId: ExtId<ExtDef>
-  deployment: 'deploying' | Deployment | undefined
+export type ExtDeployment<Def extends ExtDef = ExtDef> = {
+  ext: Ext<Def>
   pkgInfo: PkgInfo
-  lifeCycle: Ext<Def>
+  at: Date
+} & (
+  | {
+      stop: ExtLCStop
+      status: 'deployed' | 'undeploying'
+    }
+  | {
+      stop: undefined | void
+      status: 'deploying'
+    }
+)
+
+export type PkgRegistryRecord = {
+  pkgInfo: PkgDiskInfo
+  exts: Ext[]
 }
+export type DeploymentActionResult<Def extends ExtDef> =
+  | { done: false; currDeployment: undefined | ExtDeployment<ExtDef<Ext['name']>> }
+  | { done: true; deployment: ExtDeployment<Def> }

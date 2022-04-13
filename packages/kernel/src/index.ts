@@ -1,4 +1,4 @@
 export * from './k'
-export * from './pkg'
+export * from './npm-pkg'
 export * from './registry'
 export * from './types'

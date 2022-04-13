@@ -1,25 +1,15 @@
-import type { RpcTopo } from '../k'
-import type { PkgInfo } from './'
-import type { ExtDef, ExtId, ExtName } from './ext'
-import type { ExtensionRegistryRecord } from './reg'
+import type { FunTopo } from '../k'
+import type { Ext, ExtDef, ExtId } from './ext'
+import type { PkgInfo } from './pkg'
+import type { DeploymentActionResult, ExtDeployment } from './reg'
+import { Port } from './topo'
 
 export type KernelExtPorts = {
-  packages: {
-    install: RpcTopo<(_: { pkgLoc: string }) => Promise<{ records: ExtensionRegistryRecord[] }>>
-  }
-  extensions: {
-    activate: RpcTopo<
-      (_: { extName: ExtName }) => Promise<{
-        extId: ExtId
-        pkgInfo: PkgInfo
-      }>
-    >
-    deactivate: RpcTopo<
-      (_: { extName: ExtName }) => Promise<{
-        extId: ExtId
-        pkgInfo: PkgInfo
-      }>
-    >
+  extension: {
+    start: FunTopo<<Def extends ExtDef = ExtDef>(_: { ext: Ext<Def>; pkgInfo: PkgInfo }) => DeploymentActionResult<Def>>
+    stop: FunTopo<<Def extends ExtDef = ExtDef>(_: { extId: ExtId<Def> }) => DeploymentActionResult<Def>>
+    deployed: Port<ExtDeployment>
+    undeployed: Port<ExtDeployment>
   }
 }
-export type KernelExt = ExtDef<'@moodlenet/kernel', '0.0.1', KernelExtPorts>
+export type KernelExt = ExtDef<'kernel.core', '0.0.1', KernelExtPorts>

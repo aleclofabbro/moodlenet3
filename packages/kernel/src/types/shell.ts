@@ -1,4 +1,4 @@
-import type { ExtensionRegistry } from '../registry'
+import type { ExtLocalDeploymentRegistry } from '../registry/'
 import type { ExtDef, ExtId } from './ext'
 import type { PkgInfo } from './pkg'
 import type { ExtPortPaths, Pointer, PortPathPayload } from './topo'
@@ -12,10 +12,8 @@ export interface PortShell<Payload = any> {
   pkgInfo: PkgInfo
   listen: Listen
   push: PushMessage
-  registry: ShellExtensionRegistry
+  registry: ExtLocalDeploymentRegistry
 }
-
-export type ShellExtensionRegistry = Omit<ExtensionRegistry, 'unregisterExtension' | 'registerExtension'>
 
 export type Listen<Payload = any> = (_: PortListener<Payload>) => Unlisten
 export type PortListener<Payload = any> = (shell: PortShell<Payload>) => void

@@ -1,4 +1,5 @@
-import * as T from '../../types'
+import { satisfies } from 'semver'
+import type * as T from '../../types'
 
 export const baseSplitPointer = <Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(
   pointer: T.Pointer<Ext, Path>,
@@ -17,16 +18,35 @@ export const splitPointer = <Ext extends T.ExtDef, Path extends T.ExtTopoPaths<E
   return { ...baspl, ...idspl }
 }
 
-export const joinPointer = <Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(
-  extId: T.ExtId<Ext>,
+export const joinPointer = <Def extends T.ExtDef, Path extends T.ExtTopoPaths<Def>>(
+  extId: T.ExtId<Def>,
   path: Path,
-): T.Pointer<Ext, Path> => `${extId}::${path}`
+): T.Pointer<Def, Path> => `${extId}::${path}`
 
 export const joinSemanticPointer = <Ext extends T.ExtDef, Path extends T.ExtTopoPaths<Ext>>(
   a: T.Pointer<Ext, Path>,
 ): T.SemanticPointer<Ext, Path> => {
   const aSplit = splitPointer(a)
   return `${aSplit.extName}::${aSplit.path}`
+}
+
+export function isVerBWC(target: T.Version, requested: T.Version) {
+  return satisfies(target, `^${requested}`)
+}
+
+export function isBWCSemanticallySamePointers(target: T.Pointer, requested: T.Pointer) {
+  const pointerSplits = isSemanticallySamePointers(target, requested)
+  if (!pointerSplits) {
+    return false
+  }
+  const [reqSplit, trgSplit] = pointerSplits
+  return isVerBWC(trgSplit.version, reqSplit.version) && pointerSplits
+}
+
+export function isSemanticallySamePointers(a: T.Pointer, b: T.Pointer) {
+  const aSplit = splitPointer(a)
+  const bSplit = splitPointer(b)
+  return aSplit.extName === bSplit.extName && aSplit.path === bSplit.path && ([aSplit, bSplit] as const)
 }
 
 //

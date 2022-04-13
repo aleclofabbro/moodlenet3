@@ -1,14 +1,14 @@
-import type { ExtensionRegistryRecord, ExtId, ExtTopoNodePaths, KernelExt, PortShell } from '../../../types'
+import type { ExtDef, ExtDeployment, ExtId, ExtTopoNodePaths, KernelExt, PortShell } from '../../../types'
 import { splitExtId, splitPointer } from '../../pointer'
 
-type Watcher<_ExtId extends ExtId> = (_: ExtensionRegistryRecord<_ExtId> | undefined) => void
+type Watcher<Def extends ExtDef> = (_: ExtDeployment<Def> | undefined) => void
 
 //TODO: rather use probe() ?
 //TODO: remove those CONSTS
-const ACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions/activate/rpcTopoResponse'
-const DEACTIVATED_PATH: ExtTopoNodePaths<KernelExt> = 'extensions/deactivate/rpcTopoResponse'
-const KERNEL_EXT_NAME: KernelExt['name'] = '@moodlenet/kernel'
-export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, watcher: Watcher<_ExtId>) => {
+const DEPLOYED_PATH: ExtTopoNodePaths<KernelExt> = 'extension/deployed'
+const UNDEPLOYED_PATH: ExtTopoNodePaths<KernelExt> = 'extension/undeployed'
+const KERNEL_EXT_NAME: KernelExt['name'] = 'kernel.core'
+export const watchExt = <Def extends ExtDef>(shell: PortShell, extId: ExtId<Def>, watcher: Watcher<Def>) => {
   const splitWatchingExtId = splitExtId(extId)
   trigWatch()
   //TODO: rather use probe() ?
@@ -18,15 +18,15 @@ export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, 
     if (
       srcSplitPointer.extName === splitWatchingExtId.extName &&
       trgSplitPointer.extName === KERNEL_EXT_NAME &&
-      (ACTIVATED_PATH === trgSplitPointer.path || DEACTIVATED_PATH === trgSplitPointer.path)
+      (DEPLOYED_PATH === trgSplitPointer.path || UNDEPLOYED_PATH === trgSplitPointer.path)
     ) {
       setImmediate(trigWatch) //TODO: WHY SET IMMEDIATE?
     }
   })
 
   function trigWatch() {
-    const extRecord = shell.registry.getRegisteredExtension(splitWatchingExtId.extName)
-    if (!extRecord) {
+    const extDepl = shell.registry.get(extId)
+    if (!extDepl) {
       return
     }
     //TODO: where to check versioning? def & impl `requires()` , `xxX()`
@@ -34,21 +34,24 @@ export const watchExt = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, 
     // if (!isVerBWC(regRecSplitExtId.version, splitWatchingExtId.version)) {
     //   return
     // }
-    watcher(extRecord as any)
+    watcher(extDepl as any)
   }
 }
 
 type Cleanup = () => any
 type MCleanup = Cleanup | undefined | void
-type PMCleanup = MCleanup | Promise<MCleanup>
-type ExtUser<_ExtId extends ExtId> = (_: ExtensionRegistryRecord<_ExtId>) => PMCleanup
-export const useExtension = <_ExtId extends ExtId>(shell: PortShell, extId: _ExtId, extUser: ExtUser<_ExtId>) => {
-  let cleanup: PMCleanup
-  return watchExt<_ExtId>(shell, extId, async ext => {
-    if (!ext?.deployment) {
-      ;(await cleanup)?.()
+type ExtUser<Def extends ExtDef> = (_: ExtDeployment<Def>) => MCleanup
+export const useExtension = <Def extends ExtDef>(shell: PortShell, extId: ExtId<Def>, extUser: ExtUser<Def>) => {
+  let cleanup: MCleanup
+  const unlisten = watchExt<Def>(shell, extId, extDepl => {
+    if (!(extDepl?.status === 'deployed')) {
+      cleanup?.()
     } else {
-      cleanup = extUser(ext)
+      cleanup = extUser(extDepl)
     }
   })
+  return () => {
+    cleanup?.()
+    unlisten()
+  }
 }

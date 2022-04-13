@@ -1,128 +1,103 @@
-import { satisfies } from 'semver'
-import { splitExtId, splitPointer } from '../k/pointer'
-import type { Ext, ExtensionRegistryRecord, ExtId, PkgInfo, Pointer, Version } from '../types'
+import { isVerBWC, splitExtId } from '../k/pointer'
+import type { DeploymentActionResult, Ext, ExtDef, ExtDeployment, ExtId, ExtLCStop, ExtName, PkgInfo } from '../types'
 
-export type ExtensionRegistryHash = {
-  [ExtName in string]: ExtensionRegistryRecord
-}
-export type ExtensionRegistry = ReturnType<typeof createLocalExtensionRegistry>
+export type ExtLocalDeploymentRegistry = ReturnType<typeof createLocalDeploymentRegistry>
 
-export const createLocalExtensionRegistry = () => {
-  //FIXME: make `extensionRegistry` an ExtensionRegistryRecord[]
-  // to support multiple extension impl with same name
-  // from different packages
-  const extensionRegistry: ExtensionRegistryHash = {}
-  // any subsequent query by name for a regRec would return arrays
-  // or maybe-one cross-checking the pkgName too
-  //FIXME
+export const createLocalDeploymentRegistry = () => {
+  const reg: {
+    [Name in ExtName]: ExtDeployment
+  } = {}
 
   return {
-    getExtensions,
-    getRegisteredExtension,
-    assertRegisteredExtension,
-    registerExtension,
-    //unregisterExtension,
-    getCompatibleRegisteredExtension,
-    assertCompatibleRegisteredExtension,
+    get,
+    set,
+    unset,
+    assert,
+    assertDeployed,
+    deploying,
+    undeploying,
+    deploy,
+    reg,
   }
 
-  function getExtensions() {
-    return Object.values(extensionRegistry)
-  }
-  function getRegisteredExtension(extName: string) {
-    return extensionRegistry[extName]
-  }
-
-  function getCompatibleRegisteredExtension(requestedExtId: ExtId) {
-    const reqExt = splitExtId(requestedExtId)
-    const extRecord = getRegisteredExtension(reqExt.extName)
-    if (!extRecord) {
-      return 'NOT_REGISTERED' as const
+  function get<Def extends ExtDef>(extId: ExtId<Def>) {
+    const { extName, version } = splitExtId(extId)
+    const deployment: undefined | ExtDeployment<Def> = reg[extName]
+    if (!deployment) {
+      return undefined
     }
-
-    const availableExt = splitExtId(extRecord.extId)
-    if (!isVerBWC(availableExt.version, reqExt.version)) {
-      return 'VERSION_MISMATCH' as const
-    }
-    return extRecord
+    const { version: deployedVersion } = splitExtId(deployment.ext.id)
+    const compat = isVerBWC(deployedVersion, version)
+    return compat ? deployment : undefined
   }
 
-  function assertCompatibleRegisteredExtension(requestedExtId: ExtId, acceptUndeployed = false) {
-    const extRecord = getCompatibleRegisteredExtension(requestedExtId)
-    if (extRecord === 'NOT_REGISTERED') {
-      throw new Error(`requested extension [${requestedExtId}] not registered`)
-    } else if (extRecord === 'VERSION_MISMATCH') {
-      throw new Error(`requested extension [${requestedExtId}] registered but not compatible`)
-    }
-    if (!(acceptUndeployed || extRecord.deployment)) {
-      throw new Error(`requested extension ${requestedExtId} not deployed`)
-    }
-
-    return extRecord
+  function set<Def extends ExtDef>(deployment: ExtDeployment<Def>) {
+    const { extName } = splitExtId(deployment.ext.id)
+    reg[extName] = deployment
   }
 
-  function assertRegisteredExtension(extName: string, acceptUndeployed = false) {
-    const ext = getRegisteredExtension(extName)
-    if (!ext) {
-      throw new Error(`requested extension ${extName} not registered`)
-    }
-    if (!(acceptUndeployed || ext.deployment)) {
-      throw new Error(`requested extension ${extName} not deployed`)
-    }
-    return ext
+  function unset<Def extends ExtDef>(extName: ExtName<Def>) {
+    delete reg[extName]
   }
 
-  function assertNotRegisteredExtension(extName: string) {
-    const ext = getRegisteredExtension(extName)
-    if (ext) {
-      throw new Error(`extension package ${extName} already registered`)
+  function assert<Def extends ExtDef>(extId: ExtId<Def>) {
+    const deployment = get<Def>(extId)
+    if (!deployment) {
+      throw new Error(`no extension matching [${extId}]`)
     }
+    return deployment
   }
-  // function registeredExtensionOf(node_module: NodeModule) {
-  //   const pkgInfo = pkgInfoOf(node_module)
-  //   if (!pkgInfo?.json.name) {
-  //     return undefined
-  //   }
-  //   return getRegisteredExtension(pkgInfo?.json.name)
-  // }
-  function registerExtension<_ExtId extends ExtId>({
-    extId,
-    pkgInfo,
-    lifeCycle,
-  }: {
-    extId: _ExtId
-    pkgInfo: PkgInfo
-    lifeCycle: Ext
-  }) {
-    const pkgName = pkgInfo.json.name
-    const { extName } = splitExtId(extId)
-    assertNotRegisteredExtension(extName)
-    const extRegRec: ExtensionRegistryRecord<_ExtId> = {
-      deployment: undefined,
+
+  function assertDeployed<Def extends ExtDef>(extId: ExtId<Def>) {
+    const deployment = assert<Def>(extId)
+    if (deployment.status !== 'deployed') {
+      throw new Error(`extension matching [${extId}] not deployed`)
+    }
+    return deployment
+  }
+
+  function deploying<Def extends ExtDef>(ext: Ext<Def>, pkgInfo: PkgInfo): DeploymentActionResult<Def> {
+    const currDeployment = get(ext.id)
+    if (currDeployment) {
+      return { done: false, currDeployment }
+    }
+    const deployment: ExtDeployment<Def> = {
+      ext,
       pkgInfo,
-      extId,
-      lifeCycle,
+      at: new Date(),
+      status: 'deploying',
+      stop: undefined,
+    }
+    set(deployment)
+
+    return { done: true, deployment }
+  }
+
+  function undeploying<Def extends ExtDef>(extId: ExtId<Def>): DeploymentActionResult<Def> {
+    const currDeployment = get(extId)
+    if (!(currDeployment?.status === 'deployed')) {
+      return { done: false, currDeployment }
+    }
+    const deployment: ExtDeployment<Def> = {
+      ...currDeployment,
+      status: 'undeploying',
+    }
+    set(deployment)
+    return { done: true, deployment }
+  }
+
+  function deploy<Def extends ExtDef>(extId: ExtId<Def>, stop: ExtLCStop): DeploymentActionResult<Def> {
+    const currDeployment = get(extId)
+    if (!(currDeployment?.status === 'deploying')) {
+      return { done: false, currDeployment }
     }
 
-    return (extensionRegistry[pkgName] = extRegRec)
+    const deployment: ExtDeployment<Def> = {
+      ...currDeployment,
+      status: 'deployed',
+      stop,
+    }
+    set(deployment)
+    return { done: true, deployment }
   }
-}
-
-export function isVerBWC(target: Version, requested: Version) {
-  return satisfies(target, `^${requested}`)
-}
-
-export function isBWCSemanticallySamePointers(target: Pointer, requested: Pointer) {
-  const pointerSplits = isSemanticallySamePointers(target, requested)
-  if (!pointerSplits) {
-    return false
-  }
-  const [reqSplit, trgSplit] = pointerSplits
-  return isVerBWC(trgSplit.version, reqSplit.version) && pointerSplits
-}
-
-export function isSemanticallySamePointers(a: Pointer, b: Pointer) {
-  const aSplit = splitPointer(a)
-  const bSplit = splitPointer(b)
-  return aSplit.extName === bSplit.extName && aSplit.path === bSplit.path && ([aSplit, bSplit] as const)
 }
