@@ -6,7 +6,7 @@ export type BareMetalHandle = {
   modRequire: NodeRequire
 }
 
-export type Boot = (_: BareMetalHandle) => Promise<unknown>
-export type BootModule = {
-  boot: Boot
-}
+// export type Boot = (_: BareMetalHandle) => Promise<unknown>
+// export type BootModule = {
+//   boot: Boot
+// }

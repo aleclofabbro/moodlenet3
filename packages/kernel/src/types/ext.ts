@@ -17,7 +17,7 @@ export type ExtDef<
   ports: ExtRootTopo
 }
 
-type _Unsafe_ExtId<Def = ExtDef> = Def extends ExtDef ? `${Def['name']}@${Def['version']}` : never
+type _Unsafe_ExtId<Def = ExtDef> = Def extends ExtDef ? ExtId<Def> : never
 export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] = []> = {
   id: ExtId<Def>
   name: string
@@ -26,7 +26,11 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] 
   description?: string
 }
 
-export type ExtLCStart = (startArg: { mainShell: PortShell; env: Record<string, unknown>; K: KernelLib }) => void
+export type ExtLCStart = (startArg: {
+  mainShell: PortShell
+  env: Record<string, unknown>
+  K: KernelLib
+}) => ExtLCStop | void | Promise<ExtLCStop | void>
 
 export type StopObj = { reason: StopReason }
 export type ExtLCStop = (stopObj: StopObj) => Promise<unknown> | unknown

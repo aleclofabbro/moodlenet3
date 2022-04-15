@@ -20,7 +20,10 @@ import type {
 export const MN_K_PKG_INFO: PkgInfo = { name: '@moodlenet/kernel', version: '0.0.1' }
 
 export const kernelExtId: ExtId<KernelExt> = 'kernel.core@0.0.1'
-export const create = (bareMetal: BareMetalHandle) => {
+export const create = (
+  bareMetal: BareMetalHandle,
+  startExts: ExtPkgInfo[],
+): [ExtDeployment<KernelExt>, ...ExtDeployment<ExtDef>[]] => {
   let msgListeners: PortListenerRecord[] = []
   const localDeplReg = createLocalDeploymentRegistry()
   const cfgPath = process.env.KERNEL_ENV_MOD ?? `${process.cwd()}/kernel-env-mod`
@@ -32,17 +35,43 @@ export const create = (bareMetal: BareMetalHandle) => {
     requires: [],
     start: ({ mainShell, K }) => {
       K.retrnAll<KernelExt>(mainShell, kernelExtId, {
-        'extension/start': _shell => extPkgInfo => startExtension(extPkgInfo),
+        'extension/start': _shell => extPkgInfo => {
+          const startRes = startExtension(extPkgInfo)
+          if (!startRes.done) {
+            throw new Error('Should never happen, starting kernel failed for another kernel ext running')
+          }
+          return {
+            pkgInfo: startRes.deployment.pkgInfo,
+            extId: startRes.deployment.ext.id,
+            name: startRes.deployment.ext.name,
+            description: startRes.deployment.ext.description,
+            requires: startRes.deployment.ext.requires,
+          }
+        },
         'extension/stop':
           _shell =>
           ({ extId }) =>
-            stopExtension(extId),
+            stopExtension(extId).done,
       })
 
-      return
+      return () => Object.values(localDeplReg.reg).map(depl => stopExtension(depl.ext.id))
     },
   }
-  return startExtension({ ext: kernelExt, pkgInfo: MN_K_PKG_INFO })
+  const kernel = startExtension({ ext: kernelExt, pkgInfo: MN_K_PKG_INFO })
+  if (!kernel.done) {
+    throw new Error(`kernel couln't start current status:${kernel.currDeployment?.status}`)
+  }
+
+  //TODO: skip startExts deps check because provided ?
+  const results = startExts
+    .map(startExtension)
+    .map(_ => _.done && _.deployment)
+    .filter((_): _ is ExtDeployment => {
+      //TODO: what to do ? should hard-assert done ?
+      return !!_
+    })
+
+  return [kernel.deployment, ...results]
 
   /*
    */
@@ -79,7 +108,7 @@ export const create = (bareMetal: BareMetalHandle) => {
         parentMsgId: null,
       }),
     )
-    return deplRes
+    return { shell, ...deplRes }
   }
 
   function makeStartShell(extDepl: ExtDeployment) {
@@ -98,15 +127,7 @@ export const create = (bareMetal: BareMetalHandle) => {
   }
 
   function pushMessage<P>(message: Message<P>) {
-    console.log(
-      `
-+++++++++++++++++++++++
-pushMessage`,
-      message,
-      `
------------------------
-`,
-    )
+    console.log(`--\npushMessage:\n`, message, '\n---\n')
     msgListeners.forEach(({ cwPointer, listener }) => {
       const listenerP = K.splitPointer(cwPointer)
       localDeplReg.assertDeployed(listenerP.extId)

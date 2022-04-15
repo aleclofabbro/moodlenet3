@@ -1,13 +1,12 @@
 import type { ExtDef, ExtDeployment, ExtId, ExtTopoNodePaths, KernelExt, PortShell } from '../../../types'
 import { splitExtId, splitPointer } from '../../pointer'
 
-type Watcher<Def extends ExtDef> = (_: ExtDeployment<Def> | undefined) => void
-
 //TODO: rather use probe() ?
 //TODO: remove those CONSTS
 const DEPLOYED_PATH: ExtTopoNodePaths<KernelExt> = 'extension/deployed'
 const UNDEPLOYED_PATH: ExtTopoNodePaths<KernelExt> = 'extension/undeployed'
 const KERNEL_EXT_NAME: KernelExt['name'] = 'kernel.core'
+type Watcher<Def extends ExtDef> = (_: ExtDeployment<Def> | undefined) => void
 export const watchExt = <Def extends ExtDef>(shell: PortShell, extId: ExtId<Def>, watcher: Watcher<Def>) => {
   const splitWatchingExtId = splitExtId(extId)
   trigWatch()

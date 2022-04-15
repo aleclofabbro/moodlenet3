@@ -1,5 +1,5 @@
 import type { TypeofPath, TypePaths } from './crawl-path'
-import type { ExtDef } from './ext'
+import type { ExtDef, ExtId } from './ext'
 
 /*
  * Port Topology
@@ -53,7 +53,7 @@ export type SemanticPointer<
 export type Pointer<
   Def extends ExtDef = ExtDef,
   Path extends ExtTopoNodePaths<Def> = ExtTopoNodePaths<Def>,
-> = `${Def['name']}@${Def['version']}::${Path}` //`;)
+> = `${ExtId<Def>}::${Path}` //`;)
 export type Version = string
 
 export type PortPayload<P extends Port> = P extends Port<infer PL> ? PL : never
