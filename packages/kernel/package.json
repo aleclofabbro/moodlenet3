@@ -18,6 +18,7 @@
     "@types/semver": "^7.3.9",
     "arangojs": "^7.7.0",
     "bullmq": "^1.74.2",
+    "dependency-graph": "^0.11.0",
     "execa": "^5.1.1",
     "pkg-dir": "^5",
     "rxjs": "^7.5.4",

@@ -1,6 +1,6 @@
 import execa from 'execa'
 import { createRequire } from 'module'
-import { Ext, ExtPackage } from '../types'
+import { Ext, PackageExt } from '../types'
 import { pkgDiskInfoOf } from './info'
 export type PkgMngLib = ReturnType<typeof makePkgMng>
 
@@ -15,7 +15,7 @@ export function makePkgMng(cwd: string) {
     localRequire,
   }
 
-  async function install(pkgName: string, strict = true): Promise<ExtPackage> {
+  async function install(pkgName: string, strict = true): Promise<PackageExt> {
     await execa('npm', ['i', '--force --save', ...(strict ? ['--strict-peer-deps'] : []), pkgName], execa_opts)
     const mainModPath = localRequire.resolve(pkgName)
     const pkgDiskInfo = pkgDiskInfoOf(mainModPath)
@@ -23,7 +23,7 @@ export function makePkgMng(cwd: string) {
       throw pkgDiskInfo
     }
     const exts: Ext[] = localRequire(pkgName).default
-    const pkgRegistryRecord: ExtPackage = {
+    const pkgRegistryRecord: PackageExt = {
       pkgDiskInfo,
       exts,
     }

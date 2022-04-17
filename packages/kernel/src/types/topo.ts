@@ -1,66 +1,57 @@
 import type { TypeofPath, TypePaths } from './crawl-path'
-import type { ExtDef, ExtId } from './ext'
+import type { ExtDef, ExtId, ExtTopo } from './ext'
 
 /*
  * Port Topology
  */
 
-// export declare const PORT_NODE_SYM: unique symbol
-// export declare const TOPO_BASE_SYM: unique symbol
-// export declare const TOPO_NODE_SYM: unique symbol
-// export declare const ROOT_TOPO_SYM: unique symbol
-// export type PORT_LEAF_SYM = typeof PORT_NODE_SYM
-// export type TOPO_BASE_SYM = typeof TOPO_BASE_SYM
-// export type TOPO_NODE_SYM = typeof TOPO_NODE_SYM
-// export type ROOT_TOPO_SYM = typeof ROOT_TOPO_SYM
-
 export type TopoPath = string
 
-// export type BaseTopoNode<CUSTOM_SYMBOL extends symbol = TOPO_BASE_SYM> = {
-//   _ID?: CUSTOM_SYMBOL & TOPO_BASE_SYM
-// }
-
-export type Port<Payload = any /* , CUSTOM_SYMBOL extends symbol = PORT_LEAF_SYM */> = {
-  payload: Payload
-} //& BaseTopoNode /*<CUSTOM_SYMBOL & PORT_LEAF_SYM>*/
-
-export type TopoStruct = {
-  [topoElementName in string]?: Port | TopoNode //TopoElement
+export type PortBinding = 'out' | 'in'
+export type Port<Bind extends PortBinding = PortBinding, Data = any> = {
+  _data: Data
+  _bound: Bind
 }
-// export type TopoElement = Port | TopoNode
 
-export type TopoNode</* CUSTOM_SYMBOL extends symbol = TOPO_NODE_SYM,  */ Struct extends TopoStruct = TopoStruct> =
-  Struct
-// & BaseTopoNode<CUSTOM_SYMBOL & TOPO_NODE_SYM>
+export type Topo = {
+  [topoElementName in string]?: Port | Topo
+}
 
-export type RootTopo = TopoNode //<ROOT_TOPO_SYM>
+export type PortPathBinding<Def extends ExtDef, Path extends PortPaths<ExtDef>> = TypeofPath<
+  ExtTopo<Def>,
+  Path
+> extends Port<infer Bind>
+  ? Bind
+  : PortBinding
 
-export type ExtPortPaths<Ext extends ExtDef> = TypePaths<Ext['ports'], Port, Port> //& ExtTopoPaths<Ext>
-
-export type ExtTopoPaths<Ext extends ExtDef, TargetTopoNode extends TopoNode = TopoNode> = TypePaths<
-  Ext['ports'],
-  TargetTopoNode,
+export type PortPaths<Def extends ExtDef, Bound extends PortBinding = PortBinding> = TypePaths<
+  ExtTopo<Def>,
+  Port<Bound>,
   Port
 >
+export type TopoNode<T extends Topo> = T
 
-export type ExtTopoNodePaths<Ext extends ExtDef> = ExtTopoPaths<Ext> | ExtPortPaths<Ext>
+export type TopoPaths<Def extends ExtDef, TargetTopo extends Topo = Topo> = TypePaths<ExtTopo<Def>, TargetTopo, Port>
+
+export type AllPaths<Def extends ExtDef> = TopoPaths<Def> | PortPaths<Def>
 
 export type SemanticPointer<
   Def extends ExtDef = ExtDef,
-  Path extends ExtTopoNodePaths<Def> = ExtTopoNodePaths<Def>,
+  Path extends AllPaths<Def> = AllPaths<Def>,
 > = `${Def['name']}::${Path}` //`;)
 
-export type Pointer<
-  Def extends ExtDef = ExtDef,
-  Path extends ExtTopoNodePaths<Def> = ExtTopoNodePaths<Def>,
-> = `${ExtId<Def>}::${Path}` //`;)
+export type Pointer<Def extends ExtDef = ExtDef, Path extends AllPaths<Def> = AllPaths<Def>> = `${ExtId<Def>}::${Path}` // & {  def?: Def; path?: Path } //`;)
+
 export type Version = string
 
-export type PortPayload<P extends Port> = P extends Port<infer PL> ? PL : never
+export type PortData<P extends Port> = P extends Port<infer PL> ? PL : unknown
 
-export type PortPathPayload<Def extends ExtDef, Path extends ExtPortPaths<ExtDef>> = TypeofPath<
-  Def['ports'],
-  Path
-> extends Port<infer Payload>
-  ? Payload
-  : never
+export type PortPathData<
+  Def extends ExtDef,
+  Path extends PortPaths<ExtDef>,
+  Bind extends PortBinding = PortBinding,
+> = TypeofPath<ExtTopo<Def>, Path> extends Port<Bind, infer Data> ? Data : unknown
+
+export type PointerData<P, Bind extends PortBinding = PortBinding> = P extends Pointer<infer Def, infer Path>
+  ? PortPathData<Def, Path, Bind>
+  : unknown

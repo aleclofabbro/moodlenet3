@@ -1,45 +1,64 @@
-import type * as K from '../k'
-import type { PortShell } from './shell'
-import type { RootTopo } from './topo'
+// import type * as K from '../k'
+import type { Observable } from 'rxjs'
+import { MWFn } from '../mw-piper'
+import type { Message } from './message'
+import { PkgInfo } from './pkg'
+import type { Port, PortBinding, PortPathData, PortPaths, Topo } from './topo'
 
-export type KernelLib = typeof K
+// export type KernelLib = typeof K
 export type ExtVersion = string
+
 export type ExtId<Def extends ExtDef = ExtDef> = `${Def['name']}@${Def['version']}` //` ;)
 export type ExtName<Def extends ExtDef = ExtDef> = `${Def['name']}` //` ;)
+export type ExtTopo<Def extends ExtDef = ExtDef> = Def['topo']
 
 export type ExtDef<
   Name extends string = string,
   Version extends ExtVersion = ExtVersion,
-  ExtRootTopo extends RootTopo = RootTopo,
+  ExtTopo extends Topo = Topo,
 > = {
   name: Name
   version: Version
-  ports: ExtRootTopo
+  topo: ExtTopo & { '': Port<PortBinding, any> }
 }
+export type ExtTopoDef<Def extends ExtTopo> = Def
 
 type _Unsafe_ExtId<Def = ExtDef> = Def extends ExtDef ? ExtId<Def> : never
-export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] = []> = {
+export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] = ExtDef[]> = {
   id: ExtId<Def>
-  name: string
+  displayName: string
   requires: { [Index in keyof Requires]: _Unsafe_ExtId<Requires[Index]> }
-  start: ExtLCStart
+  start: ExtLCStart<Def>
   description?: string
 }
 
-export type ExtLCStart = (startArg: {
-  mainShell: PortShell
+export type Skell<Def extends ExtDef = ExtDef> = {
+  msg$: Observable<Message>
+  push: PushMessage<Def>
+  emit: EmitMessage<Def>
+  send: SendMessage
   env: Record<string, unknown>
-  K: KernelLib
-}) => ExtLCStop | void | Promise<ExtLCStop | void>
+  extId: ExtId<Def>
+  pkgInfo: PkgInfo
+}
+export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Skell<Def>) => void | {
+  mw?: MWFn<Message>
+}
 
-export type StopObj = { reason: StopReason }
-export type ExtLCStop = (stopObj: StopObj) => Promise<unknown> | unknown
+export type EmitMessage<SrcDef extends ExtDef = ExtDef> = <Path extends PortPaths<SrcDef, 'out'>>(
+  path: Path,
+) => (data: PortPathData<SrcDef, Path, 'out'>) => Message<'out', SrcDef, SrcDef, Path>
 
-export type StopReason =
-  | 'REQUIRED_EXTENSION_DISABLED'
-  | 'USER_REQUEST'
-  | 'SHUTDOWN'
-  | 'UNKNOWN'
-  | 'UNKNOWN'
-  | 'UNKNOWN'
-  | 'UNKNOWN'
+export type SendMessage = <DestDef extends ExtDef = ExtDef>(
+  extId: ExtId<DestDef>,
+) => <Path extends PortPaths<DestDef, 'in'>>(
+  path: Path,
+) => (data: PortPathData<DestDef, Path, 'in'>) => Message<'in', DestDef, DestDef, Path>
+
+export type PushMessage<SrcDef extends ExtDef = ExtDef> = <Bound extends PortBinding = PortBinding>(
+  bound: Bound,
+) => <DestDef extends ExtDef = SrcDef>(
+  destExtId: ExtId<DestDef>,
+) => <Path extends PortPaths<DestDef, Bound>>(
+  path: Bound extends 'in' ? Path : SrcDef extends DestDef ? Path : never,
+) => (data: PortPathData<DestDef, Path, Bound>) => Message<Bound, SrcDef, DestDef, Path>

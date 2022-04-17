@@ -1,8 +1,8 @@
-import type { ExtDef, ExtId, ExtPortPaths, Pointer, PortPathPayload, PortShell, SemanticPointer } from '../../types'
+import type { ExtDef, ExtId, Pointer, PortPathData, PortPaths, SemanticPointer, Skell } from '../../types'
 import { isBWCSemanticallySamePointers, joinPointer, joinSemanticPointer } from '../pointer'
 
-export type Listener<Def extends ExtDef = ExtDef, Path extends ExtPortPaths<Def> = ExtPortPaths<Def>> = (
-  shell: PortShell<PortPathPayload<Def, Path>>,
+export type Listener<Def extends ExtDef = ExtDef, Path extends PortPaths<Def> = PortPaths<Def>> = (
+  shell: Skell<PortPathData<Def, Path>>,
 ) => void
 
 export type ListenOpts = {
@@ -11,8 +11,8 @@ export type ListenOpts = {
 
 const consumers: Record<SemanticPointer, Pointer> = {}
 
-export function probePort<Ext extends ExtDef>(registererShell: PortShell) {
-  return <Path extends ExtPortPaths<Ext>>(
+export function probePort<Ext extends ExtDef>(registererShell: Skell) {
+  return <Path extends PortPaths<Ext>>(
     listenToPointer: Pointer<Ext, Path>,
     listener: Listener<Ext, Path>,
     _opts?: Partial<ListenOpts>,
@@ -60,7 +60,7 @@ already marked by @${listenShell.message.consumedBy.pointer} from pkg "${listenS
       } else {
         listener(listenShell)
       }
-    })
+    }) as any
     return () => {
       if (opts.consume) {
         delete consumers[listeningSemanticPointer]
@@ -69,7 +69,7 @@ already marked by @${listenShell.message.consumedBy.pointer} from pkg "${listenS
     }
   }
 }
-export function probeExt<Ext extends ExtDef>(shell: PortShell, extId: ExtId<Ext>) {
-  return <Path extends ExtPortPaths<Ext>>(path: Path, listener: Listener<Ext, Path>) =>
+export function probeExt<Ext extends ExtDef>(shell: Skell, extId: ExtId<Ext>) {
+  return <Path extends PortPaths<Ext>>(path: Path, listener: Listener<Ext, Path>) =>
     probePort<Ext>(shell)<Path>(joinPointer(extId, path), listener)
 }

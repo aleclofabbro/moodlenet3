@@ -1,17 +1,15 @@
-import { isVerBWC, splitExtId } from '../k/pointer'
-import type { ExtDef, ExtId, ExtPackage, PkgRegistry } from '../types'
+import { areSameExtName, isVerBWC, splitExtId } from '../k/pointer'
+import type { ExtDef, ExtId, PackageExt, PkgRegistry } from '../types'
 
 export function findExt<Def extends ExtDef>(pkgRegistry: PkgRegistry, findExtId: ExtId<Def>) {
-  const findExtIdSplit = splitExtId(findExtId)
-
   return pkgRegistry
     .map(pkgReg => {
       const matchingExts = pkgReg.exts.filter(currExt => {
-        const currExtIdSplit = splitExtId(currExt.id)
-        const nameMatch = currExtIdSplit.extName === findExtIdSplit.extName
-        if (!nameMatch) {
+        if (!areSameExtName(currExt.id, findExtId)) {
           return false
         }
+        const findExtIdSplit = splitExtId(findExtId)
+        const currExtIdSplit = splitExtId(currExt.id)
         const verMatch = isVerBWC(currExtIdSplit.version, findExtIdSplit.version)
         if (!verMatch) {
           return false
@@ -21,13 +19,13 @@ export function findExt<Def extends ExtDef>(pkgRegistry: PkgRegistry, findExtId:
       if (!matchingExts.length) {
         return null
       }
-      const match: ExtPackage = {
+      const match: PackageExt = {
         ...pkgReg,
         exts: matchingExts,
       }
       return match
     })
-    .filter((_): _ is ExtPackage => !!_)
+    .filter((_): _ is PackageExt => !!_)
 }
 
 export function assertFindExt<Def extends ExtDef>(pkgRegistry: PkgRegistry, findExtId: ExtId<Def>) {

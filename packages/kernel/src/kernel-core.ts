@@ -1,223 +1,156 @@
-import type { BareMetalHandle } from '@moodlenet/bare-metal/lib/types'
-import * as K from './k'
+import { DepGraph } from 'dependency-graph'
+import { delay, of, Subject, tap } from 'rxjs'
+import { depGraphAddNodes } from './dep-graph'
+import { isMessage } from './k/message'
+import { joinPointer } from './k/pointer'
+import { MwPiper } from './mw-piper'
 import { createLocalDeploymentRegistry } from './registry'
 import type {
+  DepGraphData,
   Ext,
   ExtDef,
+  ExtDeployable,
   ExtDeployment,
   ExtId,
-  ExtLocalDeploymentRegistry,
-  ExtPkgInfo,
+  ExtPkg,
   KernelExt,
   Message,
-  MsgID,
   PkgInfo,
-  Pointer,
-  PortListener,
-  PortShell,
   PushMessage,
 } from './types'
-export const MN_K_PKG_INFO: PkgInfo = { name: '@moodlenet/kernel', version: '0.0.1' }
 
+export const kernelPkgInfo: PkgInfo = { name: '@moodlenet/kernel', version: '0.0.1' }
 export const kernelExtId: ExtId<KernelExt> = 'kernel.core@0.0.1'
-export const create = (
-  bareMetal: BareMetalHandle,
-  startExts: ExtPkgInfo[],
-): [ExtDeployment<KernelExt>, ...ExtDeployment<ExtDef>[]] => {
-  let msgListeners: PortListenerRecord[] = []
-  const localDeplReg = createLocalDeploymentRegistry()
+// export const create = (
+//   bareMetal: BareMetalHandle,
+//   startExts: ExtPkgInfo[],
+// ): [ExtDeployment<KernelExt>, ...ExtDeployment<ExtDef>[]] => {
+export const create = () => {
   const cfgPath = process.env.KERNEL_ENV_MOD ?? `${process.cwd()}/kernel-env-mod`
   const global_env: Record<string, any> = require(cfgPath)
+  const deplReg = createLocalDeploymentRegistry()
+  const depGraph = new DepGraph<DepGraphData>()
+  const $MAIN_MSGS$ = new Subject<Message>()
+  const mwPiper = MwPiper<Message>()
+  const pipedMessages$ = $MAIN_MSGS$.pipe(mwPiper.op)
+
   const kernelExt: Ext<KernelExt> = {
     id: kernelExtId,
-    name: 'K',
+    displayName: 'K',
     description: 'K',
     requires: [],
-    start: ({ mainShell, K }) => {
-      K.retrnAll<KernelExt>(mainShell, kernelExtId, {
-        'extension/start': _shell => extPkgInfo => {
-          const startRes = startExtension(extPkgInfo)
-          if (!startRes.done) {
-            throw new Error('Should never happen, starting kernel failed for another kernel ext running')
-          }
-          return {
-            pkgInfo: startRes.deployment.pkgInfo,
-            extId: startRes.deployment.ext.id,
-            name: startRes.deployment.ext.name,
-            description: startRes.deployment.ext.description,
-            requires: startRes.deployment.ext.requires,
-          }
-        },
-        'extension/stop':
-          _shell =>
-          ({ extId }) =>
-            stopExtension(extId).done,
+    start: ({ env, msg$, push, emit }) => {
+      const x = push('out')('kernel.core@0.0.1')('ext/deployment/starting')(1)
+      emit('ext/deployment/stopping')({ reason: 'DISABLING_REQUIRED_EXTENSION' })
+      msg$.subscribe(msg => {
+        if (isMessage<KernelExt>()(msg, 'kernel.core@0.0.1::ext/deployment/stopping')) {
+          // const { bound, data, id, parentMsgId, pointer, source } = msg
+          msg.bound
+        }
       })
-
-      return () => Object.values(localDeplReg.reg).map(depl => stopExtension(depl.ext.id))
+      return {
+        mw: msg =>
+          of(msg).pipe(
+            tap(msg => console.log(`got msg:${msg.id}`)),
+            delay(1000),
+            tap(msg => console.log(`delayed output of msg:${msg.id}`)),
+          ),
+      }
     },
   }
-  const kernel = startExtension({ ext: kernelExt, pkgInfo: MN_K_PKG_INFO })
-  if (!kernel.done) {
-    throw new Error(`kernel couln't start current status:${kernel.currDeployment?.status}`)
+  depGraphAddNodes(depGraph, [kernelExt])
+  const startKResult = startExtension({ ext: kernelExt, pkgInfo: kernelPkgInfo })
+  if (!startKResult.done) {
+    throw new Error(
+      `Couldn't start ${kernelExt.id} : currDeployment: ${JSON.stringify(startKResult.currDeployment, null, 4)}`,
+    )
   }
 
-  //TODO: skip startExts deps check because provided ?
-  const results = startExts
-    .map(startExtension)
-    .map(_ => _.done && _.deployment)
-    .filter((_): _ is ExtDeployment => {
-      //TODO: what to do ? should hard-assert done ?
-      return !!_
-    })
-
-  return [kernel.deployment, ...results]
-
-  /*
-   */
-  type PortListenerRecord = {
-    listener: PortListener
-    cwPointer: Pointer
+  return () => {
+    const mainSub = pipedMessages$.subscribe(msg =>
+      depOrderDeployments().forEach(deployment => deployment.$msg$.next(msg)),
+    )
+    return {
+      mainSub,
+    }
   }
-
-  function extEnv(extName: string) {
-    return global_env[extName]
+  function extEnv(extId: ExtId) {
+    //FIXME: should check version compat
+    return global_env[extId]
   }
 
   function stopExtension<Def extends ExtDef = ExtDef>(extId: ExtId<Def>) {
-    const deplRes = localDeplReg.undeploying(extId)
-    return deplRes
-  }
-  function startExtension<Def extends ExtDef = ExtDef>(extPkgInfo: ExtPkgInfo<Def>) {
-    const deplRes = localDeplReg.deploying(extPkgInfo)
-
-    if (!deplRes.done) {
-      return deplRes
+    const stopRes = deplReg.stop(extId)
+    if (!stopRes.done) {
+      return stopRes
     }
-    const { ext } = extPkgInfo
-    console.log(`** KERNEL: starting ${ext.id}`)
-    const shell = makeStartShell(deplRes.deployment)
-    const env = extEnv(ext.id)
-    ext.start({ mainShell: shell, env, K })
-
-    pushMessage(
-      createMessage({
-        payload: null, // FIXME: Activated Message with valued payload?
-        source: K.joinPointer(ext.id, ''),
-        target: K.joinPointer(kernelExtId, 'extensions.deploying'),
+    stopRes.deployment.$msg$.complete()
+    stopRes.deployment.rmMW()
+    return stopRes.deployment
+  }
+  function startExtension<Def extends ExtDef = ExtDef>(extPkg: ExtPkg<Def>) {
+    const extId = extPkg.ext.id
+    const env = extEnv(extId)
+    const $msg$ = new Subject<Message>()
+    const msg$ = $msg$.asObservable()
+    const push: PushMessage<Def> = bound => destExtId => path => data => {
+      type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
+      assertIsActive()
+      const pointer = joinPointer(destExtId, path)
+      const msg: Message<typeof bound, Def, DestDef, typeof path> = {
+        id: newMsgId(),
+        source: extId,
+        bound,
+        pointer,
+        data: data as any,
         parentMsgId: null,
-      }),
-    )
-    return { shell, ...deplRes }
+      }
+
+      $MAIN_MSGS$.next(msg)
+      return msg
+    }
+    const { mw } =
+      extPkg.ext.start({
+        pkgInfo: extPkg.pkgInfo,
+        extId,
+        env,
+        msg$,
+        emit: path => data => push('out')(extId)(path)(data),
+        send: extId => path => data => push('in')(extId)(path)(data),
+        push,
+      }) ?? {}
+    const rmMW = mw ? mwPiper.add(mw) : () => {}
+    const deployable: ExtDeployable<Def> = {
+      ...extPkg,
+      $msg$,
+      rmMW,
+    }
+
+    return deplReg.start(deployable)
+    function assertIsActive() {
+      const deployment = deplReg.get(extId)
+      if (!deployment) {
+        throw new Error(`${extId} has no deployment`)
+      }
+    }
   }
 
-  function makeStartShell(extDepl: ExtDeployment) {
-    const cwPointer = K.joinPointer(extDepl.ext.id, '')
-    const message = createMessage({
-      payload: null, // FIXME: startShell Message with valued payload?
-      source: K.joinPointer(kernelExtId, ''),
-      target: cwPointer,
-      parentMsgId: null,
-    })
-    const startShell = makePortShell({
-      message,
-      cwPointer,
-    })
-    return startShell
-  }
-
-  function pushMessage<P>(message: Message<P>) {
-    console.log(`--\npushMessage:\n`, message, '\n---\n')
-    msgListeners.forEach(({ cwPointer, listener }) => {
-      const listenerP = K.splitPointer(cwPointer)
-      localDeplReg.assertDeployed(listenerP.extId)
-      const shell = makePortShell({
-        cwPointer,
-        message,
+  function depOrderDeployments() {
+    return depGraph
+      .overallOrder()
+      .reverse()
+      .map(pushToExtName => {
+        const deployment = deplReg.get(`${pushToExtName}@*`)
+        if (!deployment) {
+          //TODO: WARN? THROW? IGNORE?
+          return
+        }
+        return deployment
       })
-      listener(shell)
-    })
-
-    return message
+      .filter((_): _ is ExtDeployment => !!_)
   }
+}
 
-  function makePortShell<P>({ message, cwPointer }: { message: Message<P>; cwPointer: Pointer }): PortShell<P> {
-    const cwExt = K.baseSplitPointer(cwPointer)
-    assertMeDeployed()
-    const listen = (listener: PortListener) => {
-      assertMeDeployed()
-      return addListener({ cwPointer, listener })
-    }
-
-    const push: PushMessage = targetExtId => path => payload => {
-      assertMeDeployed()
-      const target = K.joinPointer(targetExtId, path)
-      localDeplReg.assertDeployed(targetExtId)
-      return pushMessage(
-        createMessage({
-          payload,
-          target,
-          source: cwPointer,
-          parentMsgId: message.id,
-        }),
-      ) as any
-    }
-
-    const { pkgInfo } = assertMeDeployed()
-    return {
-      message,
-      cwPointer,
-      pkgInfo,
-      listen,
-      push,
-      registry: getShellExtReg(),
-    }
-
-    function assertMeDeployed() {
-      return localDeplReg.assertDeployed(cwExt.extId)
-      // FIXME: remove all listeners on exception ?
-    }
-  }
-  function getShellExtReg(): ExtLocalDeploymentRegistry {
-    const registry: any = { ...localDeplReg }
-    //@ts-ignore
-    delete registry.registerExtension
-    //@ts-ignore
-    delete registry.unregisterExtension
-    return registry
-  }
-
-  function addListener({ cwPointer, listener }: { listener: PortListener; cwPointer: Pointer }) {
-    const listenerRecord: PortListenerRecord = { listener, cwPointer }
-    msgListeners = [...msgListeners, listenerRecord]
-    // setImmediate(() => (msgListeners = [...msgListeners, listenerRecord]))
-    return () => {
-      msgListeners = msgListeners.filter(_ => _ !== listenerRecord)
-    }
-  }
-
-  function createMessage<P>({
-    payload,
-    source,
-    target,
-    parentMsgId,
-  }: {
-    payload: P
-    source: Pointer
-    target: Pointer
-    parentMsgId: MsgID | null
-  }): Message<P> {
-    return {
-      id: newMsgId(),
-      ctx: {},
-      payload,
-      source,
-      target,
-      parentMsgId,
-    }
-  }
-
-  function newMsgId() {
-    return Math.random().toString(36).substring(2)
-  }
+function newMsgId() {
+  return Math.random().toString(36).substring(2)
 }

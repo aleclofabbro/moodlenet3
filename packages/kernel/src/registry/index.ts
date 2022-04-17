@@ -1,5 +1,5 @@
 import { isVerBWC, splitExtId } from '../k/pointer'
-import type { DeploymentActionResult, ExtDef, ExtDeployment, ExtId, ExtLCStop, ExtName, ExtPkgInfo } from '../types'
+import type { DeploymentActionResult, ExtDef, ExtDeployable, ExtDeployment, ExtId, ExtName } from '../types'
 
 export type ExtLocalDeploymentRegistry = ReturnType<typeof createLocalDeploymentRegistry>
 
@@ -13,27 +13,27 @@ export const createLocalDeploymentRegistry = () => {
     set,
     unset,
     assert,
-    assertDeployed,
-    deploying,
-    undeploying,
-    deploy,
+    assertReady,
+    start,
+    stop,
+    ready,
     reg,
   }
 
   function get<Def extends ExtDef>(extId: ExtId<Def>) {
     const { extName, version } = splitExtId(extId)
-    const deployment: undefined | ExtDeployment<Def> = reg[extName]
+    const deployment: undefined | ExtDeployment<Def> = reg[extName] as any
     if (!deployment) {
       return undefined
     }
     const { version: deployedVersion } = splitExtId(deployment.ext.id)
-    const compat = isVerBWC(deployedVersion, version)
-    return compat ? deployment : undefined
+    const isCompat = isVerBWC(deployedVersion, version)
+    return isCompat ? deployment : undefined
   }
 
   function set<Def extends ExtDef>(deployment: ExtDeployment<Def>) {
     const { extName } = splitExtId(deployment.ext.id)
-    reg[extName] = deployment
+    reg[extName] = deployment as any
   }
 
   function unset<Def extends ExtDef>(extName: ExtName<Def>) {
@@ -43,60 +43,59 @@ export const createLocalDeploymentRegistry = () => {
   function assert<Def extends ExtDef>(extId: ExtId<Def>) {
     const deployment = get<Def>(extId)
     if (!deployment) {
-      throw new Error(`no extension matching [${extId}]`)
+      throw new Error(`assert: no extension matching [${extId}]`)
     }
     return deployment
   }
 
-  function assertDeployed<Def extends ExtDef>(extId: ExtId<Def>) {
+  function assertReady<Def extends ExtDef>(extId: ExtId<Def>) {
     const deployment = assert<Def>(extId)
-    if (deployment.status !== 'deployed') {
-      throw new Error(`extension matching [${extId}] not deployed`)
+    if (deployment.status !== 'ready') {
+      throw new Error(`assertReady: extension matching [${extId}] not ready, ${deployment.status} instead`)
     }
     return deployment
   }
 
-  function deploying<Def extends ExtDef>(extPkgInfo: ExtPkgInfo<Def>): DeploymentActionResult<Def> {
-    const currDeployment = get(extPkgInfo.ext.id)
+  function start<Def extends ExtDef>(deployable: ExtDeployable<Def>): DeploymentActionResult<Def> {
+    const currDeployment = get(deployable.ext.id)
     if (currDeployment) {
-      return { done: false, currDeployment }
+      return { done: false, currDeployment: currDeployment as any }
     }
     const deployment: ExtDeployment<Def> = {
-      ...extPkgInfo,
-      startAt: new Date(),
-      status: 'deploying',
-      stop: undefined,
+      ...deployable,
+      at: new Date(),
+      status: 'starting',
     }
     set(deployment)
 
     return { done: true, deployment }
   }
 
-  function undeploying<Def extends ExtDef>(extId: ExtId<Def>): DeploymentActionResult<Def> {
+  function stop<Def extends ExtDef>(extId: ExtId<Def>): DeploymentActionResult<Def> {
     const currDeployment = get(extId)
-    if (!(currDeployment?.status === 'deployed')) {
-      return { done: false, currDeployment }
+    if (currDeployment?.status !== 'ready') {
+      return { done: false, currDeployment: currDeployment as any }
     }
     const deployment: ExtDeployment<Def> = {
       ...currDeployment,
-      stopAt: new Date(),
-      status: 'undeploying',
-    }
+      at: new Date(),
+      status: 'stopping',
+    } as any
     set(deployment)
     return { done: true, deployment }
   }
 
-  function deploy<Def extends ExtDef>(extId: ExtId<Def>, stop: ExtLCStop): DeploymentActionResult<Def> {
+  function ready<Def extends ExtDef>(extId: ExtId<Def>): DeploymentActionResult<Def> {
     const currDeployment = get(extId)
-    if (!(currDeployment?.status === 'deploying')) {
-      return { done: false, currDeployment }
+    if (currDeployment?.status !== 'starting') {
+      return { done: false, currDeployment: currDeployment as any }
     }
 
     const deployment: ExtDeployment<Def> = {
       ...currDeployment,
-      status: 'deployed',
-      stop,
-    }
+      status: 'ready',
+      at: new Date(),
+    } as any
     set(deployment)
     return { done: true, deployment }
   }

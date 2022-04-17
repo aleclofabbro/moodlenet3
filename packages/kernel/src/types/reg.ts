@@ -1,33 +1,34 @@
-import type { Ext, ExtDef, ExtLCStop } from './ext'
+import { Subject } from 'rxjs'
+import type { Ext, ExtDef } from './ext'
+import { Message } from './message'
 import type { PkgDiskInfo, PkgInfo } from './pkg'
 export type { ExtLocalDeploymentRegistry } from '../registry'
 
-export type ExtPkgInfo<Def extends ExtDef = ExtDef> = {
+export type ExtPkg<Def extends ExtDef = ExtDef> = {
   pkgInfo: PkgInfo
   ext: Ext<Def>
 }
+export type DeplStatus = 'starting' | 'ready' | 'stopping'
+export type DeplStatusObj<S extends DeplStatus = DeplStatus> = {
+  status: S
+  at: Date
+}
+export type ExtDeploymentBindings<Def> = {
+  $msg$: Subject<Message>
+  rmMW(): void
+}
 
-export type ExtDeployment<Def extends ExtDef = ExtDef> = ExtPkgInfo<Def> & {
-  startAt: Date
-  stopAt?: Date
-} & (
-    | {
-        stop: ExtLCStop
-        status: 'deployed' | 'undeploying'
-      }
-    | {
-        stop: undefined | void
-        status: 'deploying'
-      }
-  )
+export type ExtDeployable<Def extends ExtDef = ExtDef> = ExtPkg<Def> & ExtDeploymentBindings<Def>
+export type ExtDeployment<Def extends ExtDef = ExtDef> = ExtDeployable<Def> & DeplStatusObj
 
 export type DeploymentActionResult<Def extends ExtDef> =
-  | { done: false; currDeployment: undefined | ExtDeployment<ExtDef<Ext['name']>> }
   | { done: true; deployment: ExtDeployment<Def> }
+  // | { done: false; currDeployment: undefined | ExtDeployment<ExtDef<ExtName<Def>>> } //<-- WHY ExtDef<ExtName<Def>> ?
+  | { done: false; currDeployment: undefined | ExtDeployment<Def> }
 
-export type ExtPackage = {
+export type PackageExt = {
   pkgDiskInfo: PkgDiskInfo
   exts: Ext[]
 }
 
-export type PkgRegistry = ExtPackage[]
+export type PkgRegistry = PackageExt[]

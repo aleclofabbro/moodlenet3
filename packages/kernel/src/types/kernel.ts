@@ -1,23 +1,42 @@
-import { FunTopo } from '../k'
-import type { ExtDef, ExtId } from './ext'
-import { PkgInfo } from './pkg'
-import type { ExtDeployment, ExtPkgInfo } from './reg'
-import { Port } from './topo'
+import type { ExtDef } from './ext'
+import type { Port } from './topo'
 
-type StartResult<Def extends ExtDef = ExtDef> = {
-  pkgInfo: PkgInfo
-  extId: ExtId<Def>
-  name: string
-  description?: string | undefined
-  requires: ExtId[]
-}
-
-export type KernelExtPorts = {
-  extension: {
-    start: FunTopo<<Def extends ExtDef = ExtDef>(_: ExtPkgInfo<Def>) => StartResult<Def>>
-    stop: FunTopo<<Def extends ExtDef = ExtDef>(_: { extId: ExtId<Def> }) => boolean>
-    deployed: Port<ExtDeployment>
-    undeployed: Port<ExtDeployment>
+export type KernelExt = ExtDef<
+  'kernel.core',
+  '0.0.1',
+  {
+    ext: {
+      deployment: {
+        starting: Port<'out', 1>
+        ready: Port<'in', 2>
+        stopping: Port<'out', { reason: StopReason }>
+        done: Port<'in', 3>
+        crash: Port<'in', 4>
+      }
+    }
   }
-}
-export type KernelExt = ExtDef<'kernel.core', '0.0.1', KernelExtPorts>
+>
+export type KernelExts = ExtDef<
+  'kernels.core',
+  '0.0.1',
+  {
+    ext: {
+      deployment: {
+        start: Port<'out', 1>
+        ready: Port<'in', 2>
+        stop: Port<'out', { reason: StopReason }>
+        done: Port<'in', 3>
+        crash: Port<'in', 4>
+      }
+    }
+  }
+>
+
+export type StopReason =
+  | 'DISABLING_REQUIRED_EXTENSION'
+  | 'USER_REQUEST'
+  | 'SHUTDOWN'
+  | 'UNKNOWN'
+  | 'UNKNOWN'
+  | 'UNKNOWN'
+  | 'UNKNOWN'

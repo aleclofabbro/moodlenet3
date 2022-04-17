@@ -1,11 +1,11 @@
-import { ExtDef, ExtTopoPaths, Port, PortShell, TopoNode, TypeofPath } from '../../types'
+import { ExtDef, Port, PortShell, TopoNode, TopoPaths, TypeofPath } from '../../types'
 
 // export declare const FUN_TOPO_SYM: symbol
 // export type FUN_TOPO_SYM = typeof FUN_TOPO_SYM
 
 export type Fun = (...funTopoReqArgs: any) => any
 
-export type ExtFunTopoPaths<Def extends ExtDef> = ExtTopoPaths<Def, FunTopo<Fun>> & ExtTopoPaths<Def>
+export type ExtFunTopoPaths<Def extends ExtDef> = TopoPaths<Def, FunTopo<Fun>> & TopoPaths<Def>
 export type ExtPathFunFn<Def extends ExtDef, Path extends ExtFunTopoPaths<Def>> = TypeofPath<
   Def['ports'],
   Path
