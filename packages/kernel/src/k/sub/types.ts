@@ -36,7 +36,12 @@ export type SubcriptionTopo<SubReq, SubVal> = TopoNode<{
   item: Port<'out', ItemData<SubVal>>
 }>
 
+export type ValPromiseOf<SubTopo> = SubTopo extends SubcriptionTopo<any, infer Val> ? Promise<Val> : never
 export type ValObsOf<SubTopo> = SubTopo extends SubcriptionTopo<any, infer Val> ? Observable<Val> : never
+export type ValOf<SubTopo> = SubTopo extends SubcriptionTopo<any, infer Val> ? Val : never
 export type ValObsProviderOf<SubTopo> = SubTopo extends SubcriptionTopo<infer Req, any>
-  ? (_: { req: Req; msg: Message }) => [valObs$: ValObsOf<SubTopo>, tearDownLogic?: TeardownLogic]
+  ? (_: {
+      req: Req
+      msg: Message
+    }) => [valObs$: ValObsOf<SubTopo> | ValPromiseOf<SubTopo>, tearDownLogic?: TeardownLogic]
   : never

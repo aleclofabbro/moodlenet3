@@ -1,5 +1,5 @@
-import { dematerialize, filter, map, materialize, Subscription, take } from 'rxjs'
-import type { ExtDef, ExtId, ExtTopo, Pointer, Port, Skell, TypeofPath } from '../../types'
+import { dematerialize, filter, from, map, materialize, Subscription, take } from 'rxjs'
+import type { ExtDef, ExtId, ExtTopo, Pointer, Port, Shell, TypeofPath } from '../../types'
 import { isMessage } from '../message'
 import { joinPointer, splitPointer } from '../pointer'
 import {
@@ -14,12 +14,12 @@ import {
 } from './types'
 export * from './types'
 
-export function pub<Def extends ExtDef>(skell: Pick<Skell<Def>, 'emit' | 'msg$'>) {
+export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$'>) {
   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
     (valObsProvider: ValObsProviderOf<TypeofPath<ExtTopo<Def>, Path>>) => {
       const subP = sub_pointers<Def, Path>(pointer)
 
-      const subReqSubscription = skell.msg$
+      const subReqSubscription = shell.msg$
         .pipe(filter(msg => isMessage<Def>()(msg, subP.sub as any)))
         .subscribe(subReqMsg => {
           const [valObs$, tearDownLogic] = valObsProvider({
@@ -29,11 +29,11 @@ export function pub<Def extends ExtDef>(skell: Pick<Skell<Def>, 'emit' | 'msg$'>
           const mainSubscription = new Subscription()
 
           const itemSpl = splitPointer(subP.item)
-          const emitValMsgSubscription = valObs$
+          const emitValMsgSubscription = from(valObs$)
             .pipe(materialize())
-            .subscribe(pubNotifItem => skell.emit(itemSpl.path as never)({ item: pubNotifItem }))
+            .subscribe(pubNotifItem => shell.emit(itemSpl.path as never)({ item: pubNotifItem }))
 
-          const unsubMsgSubscription = skell.msg$
+          const unsubMsgSubscription = shell.msg$
             .pipe(
               filter(mUnsubMsg => isMessage<Def>()(mUnsubMsg, subP.unsubOut as any)),
               map(msg => (msg.data as UnsubData).id),
@@ -53,7 +53,7 @@ export function pub<Def extends ExtDef>(skell: Pick<Skell<Def>, 'emit' | 'msg$'>
 
 export function pubAll<Def extends ExtDef>(
   extId: ExtId<Def>,
-  skell: Pick<Skell<Def>, 'emit' | 'msg$'>,
+  shell: Pick<Shell<Def>, 'emit' | 'msg$'>,
   handles: {
     [Path in SubcriptionPaths<Def>]: ValObsProviderOf<TypeofPath<ExtTopo<Def>, Path>>
   },
@@ -64,7 +64,7 @@ export function pubAll<Def extends ExtDef>(
     Object.entries(handles).reduce(
       (__, [path, port]) => {
         const fullPath = joinPointer(extId, path)
-        const subscription = pub(skell)(fullPath as never)(port as never)
+        const subscription = pub(shell)(fullPath as never)(port as never)
         unsubAll.add(subscription)
         return {
           ...__,
@@ -78,13 +78,13 @@ export function pubAll<Def extends ExtDef>(
   ] as const
 }
 
-export function sub<Def extends ExtDef>(skell: Pick<Skell, 'send' | 'msg$'>) {
+export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$'>) {
   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
     (req: SubcriptionReq<Def, Path>): ValObsOf<TypeofPath<ExtTopo<Def>, Path>> => {
       const subP = sub_pointers<Def, Path>(pointer)
       const reqSplitP = splitPointer(subP.sub)
-      const reqMsg = skell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)(req)
-      const subObs = skell.msg$.pipe(
+      const reqMsg = shell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)(req)
+      const subObs = shell.msg$.pipe(
         filter(msg => msg.parentMsgId === reqMsg.id && isMessage<Def>()(msg, subP.item as any)),
         map(msg => (msg.data as ItemData<any>).item),
         dematerialize(),
@@ -124,28 +124,28 @@ type D = ExtDef<
     }
   }
 >
-declare const skell: Skell<D>
+declare const shell: Shell<D>
 
-const g = sub<D>(skell)('xxxx@1.4.3::s/v/a')(4).subscribe(_ => {})
-const h = sub<D>(skell)('xxxx@1.4.3::a')(3).subscribe(_ => {})
+const g = sub<D>(shell)('xxxx@1.4.3::s/v/a')(4).subscribe(_ => {})
+const h = sub<D>(shell)('xxxx@1.4.3::a')(3).subscribe(_ => {})
 
-// sub<D>(skell)('xxxx@1.4.3::alpha/beta/gamma')(4).subscribe(_ => {})
-// sub<D>(skell)('xxxx@1.4.3::/alpha/beta/gamma')(4).subscribe(_ => {})
-// sub<D>(skell)('xxxx@1.4.3:/alpha/beta/gamma')(4).subscribe(_ => {})
-// sub<D>(skell)('xxxx@1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
-// sub<D>(skell)('/xxxx@1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
-// sub<D>(skell)('/xxxx/1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(shell)('xxxx@1.4.3::alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(shell)('xxxx@1.4.3::/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(shell)('xxxx@1.4.3:/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(shell)('xxxx@1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(shell)('/xxxx@1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(shell)('/xxxx/1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
 
 g
 h
-pub<D>(skell)('xxxx@1.4.3::s/v/a')(_ => {
-  const o = sub<D>(skell)('xxxx@1.4.3::s/v/a')(2)
+pub<D>(shell)('xxxx@1.4.3::s/v/a')(_ => {
+  const o = sub<D>(shell)('xxxx@1.4.3::s/v/a')(2)
 
   return [o]
 })
-pubAll<D>('xxxx@1.4.3', skell, {
-  's/v/a': _a => [sub<D>(skell)('xxxx@1.4.3::s/v/a')(2)],
-  'a': _a => [sub<D>(skell)('xxxx@1.4.3::a')(1)],
+pubAll<D>('xxxx@1.4.3', shell, {
+  's/v/a': _a => [sub<D>(shell)('xxxx@1.4.3::s/v/a')(2)],
+  'a': _a => [sub<D>(shell)('xxxx@1.4.3::a')(1)],
 })
 // const j: ExtsubTopoPaths<D> = 'a'
 // listen.port<D>(s)('xxxx@1.4.3::s.v.l', ({ message: { payload } }) => {})

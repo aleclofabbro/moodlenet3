@@ -1,15 +1,15 @@
 import { filter, mergeMap, Subscription, take } from 'rxjs'
-import type { ExtDef, ExtId, ExtTopo, Pointer, Skell, TypeofPath } from '../../types'
+import type { ExtDef, ExtId, ExtTopo, Pointer, Shell, TypeofPath } from '../../types'
 import { isMessage } from '../message'
 import { joinPointer, splitPointer } from '../pointer'
 import { ExtRpcTopoPaths, RpcFnOf, RpcTopoFnOf } from './types.ts_'
 export * from './types.ts_'
 
-export function reply<Def extends ExtDef>(skell: Pick<Skell<Def>, 'emit' | 'msg$'>) {
+export function reply<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$'>) {
   return <Path extends ExtRpcTopoPaths<Def>>(pointer: Pointer<Def, Path>) =>
     (afn: RpcTopoFnOf<TypeofPath<ExtTopo<Def>, Path>>) => {
       const { requestPointer, responsePointer } = rpc_pointers<Def, Path>(pointer)
-      return skell.msg$
+      return shell.msg$
         .pipe(
           filter(msg => isMessage<Def>()(msg, requestPointer as any)),
           mergeMap(async reqMsg => {
@@ -23,14 +23,14 @@ export function reply<Def extends ExtDef>(skell: Pick<Skell<Def>, 'emit' | 'msg$
         )
         .subscribe(([reqMsg, response]) => {
           const { path } = splitPointer(responsePointer)
-          const respMsg = skell.emit(path as never)(response)
+          const respMsg = shell.emit(path as never)(response)
           return { req: reqMsg, resp: respMsg }
         })
     }
 }
 export function replyAll<Def extends ExtDef>(
   extId: ExtId<Def>,
-  skell: Pick<Skell<Def>, 'emit' | 'msg$'>,
+  shell: Pick<Shell<Def>, 'emit' | 'msg$'>,
   handles: {
     [Path in ExtRpcTopoPaths<Def>]: RpcTopoFnOf<TypeofPath<ExtTopo<Def>, Path>>
   },
@@ -40,7 +40,7 @@ export function replyAll<Def extends ExtDef>(
       const fullPath = joinPointer(extId, path)
       return {
         ...__,
-        [fullPath]: reply(skell)(fullPath as never)(port as never),
+        [fullPath]: reply(shell)(fullPath as never)(port as never),
       }
     },
     {} as {
@@ -49,28 +49,28 @@ export function replyAll<Def extends ExtDef>(
   )
 }
 
-export function caller<Def extends ExtDef>(skell: Pick<Skell<Def>, 'send' | 'msg$'>, extId: ExtId<Def>) {
+export function caller<Def extends ExtDef>(shell: Pick<Shell<Def>, 'send' | 'msg$'>, extId: ExtId<Def>) {
   return <Path extends ExtRpcTopoPaths<Def>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
 
-    return call<Def>(skell)<Path>(fullPath)
+    return call<Def>(shell)<Path>(fullPath)
   }
 }
 
-export function call<Def extends ExtDef>(skell: Pick<Skell<Def>, 'send' | 'msg$'>) {
+export function call<Def extends ExtDef>(shell: Pick<Shell<Def>, 'send' | 'msg$'>) {
   return <Path extends ExtRpcTopoPaths<Def>>(pointer: Pointer<Def, Path>): RpcFnOf<TypeofPath<ExtTopo<Def>, Path>> => {
     const { requestPointer, responsePointer } = rpc_pointers<Def, Path>(pointer)
     return ((...rpcTopoReqArgs: any[]) =>
       new Promise((resolve, reject) => {
         const requestPayload = { rpcTopoReqArgs }
         const reqSplitP = splitPointer(requestPointer)
-        const reqMsg = skell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)(requestPayload)
+        const reqMsg = shell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)(requestPayload)
         // if (!requestMessage.consumedBy) {
         //   const msg = `calling rpc ${pointer}, message not consumed:\n${JSON.stringify(requestMessage)}`
         //   reject({ msg, errorCode: 'NOT_CONSUMED' }) //TODO: define standard errors/codes
         //   return
         // }
-        return skell.msg$
+        return shell.msg$
           .pipe(
             filter(msg => msg.parentMsgId === reqMsg.id && isMessage<Def>()(msg, responsePointer as any)),
             take(1),
@@ -117,14 +117,14 @@ function rpc_pointers<Def extends ExtDef, Path extends ExtRpcTopoPaths<Def>>(poi
 //     }
 //   }
 // >
-// declare const skell: Skell
+// declare const shell: Shell
 
 // type C = <T>(t: T) => { _: T }
 // type Q = <T>(t: T) => Promise<{ _: T }>
 
-// const g = call<D>(skell)('xxxx@1.4.3::s/v/a')('10')
+// const g = call<D>(shell)('xxxx@1.4.3::s/v/a')('10')
 
-// replyAll<D>('xxxx@1.4.3', skell, {
+// replyAll<D>('xxxx@1.4.3', shell, {
 //   's/v/a': async a => ({ _: a }),
 //   'a': async a => ({ _: a }),
 // })

@@ -1,8 +1,8 @@
-import type { ExtDef, ExtId, Pointer, PortPathData, PortPaths, SemanticPointer, Skell } from '../../types'
+import type { ExtDef, ExtId, Pointer, PortPathData, PortPaths, SemanticPointer, Shell } from '../../types'
 import { isBWCSemanticallySamePointers, joinPointer, joinSemanticPointer } from '../pointer'
 
 export type Listener<Def extends ExtDef = ExtDef, Path extends PortPaths<Def> = PortPaths<Def>> = (
-  shell: Skell<PortPathData<Def, Path>>,
+  shell: Shell<PortPathData<Def, Path>>,
 ) => void
 
 export type ListenOpts = {
@@ -11,7 +11,7 @@ export type ListenOpts = {
 
 const consumers: Record<SemanticPointer, Pointer> = {}
 
-export function probePort<Ext extends ExtDef>(registererShell: Skell) {
+export function probePort<Ext extends ExtDef>(registererShell: Shell) {
   return <Path extends PortPaths<Ext>>(
     listenToPointer: Pointer<Ext, Path>,
     listener: Listener<Ext, Path>,
@@ -69,7 +69,7 @@ already marked by @${listenShell.message.consumedBy.pointer} from pkg "${listenS
     }
   }
 }
-export function probeExt<Ext extends ExtDef>(shell: Skell, extId: ExtId<Ext>) {
+export function probeExt<Ext extends ExtDef>(shell: Shell, extId: ExtId<Ext>) {
   return <Path extends PortPaths<Ext>>(path: Path, listener: Listener<Ext, Path>) =>
     probePort<Ext>(shell)<Path>(joinPointer(extId, path), listener)
 }

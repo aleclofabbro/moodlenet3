@@ -31,7 +31,7 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] 
   description?: string
 }
 
-export type Skell<Def extends ExtDef = ExtDef> = {
+export type Shell<Def extends ExtDef = ExtDef> = {
   msg$: Observable<Message>
   push: PushMessage<Def>
   emit: EmitMessage<Def>
@@ -43,7 +43,7 @@ export type Skell<Def extends ExtDef = ExtDef> = {
 
 export type MWFn = (msg: Message, index: number) => Observable<Message>
 
-export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Skell<Def>) => void | {
+export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => void | {
   mw?: MWFn
 }
 
