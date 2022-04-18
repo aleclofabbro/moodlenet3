@@ -1,5 +1,5 @@
 import { Subject } from 'rxjs'
-import type { Ext, ExtDef } from './ext'
+import type { Ext, ExtDef, MWFn } from './ext'
 import { Message } from './message'
 import type { PkgDiskInfo, PkgInfo } from './pkg'
 export type { ExtLocalDeploymentRegistry } from '../registry'
@@ -15,7 +15,7 @@ export type DeplStatusObj<S extends DeplStatus = DeplStatus> = {
 }
 export type ExtDeploymentBindings = {
   $msg$: Subject<Message>
-  rmMW(): void
+  mw: MWFn | void
 }
 
 export type ExtDeployable<Def extends ExtDef = ExtDef> = ExtPkg<Def> & ExtDeploymentBindings

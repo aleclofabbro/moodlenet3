@@ -128,6 +128,14 @@ declare const skell: Skell<D>
 
 const g = sub<D>(skell)('xxxx@1.4.3::s/v/a')(4).subscribe(_ => {})
 const h = sub<D>(skell)('xxxx@1.4.3::a')(3).subscribe(_ => {})
+
+// sub<D>(skell)('xxxx@1.4.3::alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(skell)('xxxx@1.4.3::/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(skell)('xxxx@1.4.3:/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(skell)('xxxx@1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(skell)('/xxxx@1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
+// sub<D>(skell)('/xxxx/1.4.3/alpha/beta/gamma')(4).subscribe(_ => {})
+
 g
 h
 pub<D>(skell)('xxxx@1.4.3::s/v/a')(_ => {

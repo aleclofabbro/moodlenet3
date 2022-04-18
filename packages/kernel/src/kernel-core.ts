@@ -1,9 +1,8 @@
 import { DepGraph } from 'dependency-graph'
-import { delay, of, Subject, tap } from 'rxjs'
+import { delay, mergeMap, of, Subject, tap } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
 import { isMessage } from './k/message'
 import { joinPointer } from './k/pointer'
-import { MwPiper } from './mw-piper'
 import { createLocalDeploymentRegistry } from './registry'
 import type {
   DepGraphData,
@@ -15,6 +14,7 @@ import type {
   ExtPkg,
   KernelExt,
   Message,
+  MWFn,
   PkgInfo,
   PushMessage,
 } from './types'
@@ -31,8 +31,14 @@ export const create = () => {
   const deplReg = createLocalDeploymentRegistry()
   const depGraph = new DepGraph<DepGraphData>()
   const $MAIN_MSGS$ = new Subject<Message>()
-  const mwPiper = MwPiper<Message>()
-  const pipedMessages$ = $MAIN_MSGS$.pipe(mwPiper.op)
+  const pipedMessages$ = $MAIN_MSGS$.pipe(
+    mergeMap(msg =>
+      depOrderDeployments()
+        .map(({ mw }) => mw)
+        .filter((mw): mw is MWFn => !!mw)
+        .reduce((_, mwFn) => _.pipe(mergeMap(mwFn)), of(msg)),
+    ),
+  )
 
   const kernelExt: Ext<KernelExt> = {
     id: kernelExtId,
@@ -86,7 +92,6 @@ export const create = () => {
       return stopRes
     }
     stopRes.deployment.$msg$.complete()
-    stopRes.deployment.rmMW()
     return stopRes.deployment
   }
   function startExtension<Def extends ExtDef = ExtDef>(extPkg: ExtPkg<Def>) {
@@ -121,11 +126,10 @@ export const create = () => {
         send: extId => path => data => (push as any)('in')(extId)(path)(data),
         push,
       }) ?? {}
-    const rmMW = mw ? mwPiper.add(mw) : () => {}
     const deployable: ExtDeployable<Def> = {
       ...extPkg,
       $msg$,
-      rmMW,
+      mw,
     }
 
     return deplReg.start(deployable)

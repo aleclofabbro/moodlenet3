@@ -1,6 +1,5 @@
 // import type * as K from '../k'
 import type { Observable } from 'rxjs'
-import { MWFn } from '../mw-piper'
 import type { Message } from './message'
 import { PkgInfo } from './pkg'
 import type { Port, PortBinding, PortPathData, PortPaths, Topo } from './topo'
@@ -41,8 +40,11 @@ export type Skell<Def extends ExtDef = ExtDef> = {
   extId: ExtId<Def>
   pkgInfo: PkgInfo
 }
+
+export type MWFn = (msg: Message, index: number) => Observable<Message>
+
 export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Skell<Def>) => void | {
-  mw?: MWFn<Message>
+  mw?: MWFn
 }
 
 export type EmitMessage<SrcDef extends ExtDef = ExtDef> = <Path extends PortPaths<SrcDef, 'out'>>(
