@@ -1,4 +1,4 @@
-/* import { ExtDef, ExtTopo, Port, TopoNode, TopoPaths, TypeofPath } from '../../types'
+import { ExtDef, ExtTopo, Port, TopoNode, TopoPaths, TypeofPath } from '../../types'
 
 // export declare const RPC_TOPO_SYM: symbol
 // export type RPC_TOPO_SYM = typeof RPC_TOPO_SYM
@@ -27,4 +27,3 @@ export type RpcTopo<Afn extends RpcFn = RpcFn> = TopoNode<{
 }>
 
 export type RpcTopoFnOf<RpcT> = RpcT extends RpcTopo ? RpcFnOf<RpcT> : never
- */

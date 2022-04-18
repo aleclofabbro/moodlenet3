@@ -1,4 +1,4 @@
-/* import type { ExtDef, ExtId, Pointer, PortPathData, PortPaths, SemanticPointer, Skell } from '../../types'
+import type { ExtDef, ExtId, Pointer, PortPathData, PortPaths, SemanticPointer, Skell } from '../../types'
 import { isBWCSemanticallySamePointers, joinPointer, joinSemanticPointer } from '../pointer'
 
 export type Listener<Def extends ExtDef = ExtDef, Path extends PortPaths<Def> = PortPaths<Def>> = (
@@ -73,5 +73,3 @@ export function probeExt<Ext extends ExtDef>(shell: Skell, extId: ExtId<Ext>) {
   return <Path extends PortPaths<Ext>>(path: Path, listener: Listener<Ext, Path>) =>
     probePort<Ext>(shell)<Path>(joinPointer(extId, path), listener)
 }
- */
-export default null

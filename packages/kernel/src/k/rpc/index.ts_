@@ -1,9 +1,9 @@
-/* import { filter, mergeMap, Subscription, take } from 'rxjs'
+import { filter, mergeMap, Subscription, take } from 'rxjs'
 import type { ExtDef, ExtId, ExtTopo, Pointer, Skell, TypeofPath } from '../../types'
 import { isMessage } from '../message'
 import { joinPointer, splitPointer } from '../pointer'
-import { ExtRpcTopoPaths, RpcFnOf, RpcTopoFnOf } from './types'
-export * from './types'
+import { ExtRpcTopoPaths, RpcFnOf, RpcTopoFnOf } from './types.ts_'
+export * from './types.ts_'
 
 export function reply<Def extends ExtDef>(skell: Pick<Skell<Def>, 'emit' | 'msg$'>) {
   return <Path extends ExtRpcTopoPaths<Def>>(pointer: Pointer<Def, Path>) =>
@@ -95,7 +95,6 @@ function rpc_pointers<Def extends ExtDef, Path extends ExtRpcTopoPaths<Def>>(poi
   }
 }
 
-
 //
 //
 //
@@ -132,5 +131,3 @@ function rpc_pointers<Def extends ExtDef, Path extends ExtRpcTopoPaths<Def>>(poi
 // const j: ExtRpcTopoPaths<D> = 'a'
 // listen.port<D>(s)('xxxx@1.4.3::s.v.l', ({ message: { payload } }) => {})
 // listen.ext<D>(s, 'xxxx@1.4.3')('s.g', ({ message: { payload } }) => {})
- */
-export default null
