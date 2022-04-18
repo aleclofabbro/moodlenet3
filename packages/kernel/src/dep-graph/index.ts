@@ -56,6 +56,7 @@ export function depGraphAddDeps(dg: DepGraph<DepGraphData>, adds: Ext[]) {
 export function depGraphRm(dg: DepGraph<DepGraphData>, rms: Ext[], willAdd: Ext[]) {
   rms.forEach(ext => {
     const shouldCascadeRemoveDependants = !willAdd.find(({ id }) => areSameExtName(id, ext.id))
+    shouldCascadeRemoveDependants
     const { extName } = splitExtId(ext.id)
     dg.removeNode(extName)
   })

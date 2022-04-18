@@ -1,4 +1,4 @@
-import type { AllPaths, ExtDef, ExtDeployment, ExtId, KernelExt, PortShell } from '../../../types'
+/* import type { AllPaths, ExtDef, ExtDeployment, ExtId, KernelExt, PortShell } from '../../../types'
 import { splitExtId, splitPointer } from '../../pointer'
 
 //TODO: rather use probe() ?
@@ -54,3 +54,6 @@ export const useExtension = <Def extends ExtDef>(shell: PortShell, extId: ExtId<
     unlisten()
   }
 }
+ */
+
+export default null

@@ -1,4 +1,4 @@
-import { filter, mergeMap, Subscription, take } from 'rxjs'
+/* import { filter, mergeMap, Subscription, take } from 'rxjs'
 import type { ExtDef, ExtId, ExtTopo, Pointer, Skell, TypeofPath } from '../../types'
 import { isMessage } from '../message'
 import { joinPointer, splitPointer } from '../pointer'
@@ -30,7 +30,7 @@ export function reply<Def extends ExtDef>(skell: Pick<Skell<Def>, 'emit' | 'msg$
 }
 export function replyAll<Def extends ExtDef>(
   extId: ExtId<Def>,
-  skell: Skell,
+  skell: Pick<Skell<Def>, 'emit' | 'msg$'>,
   handles: {
     [Path in ExtRpcTopoPaths<Def>]: RpcTopoFnOf<TypeofPath<ExtTopo<Def>, Path>>
   },
@@ -49,7 +49,7 @@ export function replyAll<Def extends ExtDef>(
   )
 }
 
-export function caller<Def extends ExtDef>(skell: Skell, extId: ExtId<Def>) {
+export function caller<Def extends ExtDef>(skell: Pick<Skell<Def>, 'send' | 'msg$'>, extId: ExtId<Def>) {
   return <Path extends ExtRpcTopoPaths<Def>>(path: Path) => {
     const fullPath = joinPointer(extId, path) as never
 
@@ -57,7 +57,7 @@ export function caller<Def extends ExtDef>(skell: Skell, extId: ExtId<Def>) {
   }
 }
 
-export function call<Def extends ExtDef>(skell: Skell) {
+export function call<Def extends ExtDef>(skell: Pick<Skell<Def>, 'send' | 'msg$'>) {
   return <Path extends ExtRpcTopoPaths<Def>>(pointer: Pointer<Def, Path>): RpcFnOf<TypeofPath<ExtTopo<Def>, Path>> => {
     const { requestPointer, responsePointer } = rpc_pointers<Def, Path>(pointer)
     return ((...rpcTopoReqArgs: any[]) =>
@@ -95,11 +95,12 @@ function rpc_pointers<Def extends ExtDef, Path extends ExtRpcTopoPaths<Def>>(poi
   }
 }
 
-/*
- *
- *
- *
- */
+
+//
+//
+//
+//
+//
 
 // type D = ExtDef<
 //   'xxxx',
@@ -131,3 +132,5 @@ function rpc_pointers<Def extends ExtDef, Path extends ExtRpcTopoPaths<Def>>(poi
 // const j: ExtRpcTopoPaths<D> = 'a'
 // listen.port<D>(s)('xxxx@1.4.3::s.v.l', ({ message: { payload } }) => {})
 // listen.ext<D>(s, 'xxxx@1.4.3')('s.g', ({ message: { payload } }) => {})
+ */
+export default null

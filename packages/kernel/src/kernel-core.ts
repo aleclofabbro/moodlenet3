@@ -39,8 +39,8 @@ export const create = () => {
     displayName: 'K',
     description: 'K',
     requires: [],
-    start: ({ env, msg$, push, emit }) => {
-      const x = push('out')('kernel.core@0.0.1')('ext/deployment/starting')(1)
+    start: ({ /* env,  */ msg$, push, emit }) => {
+      /* const x =  */ push('out')('kernel.core@0.0.1')('ext/deployment/starting')(1)
       emit('ext/deployment/stopping')({ reason: 'DISABLING_REQUIRED_EXTENSION' })
       msg$.subscribe(msg => {
         if (isMessage<KernelExt>()(msg, 'kernel.core@0.0.1::ext/deployment/stopping')) {
@@ -60,6 +60,7 @@ export const create = () => {
   }
   depGraphAddNodes(depGraph, [kernelExt])
   const startKResult = startExtension({ ext: kernelExt, pkgInfo: kernelPkgInfo })
+  stopExtension
   if (!startKResult.done) {
     throw new Error(
       `Couldn't start ${kernelExt.id} : currDeployment: ${JSON.stringify(startKResult.currDeployment, null, 4)}`,
@@ -94,10 +95,10 @@ export const create = () => {
     const $msg$ = new Subject<Message>()
     const msg$ = $msg$.asObservable()
     const push: PushMessage<Def> = bound => destExtId => path => data => {
-      type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
+      // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
       assertIsActive()
       const pointer = joinPointer(destExtId, path)
-      const msg: Message<typeof bound, Def, DestDef, typeof path> = {
+      const msg: Message /* <typeof bound, Def, DestDef, typeof path>  */ = {
         id: newMsgId(),
         source: extId,
         bound,
@@ -107,7 +108,7 @@ export const create = () => {
       }
 
       $MAIN_MSGS$.next(msg)
-      return msg
+      return msg as any
     }
     const { mw } =
       extPkg.ext.start({
@@ -115,8 +116,9 @@ export const create = () => {
         extId,
         env,
         msg$,
-        emit: path => data => push('out')(extId)(path)(data),
-        send: extId => path => data => push('in')(extId)(path)(data),
+        // removing "as any" generates  https://github.com/microsoft/TypeScript/issues/33133
+        emit: path => data => (push as any)('out')(extId)(path)(data),
+        send: extId => path => data => (push as any)('in')(extId)(path)(data),
         push,
       }) ?? {}
     const rmMW = mw ? mwPiper.add(mw) : () => {}

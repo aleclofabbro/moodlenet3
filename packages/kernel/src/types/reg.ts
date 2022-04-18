@@ -13,12 +13,12 @@ export type DeplStatusObj<S extends DeplStatus = DeplStatus> = {
   status: S
   at: Date
 }
-export type ExtDeploymentBindings<Def> = {
+export type ExtDeploymentBindings = {
   $msg$: Subject<Message>
   rmMW(): void
 }
 
-export type ExtDeployable<Def extends ExtDef = ExtDef> = ExtPkg<Def> & ExtDeploymentBindings<Def>
+export type ExtDeployable<Def extends ExtDef = ExtDef> = ExtPkg<Def> & ExtDeploymentBindings
 export type ExtDeployment<Def extends ExtDef = ExtDef> = ExtDeployable<Def> & DeplStatusObj
 
 export type DeploymentActionResult<Def extends ExtDef> =

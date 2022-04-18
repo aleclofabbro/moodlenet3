@@ -7,6 +7,16 @@ type Join<K, P> = K extends string /* | number */
     : never
   : never
 
+// export type TypePaths<Obj, SearchType, Depth extends number = 10> = [Depth] extends [never]
+//   ? never
+//   : Obj extends SearchType
+//   ? ''
+//   : Obj extends object
+//   ? {
+//       [K in keyof Obj]-?: TypePaths<Obj[K], SearchType, Prev[Depth]> extends infer R ? Join<K, R> : never
+//     }[keyof Obj]
+//   : never
+
 export type TypePaths<Obj, SearchType, Primitive, Depth extends number = 10> = Obj extends Primitive
   ? Obj extends SearchType
     ? ''
