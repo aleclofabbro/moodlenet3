@@ -14,16 +14,18 @@
   "description": "moodlenet core package",
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
-  "dependencies": {},
-  "devDependencies": {
+  "dependencies": {
     "@moodlenet/kernel": "^0.0.1",
     "@moodlenet/webapp": "^0.0.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
+    "rxjs": "^7.5.5"
+  },
+  "devDependencies": {
     "@types/node": "^17.0.18",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.11",
     "@types/react-router-dom": "^5.3.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
     "shx": "^0.3.4",
     "typescript": "^4.6.3"
   },

@@ -7,8 +7,8 @@ import {
   ItemData,
   SubcriptionPaths,
   SubcriptionReq,
-  SubcriptionTopo,
   SubReqData,
+  SubTopo,
   UnsubData,
   ValObsOf,
   ValObsProviderOf,
@@ -124,12 +124,13 @@ type D = ExtDef<
   '1.4.3',
   {
     d: Port<'in', string>
-    a: SubcriptionTopo<1 | 3, 5 | 7>
+    b: SubTopo<1 | 3, 5 | 7>
+    a: SubTopo<1 | 3, 5 | 7>
     s: {
       g: Port<'in', 11>
       v: {
         l: Port<'out', string>
-        a: SubcriptionTopo<2 | 4, 6 | 8>
+        a: SubTopo<2 | 4, 6 | 8>
       }
       // a: FunTopo<C>
     }
@@ -149,8 +150,8 @@ const h = sub<D>(shell)('xxxx@1.4.3::a')(3).subscribe(_ => {})
 
 g
 h
-pub<D>(shell)('xxxx@1.4.3::s/v/a')(_ => {
-  const o = sub<D>(shell)('xxxx@1.4.3::s/v/a')(2)
+pub<D>(shell)('xxxx@1.4.3::a')(_ => {
+  const o = sub<D>(shell)('xxxx@1.4.3::a')(1)
 
   return [o, () => {}]
   /* 
@@ -166,6 +167,7 @@ pub<D>(shell)('xxxx@1.4.3::s/v/a')(_ => {
 pubAll<D>('xxxx@1.4.3', shell, {
   's/v/a': _a => [sub<D>(shell)('xxxx@1.4.3::s/v/a')(2)],
   'a': _a => [sub<D>(shell)('xxxx@1.4.3::a')(1)],
+  'b': _a => [sub<D>(shell)('xxxx@1.4.3::a')(1)],
 })
 // const j: ExtsubTopoPaths<D> = 'a'
 // listen.port<D>(s)('xxxx@1.4.3::s.v.l', ({ message: { payload } }) => {})

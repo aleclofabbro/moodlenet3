@@ -1,5 +1,5 @@
 import { DepGraph } from 'dependency-graph'
-import { delay, mergeMap, of, Subject, tap } from 'rxjs'
+import { delay, mergeMap, Observer, of, Subject, tap } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
 import { onMessage } from './k/message'
 import { joinPointer } from './k/pointer'
@@ -36,7 +36,7 @@ export const create = () => {
       depOrderDeployments()
         .map(({ mw }) => mw)
         .filter((mw): mw is MWFn => !!mw)
-        .reduce((_, mwFn) => _.pipe(mergeMap(mwFn)), of(msg)),
+        .reduce(($, mwFn) => $.pipe(mergeMap(mwFn)), of(msg)),
     ),
   )
 
@@ -45,7 +45,7 @@ export const create = () => {
     displayName: 'K',
     description: 'K',
     requires: [],
-    start: ({ /* env,  */ msg$, push, emit }) => {
+    start: ({ /* env,  */ msg$, push, emit, send }) => {
       /* const x =  */ push('out')('kernel.core@0.0.1')('ext/deployment/starting')(1)
       emit('ext/deployment/stopping')({ reason: 'DISABLING_REQUIRED_EXTENSION' })
       msg$.subscribe(msg => {
@@ -59,6 +59,9 @@ export const create = () => {
           startMsg.pointer === 'kernel.core@0.0.1::ext/deployment/starting'
         })
       })
+
+      send<KernelExt>('kernel.core@0.0.1')('ext/deployment/ready')(2)
+
       return {
         mw: msg =>
           of(msg).pipe(
@@ -71,23 +74,35 @@ export const create = () => {
   }
   depGraphAddNodes(depGraph, [kernelExt])
   const startKResult = startExtension({ ext: kernelExt, pkgInfo: kernelPkgInfo })
-  stopExtension
   if (!startKResult.done) {
     throw new Error(
       `Couldn't start ${kernelExt.id} : currDeployment: ${JSON.stringify(startKResult.currDeployment, null, 4)}`,
     )
   }
 
-  return () => {
-    const mainSub = pipedMessages$.subscribe(msg =>
-      depOrderDeployments().forEach(deployment => deployment.$msg$.next(msg)),
-    )
-    return {
-      mainSub,
-    }
+  const mainObserver: Observer<Message> = {
+    next: msg => depOrderDeployments().forEach(deployment => deployment.$msg$.next(msg)),
+    complete() {},
+    error() {},
   }
+
+  return {
+    mainObserver,
+    stopExtension,
+    startExtension,
+    depOrderDeployments,
+    extEnv,
+    cfgPath,
+    global_env,
+    deplReg,
+    depGraph,
+    $MAIN_MSGS$,
+    pipedMessages$,
+    startKResult,
+  }
+
   function extEnv(extId: ExtId) {
-    //FIXME: should check version compat
+    //FIXME: should check version compat ?
     return global_env[extId]
   }
 

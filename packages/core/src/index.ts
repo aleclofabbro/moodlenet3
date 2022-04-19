@@ -1,19 +1,19 @@
-import type { Ext, ExtDef, RpcTopo } from '@moodlenet/kernel'
+import { Ext, ExtDef, onMessage, pub, pubAll, SubTopo } from '@moodlenet/kernel'
 
 export type MoodlenetCoreExt = ExtDef<
   '@moodlenet/core',
   '0.0.1',
   {
-    _test: RpcTopo<<T>(_: T) => Promise<{ a: T }>>
+    _test: SubTopo<{ a: string }, { a: number }>
   }
 >
 
 const extImpl: Ext<MoodlenetCoreExt> = {
   id: '@moodlenet/core@0.0.1',
-  name: '',
+  displayName: '',
   requires: [],
   description: '',
-  start({ mainShell, K }) {
+  start(shell) {
     console.log('I am core extension')
     // watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
     //   if (!webapp?.active) {
@@ -25,8 +25,24 @@ const extImpl: Ext<MoodlenetCoreExt> = {
     //   cmpPath: 'pkg/webapp',
     // })
     // })
-    K.replyAll<MoodlenetCoreExt>(mainShell, '@moodlenet/core@0.0.1', {
-      _test: _test_shell => async _ => ({ a: _ }),
+
+    shell.msg$.subscribe(msg => {
+      const onMy = onMessage<MoodlenetCoreExt>(msg)
+      onMy('@moodlenet/core@0.0.1::', msg => {
+        msg.pointer
+      })
+      pub<MoodlenetCoreExt>(shell)('@moodlenet/core@0.0.1::_test')(({ msg, req }) => {
+        msg.pointer
+        req.a
+        return [{ a: 2 }]
+      })
+      pubAll<MoodlenetCoreExt>('@moodlenet/core@0.0.1', shell, {
+        _test({ msg, req }) {
+          req.a.at
+          msg.bound
+          return [{ a: 1 }]
+        },
+      })
     })
 
     return

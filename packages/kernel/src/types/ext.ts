@@ -31,7 +31,7 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] 
   description?: string
 }
 
-export type Shell<Def extends ExtDef = ExtDef> = {
+export interface Shell<Def extends ExtDef = ExtDef> {
   msg$: Observable<Message>
   push: PushMessage<Def>
   emit: EmitMessage<Def>
