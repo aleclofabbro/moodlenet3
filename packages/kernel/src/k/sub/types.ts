@@ -1,4 +1,4 @@
-import { Observable, ObservableNotification, TeardownLogic } from 'rxjs'
+import { Observable, ObservableInput, ObservableNotification, TeardownLogic } from 'rxjs'
 import { ExtDef, ExtTopo, Message, MsgID, Port, TopoNode, TopoPaths, TypeofPath } from '../../types'
 
 export type SubcriptionPaths<Def extends ExtDef> = TopoPaths<Def, SubcriptionTopo<any, any>> & TopoPaths<Def>
@@ -36,12 +36,14 @@ export type SubcriptionTopo<SubReq, SubVal> = TopoNode<{
   item: Port<'out', ItemData<SubVal>>
 }>
 
-export type ValPromiseOf<SubTopo> = SubTopo extends SubcriptionTopo<any, infer Val> ? Promise<Val> : never
 export type ValObsOf<SubTopo> = SubTopo extends SubcriptionTopo<any, infer Val> ? Observable<Val> : never
+export type ValObsInputOf<SubTopo> = SubTopo extends SubcriptionTopo<any, infer Val> ? ObservableInput<Val> : never
 export type ValOf<SubTopo> = SubTopo extends SubcriptionTopo<any, infer Val> ? Val : never
+export type ProvidedValOf<SubTopo> =
+  | ValObsInputOf<SubTopo>
+  | ValOf<SubTopo>
+  | [valObs$_or_valPromise_orVal: ValOf<SubTopo> | ValObsInputOf<SubTopo>, tearDownLogic?: TeardownLogic]
+
 export type ValObsProviderOf<SubTopo> = SubTopo extends SubcriptionTopo<infer Req, any>
-  ? (_: {
-      req: Req
-      msg: Message
-    }) => [valObs$: ValObsOf<SubTopo> | ValPromiseOf<SubTopo>, tearDownLogic?: TeardownLogic]
+  ? (_: { req: Req; msg: Message }) => ProvidedValOf<SubTopo>
   : never

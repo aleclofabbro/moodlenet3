@@ -33,7 +33,11 @@ export type TypePaths<Obj, SearchType, Primitive, Depth extends number = 10> = O
                 : never
             }[keyof Obj]
           : '')
-  : Obj extends object
+  : // vv added this block
+  Obj extends Primitive
+  ? never
+  : // ^^ added this block
+  Obj extends object
   ? {
       [K in keyof Obj]-?: TypePaths<Obj[K], SearchType, Primitive, Prev[Depth]> extends infer R ? Join<K, R> : never
     }[keyof Obj]

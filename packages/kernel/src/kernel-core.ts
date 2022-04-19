@@ -1,7 +1,7 @@
 import { DepGraph } from 'dependency-graph'
 import { delay, mergeMap, of, Subject, tap } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
-import { isMessage } from './k/message'
+import { onMessage } from './k/message'
 import { joinPointer } from './k/pointer'
 import { createLocalDeploymentRegistry } from './registry'
 import type {
@@ -49,10 +49,15 @@ export const create = () => {
       /* const x =  */ push('out')('kernel.core@0.0.1')('ext/deployment/starting')(1)
       emit('ext/deployment/stopping')({ reason: 'DISABLING_REQUIRED_EXTENSION' })
       msg$.subscribe(msg => {
-        if (isMessage<KernelExt>()(msg, 'kernel.core@0.0.1::ext/deployment/stopping')) {
-          // const { bound, data, id, parentMsgId, pointer, source } = msg
-          msg.bound
-        }
+        const onMy = onMessage<KernelExt>(msg)
+        onMy('kernel.core@0.0.1::ext/deployment/stopping', stopMsg => {
+          // const { bound, data, id, parentMsgId, pointer, source } = stopMsg
+          stopMsg.data.reason === 'DISABLING_REQUIRED_EXTENSION'
+        })
+        onMy('kernel.core@0.0.1::ext/deployment/starting', startMsg => {
+          startMsg.data
+          startMsg.pointer === 'kernel.core@0.0.1::ext/deployment/starting'
+        })
       })
       return {
         mw: msg =>

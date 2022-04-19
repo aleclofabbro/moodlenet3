@@ -1,5 +1,6 @@
 //export * from './deps'
 // export * from './fun'
+export * from './message'
 export * from './pointer'
 // export * from './probe'
 // export * from './rpc'

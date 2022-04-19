@@ -1,6 +1,7 @@
-import { dematerialize, filter, from, map, materialize, Subscription, take } from 'rxjs'
+import { dematerialize, filter, from, isObservable, map, materialize, of, Subscription, take } from 'rxjs'
+import { isPromise } from 'util/types'
 import type { ExtDef, ExtId, ExtTopo, Pointer, Port, Shell, TypeofPath } from '../../types'
-import { isMessage } from '../message'
+import { matchMessage } from '../message'
 import { joinPointer, splitPointer } from '../pointer'
 import {
   ItemData,
@@ -20,12 +21,22 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$'>
       const subP = sub_pointers<Def, Path>(pointer)
 
       const subReqSubscription = shell.msg$
-        .pipe(filter(msg => isMessage<Def>()(msg, subP.sub as any)))
+        .pipe(filter(msg => matchMessage<Def>()(msg, subP.sub as any)))
         .subscribe(subReqMsg => {
-          const [valObs$, tearDownLogic] = valObsProvider({
+          const providedValOf = valObsProvider({
             req: (subReqMsg.data as SubReqData<any>).req,
             msg: subReqMsg,
           })
+
+          const [valObs$_or_valPromise_orVal, tearDownLogic] = Array.isArray(providedValOf)
+            ? providedValOf
+            : [providedValOf]
+
+          const valObs$ =
+            isPromise(valObs$_or_valPromise_orVal) || isObservable(valObs$_or_valPromise_orVal)
+              ? valObs$_or_valPromise_orVal
+              : of(valObs$_or_valPromise_orVal)
+
           const mainSubscription = new Subscription()
 
           const itemSpl = splitPointer(subP.item)
@@ -35,7 +46,7 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$'>
 
           const unsubMsgSubscription = shell.msg$
             .pipe(
-              filter(mUnsubMsg => isMessage<Def>()(mUnsubMsg, subP.unsubOut as any)),
+              filter(mUnsubMsg => matchMessage<Def>()(mUnsubMsg, subP.unsubOut as any)),
               map(msg => (msg.data as UnsubData).id),
               filter(id => id === subReqMsg.id),
               take(1),
@@ -85,7 +96,7 @@ export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$'>) {
       const reqSplitP = splitPointer(subP.sub)
       const reqMsg = shell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)(req)
       const subObs = shell.msg$.pipe(
-        filter(msg => msg.parentMsgId === reqMsg.id && isMessage<Def>()(msg, subP.item as any)),
+        filter(msg => msg.parentMsgId === reqMsg.id && matchMessage<Def>()(msg, subP.item as any)),
         map(msg => (msg.data as ItemData<any>).item),
         dematerialize(),
       )
@@ -141,7 +152,16 @@ h
 pub<D>(shell)('xxxx@1.4.3::s/v/a')(_ => {
   const o = sub<D>(shell)('xxxx@1.4.3::s/v/a')(2)
 
+  return [o, () => {}]
+  /* 
+  return [firstValueFrom(o), () => {}]
+  return 8
+  return o
   return [o]
+  return lastValueFrom( o)
+  return [6,8]
+  return [Promise.resolve(8)]
+ */
 })
 pubAll<D>('xxxx@1.4.3', shell, {
   's/v/a': _a => [sub<D>(shell)('xxxx@1.4.3::s/v/a')(2)],

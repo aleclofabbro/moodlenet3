@@ -11,5 +11,10 @@
     "noFallthroughCasesInSwitch": true /* Report errors for fallthrough cases in switch statement. */,
     "esModuleInterop": true,
     "preserveSymlinks": true
+    // "skipLibCheck": true,
+    // "assumeChangesOnlyAffectDirectDependencies": true
   }
+  // "watchOptions": {
+
+  // }
 }
