@@ -32,17 +32,14 @@ export type ItemData<Val> = {
 export type SubTopo<SubReq, SubVal> = TopoNode<{
   sub: Port<'in', SubReqData<SubReq>>
   unsub: Port<'in', void /* |UnsubData */>
-  unsubOut: Port<'out', UnsubData>
+  // unsubOut: Port<'out', UnsubData>
   item: Port<'out', ItemData<SubVal>>
 }>
 
-export type ValObsOf<Topo> = Topo extends SubTopo<any, infer Val> ? Observable<Val> : never
+export type ValItemOf<Topo> = Topo extends SubTopo<any, infer Val> ? { item: Val; msg: Message } : never
+export type ValObsOf<Topo> = Topo extends SubTopo<any, infer Val> ? Observable<{ item: Val; msg: Message }> : never
 export type ValObsInputOf<Topo> = Topo extends SubTopo<any, infer Val> ? ObservableInput<Val> : never
-export type ValOf<Topo> = Topo extends SubTopo<any, infer Val> ? Val : never
-export type ProvidedValOf<Topo> =
-  | ValObsInputOf<Topo>
-  | ValOf<Topo>
-  | [valObs$_or_valPromise_orVal: ValOf<Topo> | ValObsInputOf<Topo>, tearDownLogic?: TeardownLogic]
+export type ProvidedValOf<Topo> = ValObsInputOf<Topo> | [valObsinput: ValObsInputOf<Topo>, tearDownLogic: TeardownLogic]
 
 export type ValObsProviderOf<Topo> = Topo extends SubTopo<infer Req, any>
   ? (_: { req: Req; msg: Message }) => ProvidedValOf<Topo>
