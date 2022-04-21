@@ -31,10 +31,10 @@ const extImpl: Ext<MoodlenetCoreExt> = {
       onMy('@moodlenet/core@0.0.1::', msg => {
         msg.pointer
       })
-      pub<MoodlenetCoreExt>(shell)('@moodlenet/core@0.0.1::_test')(({ msg, req }) => {
+      pub<MoodlenetCoreExt>(shell)('@moodlenet/core@0.0.1::_test')(async ({ msg, req }) => {
         msg.pointer
         req.a
-        return [{ a: 2 }]
+        return { a: 2 }
       })
       pubAll<MoodlenetCoreExt>('@moodlenet/core@0.0.1', shell, {
         _test({ msg, req }) {

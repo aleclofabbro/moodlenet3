@@ -1,8 +1,21 @@
 import { ExtDef, SubTopo } from '@moodlenet/kernel'
 import { Readable } from 'stream'
 
-export type MoodlenetBlobStoreExtImpl = ExtDef<
-  'moodlenet.blob-store-impl',
+export type MoodlenetBlobStoreLib = {
+  read(path: string): Promise<Readable | null>
+  meta(path: string): Promise<Meta | undefined>
+  write(
+    path: string,
+    data: Buffer | Readable,
+    meta: Pick<Meta, 'mimeType'>,
+    opts?: Partial<WriteOptions> | undefined,
+  ): Promise<{ done: true; meta: Meta } | { done: false; err: PutError }>
+  create(): Promise<void>
+  exists(): Promise<boolean>
+}
+
+export type MoodlenetBlobStoreExt = ExtDef<
+  'moodlenet.blob-store',
   '0.0.1',
   {
     meta: MetaSub
