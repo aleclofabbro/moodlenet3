@@ -1,6 +1,20 @@
-import { filter, from, isObservable, map, materialize, mergeMap, Observable, of, TeardownLogic, throwError } from 'rxjs'
+import {
+  filter,
+  firstValueFrom,
+  from,
+  isObservable,
+  map,
+  materialize,
+  merge,
+  mergeMap,
+  Observable,
+  of,
+  Subject,
+  TeardownLogic,
+  throwError,
+} from 'rxjs'
 import { isPromise } from 'util/types'
-import type { ExtDef, ExtId, ExtTopo, Pointer, Port, Shell, TypeofPath } from '../../types'
+import type { ExtDef, ExtId, ExtTopo, Message, Pointer, Port, Shell, TypeofPath } from '../../types'
 import { matchMessage } from '../message'
 import { joinPointer, splitPointer } from '../pointer'
 import {
@@ -10,9 +24,10 @@ import {
   SubcriptionReq,
   SubReqData,
   SubTopo,
-  UnsubData,
   ValObsOf,
   ValObsProviderOf,
+  ValOf,
+  ValPromiseOf,
 } from './types'
 export * from './types'
 
@@ -27,51 +42,60 @@ function providedValToObsAndTeardown(providedValOf: ProvidedValOf<SubTopo<any, a
   return [valObs$, tearDownLogic] as const
 }
 
+export function mapItemVal<T extends { val: any }>() {
+  return map<T, T['val']>(_ => _.val)
+}
+
 export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$'>) {
   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
-    (valObsProvider: ValObsProviderOf<TypeofPath<ExtTopo<Def>, Path>>) => {
-      const SUBSCRIPTIONS: { [k in string]: TeardownLogic | undefined } = {}
-      const subP = sub_pointers<Def, Path>(pointer)
-
-      const unsubSubscription = shell.msg$
-        .pipe(
-          filter(mUnsubMsg => matchMessage<Def>()(mUnsubMsg, subP.unsubPointer as any)),
-          map(msg => (msg.data as UnsubData).id),
-        )
-        .subscribe(teardownAndDelSUB)
-
-      const subSubscription = shell.msg$
-        .pipe(
-          filter(msg => matchMessage<Def>()(msg, subP.subPointer as any)),
-          mergeMap(subReqMsg => {
-            const [valObs$, tearDownLogic] = providedValToObsAndTeardown(
-              valObsProvider({
-                req: (subReqMsg.data as SubReqData<any>).req,
-                msg: subReqMsg,
-              }),
+    (valObsProvider: ValObsProviderOf<TypeofPath<ExtTopo<Def>, Path>>) =>
+      new Observable(subscriber => {
+        const SUBSCRIPTIONS: { [k in string]: TeardownLogic | undefined } = {}
+        const $KILL_SUBSCRIPTIONS$ = new Subject<Message>()
+        const subP = sub_pointers<Def, Path>(pointer)
+        subscriber.add(
+          shell.msg$
+            .pipe(
+              filter(mUnsubMsg => matchMessage<Def>()(mUnsubMsg, subP.unsubPointer as any)),
+              map(msg => msg.parentMsgId),
+              filter((id): id is string => !!id),
             )
-            SUBSCRIPTIONS[subReqMsg.id] = tearDownLogic
-            return valObs$
-          }),
-          materialize(),
+            .subscribe(teardownAndDelSUB),
         )
-        .subscribe(pubNotifItem => {
-          const itemSpl = splitPointer(subP.itemPointer)
-          shell.emit(itemSpl.path as never)({ item: pubNotifItem })
+        subscriber.add(
+          shell.msg$
+            .pipe(
+              filter(msg => matchMessage<Def>()(msg, subP.subPointer as any)),
+              mergeMap(subReqMsg => {
+                const [valObs$, tearDownLogic] = providedValToObsAndTeardown(
+                  valObsProvider({
+                    req: (subReqMsg.data as SubReqData<any>).req,
+                    msg: subReqMsg,
+                  }),
+                )
+                SUBSCRIPTIONS[subReqMsg.id] = tearDownLogic
+                return merge($KILL_SUBSCRIPTIONS$, valObs$)
+              }),
+              materialize(),
+            )
+            .subscribe(pubNotifItem => {
+              const itemSpl = splitPointer(subP.itemPointer)
+              shell.emit(itemSpl.path as never)({ item: pubNotifItem })
+            }),
+        )
+        subscriber.add(() => {
+          $KILL_SUBSCRIPTIONS$.error(`${pointer} publisher ended`)
+          // brutally kills pending subscriptions when unsubscribing..
+          // TODO: define and implement policies, gentle unsubs ..
+          Object.keys(SUBSCRIPTIONS).forEach(teardownAndDelSUB)
         })
 
-      return async () => {
-        // brutally kills pending subscriptions ..
-        Object.keys(SUBSCRIPTIONS).forEach(teardownAndDelSUB)
-        unsubSubscription.unsubscribe()
-        subSubscription.unsubscribe()
-      }
-      function teardownAndDelSUB(id: string) {
-        const teardown = SUBSCRIPTIONS[id]
-        delete SUBSCRIPTIONS[id]
-        'function' === typeof teardown ? teardown() : teardown?.unsubscribe()
-      }
-    }
+        function teardownAndDelSUB(id: string) {
+          const teardown = SUBSCRIPTIONS[id]
+          delete SUBSCRIPTIONS[id]
+          'function' === typeof teardown ? teardown() : teardown?.unsubscribe()
+        }
+      })
 }
 
 export function pubAll<Def extends ExtDef>(
@@ -81,11 +105,27 @@ export function pubAll<Def extends ExtDef>(
     [Path in SubcriptionPaths<Def>]: ValObsProviderOf<TypeofPath<ExtTopo<Def>, Path>>
   },
 ) {
-  const unsubs = Object.entries(handles).map(([path, valObsProvider]) => {
+  const allPubOb$ = Object.entries(handles).map(([path, valObsProvider]) => {
     const pointer = joinPointer(extId, path)
     return pub(shell)(pointer as never)(valObsProvider as never)
   })
-  return () => Promise.all(unsubs.map(unsub => unsub()))
+  return merge(...allPubOb$)
+}
+
+export function subP<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
+  return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
+    (req: SubcriptionReq<Def, Path>) => {
+      const itemData = firstValueFrom(sub<Def>(shell)<Path>(pointer)(req))
+      return itemData as ValPromiseOf<TypeofPath<ExtTopo<Def>, Path>>
+    }
+}
+
+export function subPVal<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
+  return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
+    async (req: SubcriptionReq<Def, Path>) => {
+      const itemData = await subP<Def>(shell)<Path>(pointer)(req)
+      return itemData.val as ValOf<TypeofPath<ExtTopo<Def>, Path>>
+    }
 }
 
 export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
@@ -95,7 +135,7 @@ export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'pu
         const subP = sub_pointers<Def, Path>(pointer)
         const reqSplitP = splitPointer(subP.subPointer)
         const reqMsg = shell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)(req)
-        const sub = shell.msg$
+        const subscriberSub = shell.msg$
           .pipe(
             filter(msg => msg.parentMsgId === reqMsg.id && matchMessage<Def>()(msg, subP.itemPointer as any)),
             mergeMap(msg => {
@@ -105,16 +145,16 @@ export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'pu
                 : notif.kind === 'E'
                 ? throwError(() => new Error(notif.error))
                 : notif.kind === 'N'
-                ? [{ msg, item: notif.value }]
+                ? [{ msg, val: notif.value }] /*/ TODO: this duplicates value (in msg.data.value) */
                 : []
             }),
           )
           .subscribe(subscriber)
-        sub.add(() => {
+        return () => {
           const unsubSplitP = splitPointer(subP.unsubPointer)
           shell.send<Def>(unsubSplitP.extId)(unsubSplitP.path as never)(void 0)
-        })
-        return sub
+          subscriberSub.unsubscribe()
+        }
       }) as ValObsOf<TypeofPath<ExtTopo<Def>, Path>>
 }
 
@@ -164,10 +204,10 @@ const h = sub<D>(shell)('xxxx@1.4.3::a')(3).subscribe(_ => {})
 
 g
 h
-pub<D>(shell)('xxxx@1.4.3::a')(_ => {
-  const o = sub<D>(shell)('xxxx@1.4.3::a')(1).pipe(map(_ => _.item))
+pub<D>(shell)('xxxx@1.4.3::a')(async _ => {
+  const o = await subPVal<D>(shell)('xxxx@1.4.3::a')(1)
 
-  return [o, () => {}]
+  return o //[o, () => {}]
   /* 
   return [firstValueFrom(o), () => {}]
   return 8
@@ -179,9 +219,9 @@ pub<D>(shell)('xxxx@1.4.3::a')(_ => {
  */
 })
 pubAll<D>('xxxx@1.4.3', shell, {
-  's/v/a': _a => sub<D>(shell)('xxxx@1.4.3::s/v/a')(2).pipe(map(_ => _.item)),
-  'a': _a => sub<D>(shell)('xxxx@1.4.3::a')(1).pipe(map(_ => _.item)),
-  'b': _a => sub<D>(shell)('xxxx@1.4.3::a')(1).pipe(map(_ => _.item)),
+  's/v/a': _a => sub<D>(shell)('xxxx@1.4.3::s/v/a')(2).pipe(mapItemVal()),
+  'a': _a => sub<D>(shell)('xxxx@1.4.3::a')(1).pipe(mapItemVal()),
+  'b': _a => sub<D>(shell)('xxxx@1.4.3::a')(1).pipe(mapItemVal()),
 })
 // const j: ExtsubTopoPaths<D> = 'a'
 // listen.port<D>(s)('xxxx@1.4.3::s.v.l', ({ message: { payload } }) => {})

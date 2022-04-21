@@ -1,5 +1,5 @@
 // import type * as K from '../k'
-import type { Observable } from 'rxjs'
+import type { Observable, Subscription } from 'rxjs'
 import type { Message } from './message'
 import { PkgInfo } from './pkg'
 import type { Port, PortBinding, PortPathData, PortPaths, Topo } from './topo'
@@ -39,11 +39,13 @@ export interface Shell<Def extends ExtDef = ExtDef> {
   env: Record<string, unknown>
   extId: ExtId<Def>
   pkgInfo: PkgInfo
+  tearDown: Subscription
 }
 
 export type MWFn = (msg: Message, index: number) => Observable<Message>
 
-export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => void | {
+export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => void | ExtHandle
+export type ExtHandle = {
   mw?: MWFn
 }
 

@@ -1,5 +1,4 @@
-import { Shell, splitExtId, sub } from '@moodlenet/kernel'
-import { firstValueFrom } from 'rxjs'
+import { Shell, splitExtId, subPVal } from '@moodlenet/kernel'
 import type { Readable } from 'stream'
 import { Meta, MoodlenetBlobStoreExtImpl, PutError, WriteOptions } from './impl'
 
@@ -20,26 +19,24 @@ type Lib = {
 export function blobStoreLib(shell: Shell) {
   const { extName: storeName } = splitExtId(shell.extId)
 
-  const bsImplCall = sub<MoodlenetBlobStoreExtImpl>(shell)
+  const bsImplSubPVal = subPVal<MoodlenetBlobStoreExtImpl>(shell)
 
-  const exists: Lib['exists'] = () =>
-    firstValueFrom(bsImplCall('moodlenet.blob-store-impl@0.0.1::exists')({ storeName }))
+  const exists: Lib['exists'] = async () => bsImplSubPVal('moodlenet.blob-store-impl@0.0.1::exists')({ storeName })
 
-  const create: Lib['create'] = () =>
-    firstValueFrom(bsImplCall('moodlenet.blob-store-impl@0.0.1::create')({ storeName }))
+  const create: Lib['create'] = () => bsImplSubPVal('moodlenet.blob-store-impl@0.0.1::create')({ storeName })
 
   const read: Lib['read'] = (path: string) =>
-    firstValueFrom(bsImplCall('moodlenet.blob-store-impl@0.0.1::read')({ storeName, path }))
+    bsImplSubPVal('moodlenet.blob-store-impl@0.0.1::read')({ storeName, path })
 
   const meta: Lib['meta'] = (path: string) =>
-    firstValueFrom(bsImplCall('moodlenet.blob-store-impl@0.0.1::meta')({ storeName, path }))
+    bsImplSubPVal('moodlenet.blob-store-impl@0.0.1::meta')({ storeName, path })
 
   const write: Lib['write'] = (
     path: string,
     data: Buffer | Readable,
     meta: Pick<Meta, 'mimeType'>,
     opts?: Partial<WriteOptions>,
-  ) => firstValueFrom(bsImplCall('moodlenet.blob-store-impl@0.0.1::write')({ storeName, path, data, meta, opts }))
+  ) => bsImplSubPVal('moodlenet.blob-store-impl@0.0.1::write')({ storeName, path, data, meta, opts })
 
   return (): Lib => ({
     read,

@@ -13,7 +13,7 @@ export type Message<
   source: ExtId<SourceDef>
   pointer: Pointer<DestDef, Path>
   data: PortPathData<DestDef, Path, Bound>
-  parentMsgId: MsgID | null
+  parentMsgId: MsgID | null // | undefined
 }
 
 // export type PostOpts = {}

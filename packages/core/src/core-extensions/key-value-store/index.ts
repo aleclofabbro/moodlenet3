@@ -1,5 +1,4 @@
-import { ExtDef, Shell, splitExtId, sub, SubTopo } from '@moodlenet/kernel'
-import { firstValueFrom } from 'rxjs'
+import { ExtDef, Shell, splitExtId, subPVal, SubTopo } from '@moodlenet/kernel'
 
 type Impl = MoodlenetKeyValueStoreExtImpl
 export type MoodlenetKeyValueStoreExtImpl = ExtDef<
@@ -29,19 +28,16 @@ type Lib<KVMap = {}> = {
 export function KVlib<KVMap>(shell: Shell): Lib<KVMap> {
   const { extName: storeName } = splitExtId(shell.extId)
 
-  const kvsImplSub = sub<Impl>(shell)
+  const kvsImplSubPVal = subPVal<Impl>(shell)
 
-  const get: Lib['get'] = key =>
-    firstValueFrom(kvsImplSub('moodlenet.key-value-store-impl@0.0.1::get')({ storeName, key }))
+  const get: Lib['get'] = key => kvsImplSubPVal('moodlenet.key-value-store-impl@0.0.1::get')({ storeName, key })
 
   const put: Lib['put'] = (key, val) =>
-    firstValueFrom(kvsImplSub('moodlenet.key-value-store-impl@0.0.1::put')({ storeName, key, val }))
+    kvsImplSubPVal('moodlenet.key-value-store-impl@0.0.1::put')({ storeName, key, val })
 
-  const create: Lib['create'] = () =>
-    firstValueFrom(kvsImplSub('moodlenet.key-value-store-impl@0.0.1::create')({ storeName }))
+  const create: Lib['create'] = () => kvsImplSubPVal('moodlenet.key-value-store-impl@0.0.1::create')({ storeName })
 
-  const exists: Lib['exists'] = () =>
-    firstValueFrom(kvsImplSub('moodlenet.key-value-store-impl@0.0.1::exists')({ storeName }))
+  const exists: Lib['exists'] = () => kvsImplSubPVal('moodlenet.key-value-store-impl@0.0.1::exists')({ storeName })
 
   const lib: Lib<KVMap> = {
     get,

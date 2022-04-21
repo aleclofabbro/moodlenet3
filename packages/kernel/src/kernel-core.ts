@@ -111,14 +111,15 @@ export const create = () => {
     if (!stopRes.done) {
       return stopRes
     }
-    stopRes.deployment.$msg$.complete()
+    stopRes.deployment.tearDown.unsubscribe()
     return stopRes.deployment
   }
   function startExtension<Def extends ExtDef = ExtDef>(extPkg: ExtPkg<Def>) {
     const extId = extPkg.ext.id
     const env = extEnv(extId)
     const $msg$ = new Subject<Message>()
-    const msg$ = $msg$.asObservable()
+    const tearDown = pipedMessages$.subscribe($msg$)
+
     const push: PushMessage<Def> = bound => destExtId => path => data => {
       // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
       assertIsActive()
@@ -140,16 +141,19 @@ export const create = () => {
         pkgInfo: extPkg.pkgInfo,
         extId,
         env,
-        msg$,
+        msg$: $msg$.asObservable(),
         // removing "as any" generates  https://github.com/microsoft/TypeScript/issues/33133
         emit: path => data => (push as any)('out')(extId)(path)(data),
         send: extId => path => data => (push as any)('in')(extId)(path)(data),
         push,
+        tearDown,
       }) ?? {}
+
     const deployable: ExtDeployable<Def> = {
       ...extPkg,
       $msg$,
       mw,
+      tearDown,
     }
 
     return deplReg.start(deployable)
