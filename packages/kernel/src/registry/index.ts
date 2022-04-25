@@ -18,6 +18,7 @@ export const createLocalDeploymentRegistry = () => {
     stop,
     ready,
     reg,
+    isReady,
   }
 
   function get<Def extends ExtDef>(extId: ExtId<Def>) {
@@ -28,6 +29,14 @@ export const createLocalDeploymentRegistry = () => {
     }
     const { version: deployedVersion } = splitExtId(deployment.ext.id)
     const isCompat = isVerBWC(deployedVersion, version)
+    // console.log({
+    //   isCompat,
+    //   deployedVersion,
+    //   version,
+    //   extName,
+    //   deployedId: deployment?.ext.id,
+    //   deployedSt: deployment?.status,
+    // })
     return isCompat ? deployment : undefined
   }
 
@@ -55,7 +64,10 @@ export const createLocalDeploymentRegistry = () => {
     }
     return deployment
   }
-
+  function isReady<Def extends ExtDef>(extId: ExtId<Def>) {
+    const deployment = get<Def>(extId)
+    return deployment?.status === 'ready' || deployment?.status === 'starting'
+  }
   function start<Def extends ExtDef>(deployable: ExtDeployable<Def>): DeploymentActionResult<Def> {
     const currDeployment = get(deployable.ext.id)
     if (currDeployment) {

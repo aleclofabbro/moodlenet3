@@ -6,16 +6,7 @@ export function matchMessage<DestDef extends ExtDef>() {
     msg: Message,
     matchPointer: Pointer<DestDef, Path>,
   ): msg is Message<PortPathBinding<DestDef, Path>, ExtDef, DestDef, Path> => {
-    const checkRes = isBWCSemanticallySamePointers(msg.pointer, matchPointer)
-    return checkRes === true
-      ? //yes
-        true
-      : !checkRes
-      ? //not at all
-        false
-      : // wrong version
-        //TODO: any warning ?
-        false
+    return isBWCSemanticallySamePointers(msg.pointer, matchPointer)
   }
 }
 

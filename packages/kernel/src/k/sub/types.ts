@@ -36,13 +36,19 @@ export type SubTopo<SubReq, SubVal> = TopoNode<{
   item: Port<'out', ItemData<SubVal>>
 }>
 
-export type ValItemOf<Topo> = Topo extends SubTopo<any, infer Val> ? { val: Val; msg: Message } : never
-export type ValObsOf<Topo> = Topo extends SubTopo<any, infer Val> ? Observable<{ val: Val; msg: Message }> : never
-export type ValPromiseOf<Topo> = Topo extends SubTopo<any, infer Val> ? Promise<{ val: Val; msg: Message }> : never
-export type ValOf<Topo> = Topo extends SubTopo<any, infer Val> ? Val : never
-export type ValObsInputOf<Topo> = Topo extends SubTopo<any, infer Val> ? ObservableInput<Val> : never
+export type ValItemOf<Topo> = Topo extends SubTopo<any, infer Val>
+  ? { val: Val; msg: Message }
+  : { val: unknown; msg: Message }
+export type ValMsgObsOf<Topo> = Topo extends SubTopo<any, infer Val>
+  ? Observable<{ val: Val; msg: Message }>
+  : Observable<{ val: unknown; msg: Message }>
+export type ValPromiseOf<Topo> = Topo extends SubTopo<any, infer Val>
+  ? Promise<{ val: Val; msg: Message }>
+  : Promise<{ val: unknown; msg: Message }>
+export type ValOf<Topo> = Topo extends SubTopo<any, infer Val> ? Val : unknown
+export type ValObsInputOf<Topo> = Topo extends SubTopo<any, infer Val> ? ObservableInput<Val> : ObservableInput<unknown>
 export type ProvidedValOf<Topo> = ValObsInputOf<Topo> | [valObsinput: ValObsInputOf<Topo>, tearDownLogic: TeardownLogic]
 
 export type ValObsProviderOf<Topo> = Topo extends SubTopo<infer Req, any>
   ? (_: { req: Req; msg: Message }) => ProvidedValOf<Topo>
-  : never
+  : (_: { req: unknown; msg: Message }) => ProvidedValOf<Topo>

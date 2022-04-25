@@ -40,7 +40,7 @@ export function isBWCSemanticallySamePointers(target: Pointer, requested: Pointe
     return false
   }
   const [reqSplit, trgSplit] = pointerSplits
-  return isVerBWC(trgSplit.version, reqSplit.version) || pointerSplits
+  return isVerBWC(trgSplit.version, reqSplit.version)
 }
 
 export function areSemanticallySamePointers(a: Pointer, b: Pointer) {

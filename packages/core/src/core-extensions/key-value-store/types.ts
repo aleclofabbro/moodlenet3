@@ -2,7 +2,7 @@ import { ExtDef, SubTopo } from '@moodlenet/kernel'
 
 export type MoodlenetKeyValueStoreExt = ExtDef<
   'moodlenet.key-value-store',
-  '0.0.1',
+  '0.1.10',
   {
     get: SubTopo<{ storeName: string; key: string }, any>
     put: SubTopo<{ storeName: string; key: string; val: any }, { old: any | undefined }>

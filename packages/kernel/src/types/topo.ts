@@ -14,7 +14,7 @@ export type Port<Bind extends PortBinding = PortBinding, Data = any> = {
 }
 
 export type Topo = {
-  [topoElementName in string]?: Port | Topo
+  [topoElementName in string]: Port | Topo
 }
 
 export type PortPathBinding<Def extends ExtDef, Path extends PortPaths<ExtDef>> = TypeofPath<

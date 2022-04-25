@@ -16,7 +16,7 @@ export type MoodlenetBlobStoreLib = {
 
 export type MoodlenetBlobStoreExt = ExtDef<
   'moodlenet.blob-store',
-  '0.0.1',
+  '0.1.10',
   {
     meta: MetaSub
     read: ReadSub

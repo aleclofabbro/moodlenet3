@@ -22,7 +22,6 @@
     "execa": "^5.1.1",
     "pkg-dir": "^5",
     "rxjs": "^7.5.4",
-    "rxjs-compat": "^6.6.7",
     "semver": "^7.3.6"
   },
   "peerDependencies": {

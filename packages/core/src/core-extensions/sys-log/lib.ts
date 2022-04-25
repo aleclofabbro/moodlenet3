@@ -1,8 +1,8 @@
-import type { Shell } from '@moodlenet/kernel'
+import type { ExtDef, Shell } from '@moodlenet/kernel'
 import { MoodlenetSysLogExt, MoodlenetSysLogLib } from './types'
 
-export const moodlenetSysLogLib = (shell: Shell): MoodlenetSysLogLib => {
-  const logPort = shell.push('in')<MoodlenetSysLogExt>('moodlenet.sys-log@0.0.1')
+export const moodlenetSysLogLib = <Def extends ExtDef>(shell: Shell<Def>): MoodlenetSysLogLib => {
+  const logPort = shell.push('in')<MoodlenetSysLogExt>('moodlenet.sys-log@0.1.10')
 
   return {
     debug: logPort('debug'),

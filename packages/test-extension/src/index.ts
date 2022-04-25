@@ -1,37 +1,19 @@
-import { ExtensionDef, RpcTopo } from '@moodlenet/kernel/lib'
+import { K } from '@moodlenet/core'
 
-export type TestExt = ExtensionDef<
+export type TestExt = K.ExtDef<
   '@moodlenet/test-extension',
-  '0.0.1',
+  '0.1.10',
   {
-    _test: RpcTopo<<T>(_: T) => Promise<{ a: T }>>
+    _test: K.SubTopo<{ a: string }, { b: number }>
   }
 >
-export const testExtId: ExtIdStrOf<TestExt> = '@moodlenet/test-extension@0.0.1'
 
-const extImpl: ExtImplExports = {
-  module,
-  extensions: {
-    [testExtId]: {
-      async start({ shell }) {
-        console.log('I am test extension')
-        // watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
-        //   if (!webapp?.active) {
-        //     return
-        //   }
-        // asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
-        //   extId: testExtId,
-        //   moduleLoc: resolve(__dirname, '..'),
-        //   cmpPath: 'pkg/webapp',
-        // })
-        // })
-        rpcReplyAll<TestExt>(shell, '@moodlenet/test-extension', {
-          _test: _shell => async _ => ({ a: _ }),
-        })
+const extImpl: K.Ext<TestExt> = {
+  id: '',
+  start(/* shell */) {
+    console.log('I am test extension')
 
-        return async () => {}
-      },
-    },
+    return () => {}
   },
 }
 

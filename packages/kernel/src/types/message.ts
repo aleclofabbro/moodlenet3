@@ -14,6 +14,8 @@ export type Message<
   pointer: Pointer<DestDef, Path>
   data: PortPathData<DestDef, Path, Bound>
   parentMsgId: MsgID | null // | undefined
+  sub: boolean
+  managedBy: ExtId | null
 }
 
 // export type PostOpts = {}

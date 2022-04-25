@@ -23,7 +23,7 @@ export type ExtDef<
 export type ExtTopoDef<Def extends ExtTopo> = Def
 
 type _Unsafe_ExtId<Def = ExtDef> = Def extends ExtDef ? ExtId<Def> : never
-export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] = ExtDef[]> = {
+export type Ext<Def extends ExtDef = ExtDef, Requires extends ExtDef[] = ExtDef[]> = {
   id: ExtId<Def>
   displayName: string
   requires: { [Index in keyof Requires]: _Unsafe_ExtId<Requires[Index]> }
@@ -31,16 +31,22 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends readonly ExtDef[] 
   description?: string
 }
 
+export type RawExtEnv = Record<string, any>
+
 export interface Shell<Def extends ExtDef = ExtDef> {
   msg$: Observable<Message>
   push: PushMessage<Def>
   emit: EmitMessage<Def>
   send: SendMessage
-  env: Record<string, unknown>
+  env: RawExtEnv
   extId: ExtId<Def>
   pkgInfo: PkgInfo
   tearDown: Subscription
+  expose: ExposePointers<Def>
+  isExtAvailable: ExtAvailable
 }
+
+type ExtAvailable = (extId: ExtId) => boolean
 
 export type MWFn = (msg: Message, index: number) => Observable<Message>
 
@@ -51,13 +57,13 @@ export type ExtHandle = {
 
 export type EmitMessage<SrcDef extends ExtDef = ExtDef> = <Path extends PortPaths<SrcDef, 'out'>>(
   path: Path,
-) => (data: PortPathData<SrcDef, Path, 'out'>) => Message<'out', SrcDef, SrcDef, Path>
+) => (data: PortPathData<SrcDef, Path, 'out'>, opts?: Partial<PushOptions>) => Message<'out', SrcDef, SrcDef, Path>
 
 export type SendMessage = <DestDef extends ExtDef = ExtDef>(
   extId: ExtId<DestDef>,
 ) => <Path extends PortPaths<DestDef, 'in'>>(
   path: Path,
-) => (data: PortPathData<DestDef, Path, 'in'>) => Message<'in', DestDef, DestDef, Path>
+) => (data: PortPathData<DestDef, Path, 'in'>, opts?: Partial<PushOptions>) => Message<'in', DestDef, DestDef, Path>
 
 export type PushMessage<SrcDef extends ExtDef = ExtDef> = <Bound extends PortBinding = PortBinding>(
   bound: Bound,
@@ -65,4 +71,21 @@ export type PushMessage<SrcDef extends ExtDef = ExtDef> = <Bound extends PortBin
   destExtId: ExtId<DestDef>,
 ) => <Path extends PortPaths<DestDef, Bound>>(
   path: Bound extends 'in' ? Path : SrcDef extends DestDef ? Path : never,
-) => (data: PortPathData<DestDef, Path, Bound>) => Message<Bound, SrcDef, DestDef, Path>
+) => (data: PortPathData<DestDef, Path, Bound>, opts?: Partial<PushOptions>) => Message<Bound, SrcDef, DestDef, Path>
+
+export type PushOptions = {
+  parent: Message | null
+  primary: boolean
+  sub: boolean
+}
+
+export type ExposedPointer = {
+  validateData(data: unknown): boolean
+  subResult: 'array' | 'stream'
+}
+
+export type ExposePointers<Def extends ExtDef = ExtDef> = (p: Partial<ExposedPointerMap<Def>>) => void
+
+export type ExposedPointerMap<Def extends ExtDef = ExtDef> = {
+  [path in PortPaths<Def, 'in'>]: ExposedPointer
+}

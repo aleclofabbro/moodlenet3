@@ -1,9 +1,10 @@
+import { SubTopo } from '../k'
 import type { ExtDef } from './ext'
 import type { Port } from './topo'
 
 export type KernelExt = ExtDef<
   'kernel.core',
-  '0.0.1',
+  '0.1.10',
   {
     ext: {
       deployment: {
@@ -14,21 +15,7 @@ export type KernelExt = ExtDef<
         crash: Port<'in', 4>
       }
     }
-  }
->
-export type KernelExts = ExtDef<
-  'kernels.core',
-  '0.0.1',
-  {
-    ext: {
-      deployment: {
-        start: Port<'out', 1>
-        ready: Port<'in', 2>
-        stop: Port<'out', { reason: StopReason }>
-        done: Port<'in', 3>
-        crash: Port<'in', 4>
-      }
-    }
+    testSub: SubTopo<{ XX: string }, { a: string }>
   }
 >
 

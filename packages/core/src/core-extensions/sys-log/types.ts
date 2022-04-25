@@ -6,7 +6,7 @@ export type LogOptions = {}
 
 export type Log = {} | { _logOpts: LogOptions }
 
-export type MoodlenetSysLogExt = ExtDef<'moodlenet.sys-log', '0.0.1', { [level in LogLevel]: Port<'in', Log> }>
+export type MoodlenetSysLogExt = ExtDef<'moodlenet.sys-log', '0.1.10', { [level in LogLevel]: Port<'in', Log> }>
 
 export type MoodlenetSysLogLib = {
   [level in LogLevel]: (log: Log) => void
