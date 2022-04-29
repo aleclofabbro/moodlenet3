@@ -17,7 +17,7 @@ import type {
   ExtName,
   ExtPkg,
   KernelExt,
-  Message,
+  MessagePush,
   MWFn,
   PkgInfo,
   PushMessage,
@@ -42,7 +42,7 @@ export const create = ({ global_env }: CreateCfg) => {
 
   const deplReg = createLocalDeploymentRegistry()
   const depGraph = new DepGraph<DepGraphData>()
-  const $MAIN_MSGS$ = new Subject<Message>()
+  const $MAIN_MSGS$ = new Subject<MessagePush>()
   const pipedMessages$ = $MAIN_MSGS$.pipe(
     mergeMap(msg => {
       const orderDepl = depOrderDeployments()
@@ -152,7 +152,7 @@ export const create = ({ global_env }: CreateCfg) => {
     const extId = extPkg.ext.id
     const { extName /* , version */ } = splitExtId(extId)
     const env = extEnv(extId)
-    const $msg$ = new Subject<Message>()
+    const $msg$ = new Subject<MessagePush>()
     const tearDown = pipedMessages$.subscribe($msg$)
     const push: PushMessage<Def> = bound => destExtId => path => (data, _opts) => {
       // console.log('PUSH', { bound, destExtId, path, data, _opts })
@@ -179,7 +179,7 @@ export const create = ({ global_env }: CreateCfg) => {
       const parentMsgId = opts.parent?.id
       // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
       assertMeIsActive()
-      const msg: Message /* <typeof bound, Def, DestDef, typeof path>  */ = {
+      const msg: MessagePush /* <typeof bound, Def, DestDef, typeof path>  */ = {
         id: newMsgId(),
         source: extId,
         bound,

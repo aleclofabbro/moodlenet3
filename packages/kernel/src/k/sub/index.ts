@@ -18,7 +18,7 @@ import {
   throwError,
 } from 'rxjs'
 import { isPromise } from 'util/types'
-import type { ExtDef, ExtId, ExtTopo, Message, Pointer, PushOptions, Shell, TypeofPath } from '../../types'
+import type { ExtDef, ExtId, ExtTopo, MessagePush, Pointer, PushOptions, Shell, TypeofPath } from '../../types'
 import { manageMsg, matchMessage } from '../message'
 import { isBWCSemanticallySamePointers, joinPointer, splitPointer } from '../pointer'
 import {
@@ -106,7 +106,7 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$' 
           }),
         )
         .subscribe(pubNotifItem => {
-          const parentMsg: Message = (pubNotifItem as any)[PUB_SYM]
+          const parentMsg: MessagePush = (pubNotifItem as any)[PUB_SYM]
           const itemSpl = splitPointer(subP.itemPointer)
           shell.emit(itemSpl.path as never)({ item: pubNotifItem }, { parent: parentMsg })
         })

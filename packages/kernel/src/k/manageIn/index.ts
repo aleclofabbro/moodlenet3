@@ -1,12 +1,12 @@
 import { Subscription } from 'rxjs'
-import { ExtDef, Message, Pointer, PortPathBinding, PortPaths, Shell } from '../../types'
+import { ExtDef, MessagePush, Pointer, PortPathBinding, PortPaths, Shell } from '../../types'
 import { manageMsg, onMessage } from '../message/index'
 
 export function manageIn<Def extends ExtDef>(
   shell: Shell<Def>,
 ): <Path extends PortPaths<Def, PortPathBinding<Def, Path>>>(
   matchPointer: Pointer<Def, Path>,
-  cb: (msg: Message<PortPathBinding<Def, Path>, ExtDef, Def, Path>) => unknown,
+  cb: (msg: MessagePush<PortPathBinding<Def, Path>, ExtDef, Def, Path>) => unknown,
 ) => Subscription {
   return (matchPointer, cb) =>
     shell.msg$.subscribe(msg =>

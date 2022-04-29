@@ -1,6 +1,6 @@
 import type { Subject, Subscription } from 'rxjs'
 import type { Ext, ExtDef, MWFn } from './ext'
-import type { Message } from './message'
+import type { MessagePush } from './message'
 import type { PkgDiskInfo, PkgInfo } from './pkg'
 export type { ExtLocalDeploymentRegistry } from '../registry'
 
@@ -14,7 +14,7 @@ export type DeplStatusObj<S extends DeplStatus = DeplStatus> = {
   at: Date
 }
 export type ExtDeploymentBindings = {
-  $msg$: Subject<Message>
+  $msg$: Subject<MessagePush>
   mw: MWFn | void
   tearDown: Subscription
 }

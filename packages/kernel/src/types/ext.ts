@@ -1,6 +1,6 @@
 // import type * as K from '../k'
 import type { Observable, Subscription } from 'rxjs'
-import type { Message } from './message'
+import type { MessagePush } from './message'
 import { PkgInfo } from './pkg'
 import type { Port, PortBinding, PortPathData, PortPaths, Topo } from './topo'
 
@@ -34,11 +34,11 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends ExtDef[] = ExtDef[
 export type RawExtEnv = Record<string, unknown> | undefined
 
 export interface Shell<Def extends ExtDef = ExtDef> {
-  msg$: Observable<Message>
+  msg$: Observable<MessagePush>
   push: PushMessage<Def>
   emit: EmitMessage<Def>
   send: SendMessage
-  env: RawExtEnv 
+  env: RawExtEnv
   extId: ExtId<Def>
   pkgInfo: PkgInfo
   tearDown: Subscription
@@ -48,7 +48,7 @@ export interface Shell<Def extends ExtDef = ExtDef> {
 
 type ExtAvailable = (extId: ExtId) => boolean
 
-export type MWFn = (msg: Message, index: number) => Observable<Message>
+export type MWFn = (msg: MessagePush, index: number) => Observable<MessagePush>
 
 export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => void | ExtHandle
 export type ExtHandle = {
@@ -57,13 +57,13 @@ export type ExtHandle = {
 
 export type EmitMessage<SrcDef extends ExtDef = ExtDef> = <Path extends PortPaths<SrcDef, 'out'>>(
   path: Path,
-) => (data: PortPathData<SrcDef, Path, 'out'>, opts?: Partial<PushOptions>) => Message<'out', SrcDef, SrcDef, Path>
+) => (data: PortPathData<SrcDef, Path, 'out'>, opts?: Partial<PushOptions>) => MessagePush<'out', SrcDef, SrcDef, Path>
 
 export type SendMessage = <DestDef extends ExtDef = ExtDef>(
   extId: ExtId<DestDef>,
 ) => <Path extends PortPaths<DestDef, 'in'>>(
   path: Path,
-) => (data: PortPathData<DestDef, Path, 'in'>, opts?: Partial<PushOptions>) => Message<'in', DestDef, DestDef, Path>
+) => (data: PortPathData<DestDef, Path, 'in'>, opts?: Partial<PushOptions>) => MessagePush<'in', DestDef, DestDef, Path>
 
 export type PushMessage<SrcDef extends ExtDef = ExtDef> = <Bound extends PortBinding = PortBinding>(
   bound: Bound,
@@ -71,10 +71,13 @@ export type PushMessage<SrcDef extends ExtDef = ExtDef> = <Bound extends PortBin
   destExtId: ExtId<DestDef>,
 ) => <Path extends PortPaths<DestDef, Bound>>(
   path: Bound extends 'in' ? Path : SrcDef extends DestDef ? Path : never,
-) => (data: PortPathData<DestDef, Path, Bound>, opts?: Partial<PushOptions>) => Message<Bound, SrcDef, DestDef, Path>
+) => (
+  data: PortPathData<DestDef, Path, Bound>,
+  opts?: Partial<PushOptions>,
+) => MessagePush<Bound, SrcDef, DestDef, Path>
 
 export type PushOptions = {
-  parent: Message | null
+  parent: MessagePush | null
   primary: boolean
   sub: boolean
 }
