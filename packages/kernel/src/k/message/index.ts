@@ -1,4 +1,4 @@
-import type { ExtDef, Message, Pointer, PortPathBinding, PortPaths } from '../../types'
+import type { ExtDef, ExtId, Message, Pointer, PortPathBinding, PortPaths } from '../../types'
 import { isBWCSemanticallySamePointers } from '../pointer'
 
 export function matchMessage<DestDef extends ExtDef>() {
@@ -19,4 +19,9 @@ export function onMessage<DestDef extends ExtDef>(msg: Message) {
       cb(msg)
     }
   }
+}
+
+export function manageMsg(msg: Message, extId: ExtId) {
+  msg.managedBy = extId
+  return msg
 }

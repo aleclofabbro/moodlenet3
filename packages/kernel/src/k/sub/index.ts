@@ -19,7 +19,7 @@ import {
 } from 'rxjs'
 import { isPromise } from 'util/types'
 import type { ExtDef, ExtId, ExtTopo, Message, Pointer, PushOptions, Shell, TypeofPath } from '../../types'
-import { matchMessage } from '../message'
+import { manageMsg, matchMessage } from '../message'
 import { isBWCSemanticallySamePointers, joinPointer, splitPointer } from '../pointer'
 import {
   ItemData,
@@ -71,7 +71,7 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$' 
           // tap(console.log),
           filter(msg => matchMessage<Def>()(msg, subP.subPointer as any)),
           mergeMap(subReqMsg => {
-            subReqMsg.managedBy = shell.extId
+            manageMsg(subReqMsg, shell.extId)
             try {
               const [valObs$, tearDownLogic] = providedValToObsAndTeardown(
                 valObsProvider({

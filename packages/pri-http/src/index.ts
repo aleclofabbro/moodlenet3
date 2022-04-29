@@ -112,7 +112,6 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
               next({ msg, val }) {
                 console.log('HTTP', { parMsgId: msg.parentMsgId, val })
                 res.cork()
-                // :/ no good !
                 res.write(JSON.stringify({ msg, val }) + '\n')
                 process.nextTick(() => res.uncork())
               },
@@ -128,7 +127,7 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
             })
           res.on('close', () => {
             // curl works , postman nope
-            console.log('HTTP RESPONSE CLOSED **********************************************')
+            console.log('HTTP RESPONSE CLOSED **********************************************', apiSub.closed)
             apiSub.unsubscribe()
           })
         } catch (err) {
@@ -149,5 +148,5 @@ type Env = {
 }
 function getEnv(rawExtEnv: K.RawExtEnv): Env {
   console.log({ rawExtEnv })
-  return rawExtEnv as any //implement checks
+  return rawExtEnv as any //FIXME: implement checks
 }

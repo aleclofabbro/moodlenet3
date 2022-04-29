@@ -1,7 +1,7 @@
 import { DepGraph } from 'dependency-graph'
-import { interval, map, mergeMap, of, share, Subject, take } from 'rxjs'
+import { interval, map, mergeMap, of, share, Subject, take, tap } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
-import { onMessage } from './k/message'
+import { manageIn } from './k/manageIn'
 import { joinPointer, splitExtId } from './k/pointer'
 import { pubAll } from './k/sub'
 import { createLocalDeploymentRegistry } from './registry'
@@ -22,9 +22,10 @@ import type {
   PkgInfo,
   PushMessage,
   PushOptions,
+  RawExtEnv,
 } from './types'
 
-export type CreateCfg = { global_env: Record<ExtName, any> }
+export type CreateCfg = { global_env: Record<ExtName, RawExtEnv> }
 
 export const kernelPkgInfo: PkgInfo = { name: '@moodlenet/kernel', version: '0.1.10' }
 export const kernelExtId: ExtId<KernelExt> = 'kernel.core@0.1.10'
@@ -51,6 +52,7 @@ export const create = ({ global_env }: CreateCfg) => {
         .filter((mw): mw is MWFn => !!mw)
         .reduce(($, mwFn) => $.pipe(mergeMap(mwFn)), of(msg))
     }),
+    tap(msg => setImmediate(() => console.log('*******msg', msg))),
     share(),
   )
 
@@ -62,21 +64,21 @@ export const create = ({ global_env }: CreateCfg) => {
     start: shell => {
       // /* const x =  */ push('out')('kernel.core@0.1.10')('ext/deployment/starting')(1)
       // emit('ext/deployment/stopping')({ reason: 'DISABLING_REQUIRED_EXTENSION' })
-      shell.msg$.subscribe(msg => {
-        const onMy = onMessage<KernelExt>(msg)
-        onMy('kernel.core@0.1.10::ext/deployment/stopping', stopMsg => {
-          // const { bound, data, id, parentMsgId, pointer, source } = stopMsg
-          stopMsg.data.reason === 'DISABLING_REQUIRED_EXTENSION'
-          console.log('OH MY deployment/stopping', stopMsg.id)
-        })
-        onMy('kernel.core@0.1.10::ext/deployment/starting', startMsg => {
-          startMsg.data
-          startMsg.pointer === 'kernel.core@0.1.10::ext/deployment/starting'
-          console.log('OH MY deployment/starting', startMsg.id)
-        })
-        onMy('kernel.core@0.1.10::ext/deployment/ready', readyMsg => {
-          console.log('OH MY deployment/ready', readyMsg.id)
-        })
+      manageIn(shell)('kernel.core@0.1.10::ext/deployment/stopping', stopMsg => {
+        // const { bound, data, id, parentMsgId, pointer, source } = stopMsg
+        stopMsg.data.reason === 'DISABLING_REQUIRED_EXTENSION'
+        console.log('OH MY deployment/stopping', stopMsg.id)
+      })
+      manageIn(shell)('kernel.core@0.1.10::ext/deployment/starting', startMsg => {
+        startMsg.data
+        startMsg.pointer === 'kernel.core@0.1.10::ext/deployment/starting'
+        console.log('OH MY deployment/starting', startMsg.id)
+      })
+      manageIn(shell)('kernel.core@0.1.10::ext/deployment/ready', readyMsg => {
+        console.log('OH xx MY deployment/ready', readyMsg.id)
+      })
+      shell.expose({
+        'testSub/sub': { validate: () => ({ valid: false, msg: 'no good' }) },
       })
       pubAll<KernelExt>('kernel.core@0.1.10', shell, {
         testSub(_) {
@@ -161,20 +163,20 @@ export const create = ({ global_env }: CreateCfg) => {
         ..._opts,
       }
       const pointer = joinPointer(destExtId, path)
-      deplReg.assert(destExtId)
-      // if (opts.primary) {
-      //   const { extName: pushToExtName } = splitExtId(destExtId)
-      //   const expPnt = EXPOSED_POINTERS_REG[pushToExtName]?.[path]
-      //   if (!expPnt) {
-      //     throw new Error(`pointer ${pointer} is not exposed to primaries`)
-      //   }
-      //   const validated = expPnt.validateData(data)
-      //   if (!validated) {
-      //     throw new Error(`data validation didn't pass for ${pointer}`)
-      //   }
-      // }
+      const deployment = deplReg.assert(destExtId)
+      if (opts.primary) {
+        const { extName: pushToExtName } = splitExtId(destExtId)
+        const expPnt = EXPOSED_POINTERS_REG[pushToExtName]?.[path]
+        if (!expPnt) {
+          throw new Error(`pointer ${pointer} is not exposed to primaries`)
+        }
+        const { valid, msg = '- no details -' } = expPnt.validate(data)
+        if (!valid) {
+          throw new Error(`data validation didn't pass for ${pointer} : ${msg}`)
+        }
+      }
 
-      const parentMsgId = opts.parent?.id ?? null
+      const parentMsgId = opts.parent?.id
       // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
       assertMeIsActive()
       const msg: Message /* <typeof bound, Def, DestDef, typeof path>  */ = {
@@ -185,22 +187,25 @@ export const create = ({ global_env }: CreateCfg) => {
         data: data as any,
         parentMsgId,
         sub: opts.sub,
-        managedBy: null,
+        // managedBy: null,
+        activeDest: deployment.ext.id,
       }
 
       setTimeout(() => $MAIN_MSGS$.next(msg), 10)
       return msg as any
     }
+
     const expose: ExposePointers<Def> = expPnt => {
       EXPOSED_POINTERS_REG[extName] = expPnt
     }
+
     const { mw } =
       extPkg.ext.start({
         pkgInfo: extPkg.pkgInfo,
         extId,
         env,
         msg$: $msg$.asObservable(),
-        // removing "as any" generates  https://github.com/microsoft/TypeScript/issues/33133
+        // removing "as any" generates  "Error: Debug Failure. No error for last overload signature" ->https://github.com/microsoft/TypeScript/issues/33133  ... related:https://github.com/microsoft/TypeScript/issues/37974
         emit: path => (data, opts) => (push as any)('out')(extId)(path)(data, opts),
         send: extId => path => (data, opts) => (push as any)('in')(extId)(path)(data, opts),
         push,

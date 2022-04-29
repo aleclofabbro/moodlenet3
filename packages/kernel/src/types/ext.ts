@@ -31,14 +31,14 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends ExtDef[] = ExtDef[
   description?: string
 }
 
-export type RawExtEnv = Record<string, any>
+export type RawExtEnv = Record<string, unknown> | undefined
 
 export interface Shell<Def extends ExtDef = ExtDef> {
   msg$: Observable<Message>
   push: PushMessage<Def>
   emit: EmitMessage<Def>
   send: SendMessage
-  env: RawExtEnv
+  env: RawExtEnv 
   extId: ExtId<Def>
   pkgInfo: PkgInfo
   tearDown: Subscription
@@ -80,8 +80,12 @@ export type PushOptions = {
 }
 
 export type ExposedPointer = {
-  validateData(data: unknown): boolean
-  subResult: 'array' | 'stream'
+  validate(data: unknown): ValidationMessage
+}
+
+type ValidationMessage = {
+  valid: boolean
+  msg?: string
 }
 
 export type ExposePointers<Def extends ExtDef = ExtDef> = (p: Partial<ExposedPointerMap<Def>>) => void
