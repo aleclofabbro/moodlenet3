@@ -167,22 +167,30 @@ export const create = ({ global_env }: CreateCfg) => {
     const getExt: Shell['getExt'] = extId => {
       const regDeployable = deplReg.getCompat(extId)
 
-      const onExtDeployable: OnExtDeployable | undefined = regDeployable && {
+      const onExtDeployable: OnExtDeployable<ExtDef> | undefined = regDeployable && {
+        lib: regDeployable.lib,
         at: regDeployable.at,
         pkgInfo: regDeployable.pkgInfo,
         version: splitExtId(regDeployable.ext.id).version,
       }
-      const onExtDeployment: OnExtDeployment<Def> | undefined = regDeployable?.deployment && {
+      const onExtDeployment: OnExtDeployment<ExtDef> | undefined = regDeployable?.deployment && {
         at: regDeployable.deployment.at,
-        lib: regDeployable.deployment.lib,
+        inst: regDeployable.deployment.inst,
+        lib: regDeployable.lib,
         pkgInfo: regDeployable.pkgInfo,
         version: splitExtId(regDeployable.ext.id).version,
       }
-      if (!onExtDeployable && onExtDeployment) {
-        throw new Error(`onExt: should never happen: ${extId} has onExtDeployment but not onExtDeployable`)
+
+      if (!(onExtDeployable && onExtDeployment)) {
+        throw new Error(
+          `onExt: should never happen: ${extId} missing ${onExtDeployable ? '' : 'onExtDeployable'} ${
+            onExtDeployment ? '' : 'onExtDeployment'
+          }`,
+        )
       }
-      const extDepl = [onExtDeployable, onExtDeployment] as ExtDepl<Def>
-      return extDepl
+
+      const extDepl = [onExtDeployable, onExtDeployment] as ExtDepl<ExtDef>
+      return extDepl as any
     }
 
     const onExt: Shell['onExt'] = (extId, cb) => {
@@ -207,16 +215,18 @@ export const create = ({ global_env }: CreateCfg) => {
 
     const onExtDeployed: Shell['onExtDeployed'] = (extId, cb) => {
       let cleanup: void | (() => void) = undefined
-      const subscription = onExt(extId, ([, extDeployment]) => {
+      const subscription = onExt(extId, ([extDeployable, extDeployment]) => {
         if (!extDeployment) {
           return cleanup?.()
         }
-        cleanup = cb({
+        const onExtDeployment: OnExtDeployment<ExtDef> = {
           at: extDeployment.at,
           pkgInfo: extDeployment.pkgInfo,
-          lib: extDeployment.lib,
+          inst: extDeployment.inst,
           version: extDeployment.version,
-        })
+          lib: extDeployable.lib,
+        }
+        cleanup = cb(onExtDeployment)
       })
       return subscription
     }
@@ -226,11 +236,13 @@ export const create = ({ global_env }: CreateCfg) => {
         if (!extDeployable) {
           return cleanup?.()
         }
-        cleanup = cb({
+        const onExtDeployable: OnExtDeployable<ExtDef> = {
           at: extDeployable.at,
           pkgInfo: extDeployable.pkgInfo,
           version: extDeployable.version,
-        })
+          lib: extDeployable.lib,
+        }
+        cleanup = cb(onExtDeployable as any)
       })
       return subscription
     }

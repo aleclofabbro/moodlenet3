@@ -8,7 +8,7 @@ interface Lib {
 }
 type GetLib = (shell: K.Shell) => Lib
 
-export type MNPriHttpExt = K.ExtDef<'moodlenet.pri-http', '0.1.10', {}, GetLib>
+export type MNPriHttpExt = K.ExtDef<'moodlenet.pri-http', '0.1.10', {}, void, GetLib>
 export const priHttpExtId: K.ExtId<MNPriHttpExt> = 'moodlenet.pri-http@0.1.10'
 
 // const ext: K.Ext<MNPriHttpExt, [K.KernelExt, coreExt.sysLog.MoodlenetSysLogExt]> = {
@@ -44,10 +44,10 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
           logger.info(`No port defined in env, won't start HTTP server at startup`)
         }
         return {
-          lib,
+          inst,
         }
 
-        function lib(userShell: K.Shell): Lib {
+        function inst(userShell: K.Shell): Lib {
           return {
             mount({ app, absMountPath }) {
               const { extName /* , version */ } = K.splitExtId(userShell.extId)

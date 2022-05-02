@@ -63,7 +63,7 @@ export const createLocalDeployableRegistry = () => {
 
   function lib(extId: ExtId) {
     const regDeployable = getCompat(extId)
-    return regDeployable?.deployment?.lib
+    return regDeployable?.deployment?.inst
   }
 
   function enable<Def extends ExtDef>({
@@ -97,7 +97,7 @@ export const createLocalDeployableRegistry = () => {
       at: new Date(),
       ...deploymentShell,
       ...deployment,
-      lib: deployment.lib ?? undefined,
+      inst: deployment.inst ?? undefined,
     }
 
     return (currRegDeployable.deployment = regDeployment)

@@ -9,6 +9,7 @@ export type ExtVersion = string
 
 export type ExtId<Def extends ExtDef = ExtDef> = `${Def['name']}@${Def['version']}` //` ;)
 export type ExtName<Def extends ExtDef = ExtDef> = `${Def['name']}` //` ;)
+export type ExtInst<Def extends ExtDef = ExtDef> = Def['inst']
 export type ExtLib<Def extends ExtDef = ExtDef> = Def['lib']
 export type ExtTopo<Def extends ExtDef = ExtDef> = Def['topo']
 
@@ -16,11 +17,13 @@ export type ExtDef<
   Name extends string = string,
   Version extends ExtVersion = ExtVersion,
   ExtTopo extends Topo = Topo,
-  Lib extends {} = any,
+  Lib extends any = any,
+  Instance extends any = any,
 > = {
   name: Name
   version: Version
   topo: ExtTopo //& { '': Port<PortBinding, any> }
+  inst: Instance
   lib: Lib
 }
 
@@ -54,7 +57,7 @@ export interface Shell<Def extends ExtDef = ExtDef> {
 
 export type OnExtEnabled = <Def extends ExtDef>(
   id: ExtId<Def>,
-  cb: (_: OnExtDeployable) => void | (() => void),
+  cb: (_: OnExtDeployable<Def>) => void | (() => void),
 ) => Subscription
 
 export type OnExt = <Def extends ExtDef>(id: ExtId<Def>, cb: (_: ExtDepl<Def>) => void) => Subscription
@@ -67,13 +70,13 @@ export type OnExtDeployed = <Def extends ExtDef>(
 export type GetExt = <Def extends ExtDef>(id: ExtId<Def>) => ExtDepl<Def>
 
 export type ExtDepl<Def extends ExtDef> =
-  | [OnExtDeployable, OnExtDeployment<Def>]
-  | [OnExtDeployable, undefined]
+  | [OnExtDeployable<Def>, OnExtDeployment<Def>]
+  | [OnExtDeployable<Def>, undefined]
   | [undefined, undefined]
 
-export type OnExtDeployment<Def extends ExtDef> = OnExtDeployable & { lib: ExtLib<Def> }
-export type OnExtDeployable = { version: Version; at: Date; pkgInfo: PkgInfo }
-export type GetExtLib = <Def extends ExtDef>(id: ExtId<Def>) => ExtLib<Def> | void
+export type OnExtDeployment<Def extends ExtDef> = OnExtDeployable<Def> & { inst: ExtInst<Def> }
+export type OnExtDeployable<Def extends ExtDef> = { version: Version; at: Date; pkgInfo: PkgInfo; lib: ExtLib<Def> }
+export type GetExtLib = <Def extends ExtDef>(id: ExtId<Def>) => ExtInst<Def> | void
 
 export interface DeploymentShell<Def extends ExtDef = ExtDef> {
   tearDown: Subscription
@@ -83,14 +86,14 @@ export interface DeploymentShell<Def extends ExtDef = ExtDef> {
 export type MWFn = (msg: IMessage<any>, index: number) => Observable<IMessage<any>>
 
 export type ExtEnable<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => ExtDeployable<Def>
-export interface ExtDeployable<Def extends ExtDef = ExtDef> {
-  deploy: (_: DeploymentShell<Def>) => ExtDeploymentHandle<Def>
+export type ExtDeployable<Def extends ExtDef = ExtDef> = {
+  deploy: (_: DeploymentShell<Def>) => ExtDeployment<Def>
   mw?: MWFn
-}
+} & (ExtLib<Def> extends undefined | null | void ? { lib?: undefined } : { lib: ExtLib<Def> })
 
-export type ExtDeploymentHandle<Def extends ExtDef = ExtDef> = {} & (ExtLib<Def> extends undefined | null | void
-  ? { lib?: undefined }
-  : { lib: ExtLib<Def> })
+export type ExtDeployment<Def extends ExtDef = ExtDef> = {} & (ExtInst<Def> extends undefined | null | void
+  ? { inst?: undefined }
+  : { inst: ExtInst<Def> })
 
 export type EmitMessage<SrcDef extends ExtDef = ExtDef> = <Path extends PortPaths<SrcDef, 'out'>>(
   path: Path,
