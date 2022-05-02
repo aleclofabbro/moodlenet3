@@ -35,10 +35,10 @@ export type TopoPaths<Def extends ExtDef, TargetTopo extends Topo = Topo> = Type
 
 export type AllPaths<Def extends ExtDef> = TopoPaths<Def> | PortPaths<Def>
 
-export type SemanticPointer<
-  Def extends ExtDef = ExtDef,
-  Path extends AllPaths<Def> = AllPaths<Def>,
-> = `${Def['name']}::${Path}` //`;)
+// export type SemanticPointer<
+//   Def extends ExtDef = ExtDef,
+//   Path extends AllPaths<Def> = AllPaths<Def>,
+// > = `${Def['name']}::${Path}` //`;)
 
 export type Pointer<Def extends ExtDef = ExtDef, Path extends AllPaths<Def> = AllPaths<Def>> = `${ExtId<Def>}::${Path}` // & {  def?: Def; path?: Path } //`;)
 

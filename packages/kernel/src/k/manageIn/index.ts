@@ -12,7 +12,7 @@ export function manageIn<Def extends ExtDef>(
     shell.msg$.subscribe(msg =>
       onMessage<Def>(msg)(matchPointer, msg => {
         manageMsg(msg, shell.extId)
-        return cb(msg)
+        return cb(msg as any)
       }),
     )
 }

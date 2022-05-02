@@ -18,6 +18,8 @@ export function boot() {
       console.log({ _: pkgDiskInfo })
       const exts: Ext[] = req(pkgDiskInfo.name).default
       console.log({ exts })
-      exts.forEach(ext => K.startExtension({ ext, pkgInfo: pkgDiskInfo }))
+      exts
+        .map(ext => K.enableExtension({ ext, pkgInfo: pkgDiskInfo }))
+        .forEach(regDeployable => K.deployExtension({ extId: regDeployable.ext.id }))
     })
 }

@@ -1,5 +1,5 @@
 import { satisfies } from 'semver'
-import type { AllPaths, ExtDef, ExtId, Pointer, SemanticPointer, Version } from '../../types'
+import type { AllPaths, ExtDef, ExtId, Pointer, Version } from '../../types'
 
 export function baseSplitPointer<Ext extends ExtDef, Path extends AllPaths<Ext>>(pointer: Pointer<Ext, Path>) {
   const [extId, path] = pointer.split('::') as [ExtId<Ext>, Path]
@@ -23,12 +23,12 @@ export function joinPointer<Def extends ExtDef, Path extends AllPaths<Def>>(
   return `${extId}::${path}`
 }
 
-export function joinSemanticPointer<Ext extends ExtDef, Path extends AllPaths<Ext>>(
-  a: Pointer<Ext, Path>,
-): SemanticPointer<Ext, Path> {
-  const aSplit = splitPointer(a)
-  return `${aSplit.extName}::${aSplit.path}`
-}
+// export function joinSemanticPointer<Ext extends ExtDef, Path extends AllPaths<Ext>>(
+//   a: Pointer<Ext, Path>,
+// ): SemanticPointer<Ext, Path> {
+//   const aSplit = splitPointer(a)
+//   return `${aSplit.extName}::${aSplit.path}`
+// }
 
 export function isVerBWC(target: Version, requested: Version) {
   return satisfies(target, `^${requested}`)

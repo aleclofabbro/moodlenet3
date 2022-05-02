@@ -1,114 +1,140 @@
+import { Subject } from 'rxjs'
 import { isVerBWC, splitExtId } from '../k/pointer'
-import type { DeploymentActionResult, ExtDef, ExtDeployable, ExtDeployment, ExtId, ExtName } from '../types'
+import type {
+  DeploymentShell,
+  Ext,
+  ExtDef,
+  ExtId,
+  ExtName,
+  IMessage,
+  PkgInfo,
+  RegDeployable,
+  RegDeployment,
+  Shell,
+} from '../types'
 
-export type ExtLocalDeploymentRegistry = ReturnType<typeof createLocalDeploymentRegistry>
+export type ExtLocalDeployableRegistry = ReturnType<typeof createLocalDeployableRegistry>
 
-export const createLocalDeploymentRegistry = () => {
+export const createLocalDeployableRegistry = () => {
   const reg: {
-    [Name in ExtName]: ExtDeployment
+    [Name in ExtName]: RegDeployable
   } = {}
 
   return {
     get,
-    set,
-    unset,
-    assert,
-    assertReady,
-    start,
-    stop,
-    ready,
+    enable,
+    disable,
+    assertEnabled,
+    undeploy,
+    assertDeployed,
+    isDeployed,
     reg,
-    isReady,
+    deploy,
+    lib,
+    getCompat,
   }
 
-  function get<Def extends ExtDef>(extId: ExtId<Def>) {
+  function getCompat(extId: ExtId) {
     const { extName, version } = splitExtId(extId)
-    const deployment: undefined | ExtDeployment<Def> = reg[extName] as any
-    if (!deployment) {
+    const regDeployable = get(extName)
+    if (!regDeployable) {
       return undefined
     }
-    const { version: deployedVersion } = splitExtId(deployment.ext.id)
+    const { version: deployedVersion } = splitExtId(regDeployable.ext.id)
     const isCompat = isVerBWC(deployedVersion, version)
-    // console.log({
-    //   isCompat,
-    //   deployedVersion,
-    //   version,
-    //   extName,
-    //   deployedId: deployment?.ext.id,
-    //   deployedSt: deployment?.status,
-    // })
-    return isCompat ? deployment : undefined
+    // debug()
+    return isCompat ? regDeployable : undefined
+
+    // function debug() {
+    //   console.log({
+    //     isCompat,
+    //     deployedVersion,
+    //     version,
+    //     extName,
+    //     deployedId: deployment?.ext.id,
+    //   })
+    // }
   }
 
-  function set<Def extends ExtDef>(deployment: ExtDeployment<Def>) {
-    const { extName } = splitExtId(deployment.ext.id)
-    reg[extName] = deployment as any
+  function get(extName: ExtName) {
+    const regDeployable = reg[extName]
+    return regDeployable
   }
 
-  function unset<Def extends ExtDef>(extName: ExtName<Def>) {
+  function lib(extId: ExtId) {
+    const regDeployable = getCompat(extId)
+    return regDeployable?.deployment?.lib
+  }
+
+  function enable<Def extends ExtDef>({
+    ext,
+    pkgInfo,
+    shell,
+    $msg$,
+  }: {
+    pkgInfo: PkgInfo
+    ext: Ext<Def>
+    shell: Shell<Def>
+    $msg$: Subject<IMessage<any>>
+  }) {
+    const { extName } = splitExtId(ext.id)
+    const currDeployable = reg[extName]
+    if (currDeployable) {
+      throw new Error(`can't register ${ext.id} as it's already present in registry (${currDeployable.ext.id})`)
+    }
+    const deployable = ext.enable(shell)
+    const regDeployable: RegDeployable<Def> = { ...deployable, ext, pkgInfo, shell, $msg$, at: new Date() }
+    return (reg[extName] = regDeployable as any)
+  }
+
+  function deploy({ deploymentShell, extId }: { extId: ExtId; deploymentShell: DeploymentShell }) {
+    const currRegDeployable = assertEnabled(extId)
+    if (currRegDeployable.deployment) {
+      throw new Error(`can't deploy ${extId} as it's already deployed since ${currRegDeployable.deployment.at}`)
+    }
+    const deployment = currRegDeployable.deploy(deploymentShell)
+    const regDeployment: RegDeployment = {
+      at: new Date(),
+      ...deploymentShell,
+      ...deployment,
+      lib: deployment.lib ?? undefined,
+    }
+
+    return (currRegDeployable.deployment = regDeployment)
+  }
+
+  function undeploy(extName: ExtName) {
+    const currDeployable = get(extName)
+    currDeployable?.deployment?.tearDown.unsubscribe()
+    delete currDeployable?.deployment
+    return currDeployable
+  }
+
+  function disable(extName: ExtName) {
+    const currDeployable = undeploy(extName)
+    currDeployable?.$msg$.complete()
     delete reg[extName]
+    return currDeployable
   }
 
-  function assert<Def extends ExtDef>(extId: ExtId<Def>) {
-    const deployment = get<Def>(extId)
-    if (!deployment) {
-      throw new Error(`assert: no extension matching [${extId}]`)
+  function assertEnabled(extId: ExtId) {
+    const currDeployable = getCompat(extId)
+    if (!currDeployable) {
+      throw new Error(`assert: no compat extension matching [${extId}]`)
     }
-    return deployment
+    return currDeployable
   }
 
-  function assertReady<Def extends ExtDef>(extId: ExtId<Def>) {
-    const deployment = assert<Def>(extId)
-    if (deployment.status !== 'ready') {
-      throw new Error(`assertReady: extension matching [${extId}] not ready, ${deployment.status} instead`)
+  function assertDeployed(extId: ExtId) {
+    const currDeployable = assertEnabled(extId)
+    if (!currDeployable.deployment) {
+      throw new Error(`assertDeployed: extension matching [${extId}] not deployed`)
     }
-    return deployment
-  }
-  function isReady<Def extends ExtDef>(extId: ExtId<Def>) {
-    const deployment = get<Def>(extId)
-    return deployment?.status === 'ready' || deployment?.status === 'starting'
-  }
-  function start<Def extends ExtDef>(deployable: ExtDeployable<Def>): DeploymentActionResult<Def> {
-    const currDeployment = get(deployable.ext.id)
-    if (currDeployment) {
-      return { done: false, currDeployment: currDeployment as any }
-    }
-    const deployment: ExtDeployment<Def> = {
-      ...deployable,
-      at: new Date(),
-      status: 'starting',
-    }
-    set(deployment)
-
-    return { done: true, deployment }
+    return [currDeployable.deployment, currDeployable] as const
   }
 
-  function stop<Def extends ExtDef>(extId: ExtId<Def>): DeploymentActionResult<Def> {
-    const currDeployment = get(extId)
-    if (currDeployment?.status !== 'ready') {
-      return { done: false, currDeployment: currDeployment as any }
-    }
-    const deployment: ExtDeployment<Def> = {
-      ...currDeployment,
-      at: new Date(),
-      status: 'stopping',
-    } as any
-    set(deployment)
-    return { done: true, deployment }
-  }
-
-  function ready<Def extends ExtDef>(extId: ExtId<Def>): DeploymentActionResult<Def> {
-    const currDeployment = get(extId)
-    if (currDeployment?.status !== 'starting') {
-      return { done: false, currDeployment: currDeployment as any }
-    }
-
-    const deployment: ExtDeployment<Def> = {
-      ...currDeployment,
-      status: 'ready',
-      at: new Date(),
-    } as any
-    set(deployment)
-    return { done: true, deployment }
+  function isDeployed(extId: ExtId) {
+    const currDeployable = assertEnabled(extId)
+    return !!currDeployable.deployment
   }
 }

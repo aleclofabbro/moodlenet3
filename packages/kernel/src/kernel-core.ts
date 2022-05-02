@@ -1,28 +1,32 @@
 import { DepGraph } from 'dependency-graph'
 import { interval, map, mergeMap, of, share, Subject, take, tap } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
-import { manageIn } from './k/manageIn'
-import { joinPointer, splitExtId } from './k/pointer'
+import { matchMessage } from './k/message'
+import { isVerBWC, joinPointer, splitExtId, splitPointer } from './k/pointer'
 import { pubAll } from './k/sub'
-import { createLocalDeploymentRegistry } from './registry'
+import { createLocalDeployableRegistry } from './registry'
 import type {
   DepGraphData,
+  DeploymentShell,
   ExposedPointerMap,
   ExposePointers,
   Ext,
   ExtDef,
-  ExtDeployable,
-  ExtDeployment,
+  ExtDepl,
   ExtId,
   ExtName,
-  ExtPkg,
+  IMessage,
   KernelExt,
   MessagePush,
   MWFn,
+  OnExtDeployable,
+  OnExtDeployment,
   PkgInfo,
   PushMessage,
   PushOptions,
   RawExtEnv,
+  RegDeployable,
+  Shell,
 } from './types'
 
 export type CreateCfg = { global_env: Record<ExtName, RawExtEnv> }
@@ -40,9 +44,9 @@ export const create = ({ global_env }: CreateCfg) => {
   const EXPOSED_POINTERS_REG: Record<ExtName, ExposedPointerMap> = {}
   // const _env = getEnv(global_env['kernel.core'])
 
-  const deplReg = createLocalDeploymentRegistry()
+  const deplReg = createLocalDeployableRegistry()
   const depGraph = new DepGraph<DepGraphData>()
-  const $MAIN_MSGS$ = new Subject<MessagePush>()
+  const $MAIN_MSGS$ = new Subject<IMessage<any>>()
   const pipedMessages$ = $MAIN_MSGS$.pipe(
     mergeMap(msg => {
       const orderDepl = depOrderDeployments()
@@ -61,68 +65,35 @@ export const create = ({ global_env }: CreateCfg) => {
     displayName: 'K',
     description: 'K',
     requires: [],
-    start: shell => {
-      // /* const x =  */ push('out')('kernel.core@0.1.10')('ext/deployment/starting')(1)
-      // emit('ext/deployment/stopping')({ reason: 'DISABLING_REQUIRED_EXTENSION' })
-      manageIn(shell)('kernel.core@0.1.10::ext/deployment/stopping', stopMsg => {
-        // const { bound, data, id, parentMsgId, pointer, source } = stopMsg
-        stopMsg.data.reason === 'DISABLING_REQUIRED_EXTENSION'
-        console.log('OH MY deployment/stopping', stopMsg.id)
-      })
-      manageIn(shell)('kernel.core@0.1.10::ext/deployment/starting', startMsg => {
-        startMsg.data
-        startMsg.pointer === 'kernel.core@0.1.10::ext/deployment/starting'
-        console.log('OH MY deployment/starting', startMsg.id)
-      })
-      manageIn(shell)('kernel.core@0.1.10::ext/deployment/ready', readyMsg => {
-        console.log('OH xx MY deployment/ready', readyMsg.id)
-      })
-      shell.expose({
-        'testSub/sub': { validate: () => ({ valid: false, msg: 'no good' }) },
-      })
-      pubAll<KernelExt>('kernel.core@0.1.10', shell, {
-        testSub(_) {
-          // console.log({ '**********': _ })
-          return interval(500).pipe(
-            take(10),
-            map(n => /* 
-              n === 6
-                ? (() => {
-                    throw new Error('axx')
-                  })()
-                : */ ({ a: `${_.req.XX}\n\n(${n})` })),
-          )
-        },
-      })
-      setTimeout(() => shell.send<KernelExt>('kernel.core@0.1.10')('ext/deployment/ready')(2), 1000)
-
+    enable: shell => {
       return {
-        mw: msg => of(msg) /* .pipe(
-            tap(msg => console.log(`got msg: ${msg.pointer}#${msg.id}`)),
-            delay(1000),
-            tap(msg => console.log(`delayed output of msg: ${msg.pointer}#${msg.id}`)),
-          )  */,
+        mw: msg => of(msg),
+        deploy({ expose /* , tearDown  */ }) {
+          expose({
+            'testSub/sub': { validate: () => ({ valid: true, msg: 'no good' }) },
+          })
+          pubAll<KernelExt>('kernel.core@0.1.10', shell, {
+            testSub(_) {
+              return interval(500).pipe(
+                take(5),
+                map(n => ({ a: `${_.msg.data.req.XX}\n\n(${n})` })),
+              )
+            },
+          })
+          return {}
+        },
       }
     },
   }
   depGraphAddNodes(depGraph, [kernelExt])
-  const startKResult = startExtension({ ext: kernelExt, pkgInfo: kernelPkgInfo })
-  if (!startKResult.done) {
-    throw new Error(
-      `Couldn't start ${kernelExt.id} : currDeployment: ${JSON.stringify(startKResult.currDeployment, null, 4)}`,
-    )
-  }
-
-  // const mainObserver: Observer<Message> = {
-  //   next: msg => depOrderDeployments().forEach(deployment => deployment.$msg$.next(msg)),
-  //   complete() {},
-  //   error() {},
-  // }
+  const KDeployable = enableExtension<KernelExt>({ ext: kernelExt, pkgInfo: kernelPkgInfo })
+  const KDeployment = deployExtension({ extId: kernelExtId })
 
   return {
-    // mainObserver,
-    stopExtension,
-    startExtension,
+    deployExtension,
+    disableExtension,
+    undeployExtension,
+    enableExtension,
     depOrderDeployments,
     extEnv,
     global_env,
@@ -130,7 +101,8 @@ export const create = ({ global_env }: CreateCfg) => {
     depGraph,
     $MAIN_MSGS$,
     pipedMessages$,
-    startKResult,
+    KDeployable,
+    KDeployment,
   }
 
   function extEnv(extId: ExtId) {
@@ -140,21 +112,17 @@ export const create = ({ global_env }: CreateCfg) => {
     return global_env[extName]
   }
 
-  function stopExtension<Def extends ExtDef = ExtDef>(extId: ExtId<Def>) {
-    const stopRes = deplReg.stop(extId)
-    if (!stopRes.done) {
-      return stopRes
-    }
-    stopRes.deployment.tearDown.unsubscribe()
-    return stopRes.deployment
+  function disableExtension(extName: ExtName) {
+    return deplReg.disable(extName)
   }
-  function startExtension<Def extends ExtDef = ExtDef>(extPkg: ExtPkg<Def>) {
-    const extId = extPkg.ext.id
-    const { extName /* , version */ } = splitExtId(extId)
+  function undeployExtension(extName: ExtName) {
+    return deplReg.undeploy(extName)
+  }
+  function enableExtension<Def extends ExtDef>({ ext, pkgInfo }: { ext: Ext<Def>; pkgInfo: PkgInfo }) {
+    const extId = ext.id
     const env = extEnv(extId)
-    const $msg$ = new Subject<MessagePush>()
-    const tearDown = pipedMessages$.subscribe($msg$)
-    const push: PushMessage<Def> = bound => destExtId => path => (data, _opts) => {
+    const $msg$ = new Subject<IMessage<any>>()
+    const push: PushMessage = bound => destExtId => path => (data, _opts) => {
       // console.log('PUSH', { bound, destExtId, path, data, _opts })
       const opts: PushOptions = {
         parent: null,
@@ -163,10 +131,11 @@ export const create = ({ global_env }: CreateCfg) => {
         ..._opts,
       }
       const pointer = joinPointer(destExtId, path)
-      const deployment = deplReg.assert(destExtId)
+      const [, destRegDeployable] = deplReg.assertDeployed(destExtId)
       if (opts.primary) {
         const { extName: pushToExtName } = splitExtId(destExtId)
         const expPnt = EXPOSED_POINTERS_REG[pushToExtName]?.[path]
+        console.log({ EXPOSED_POINTERS_REG, pushToExtName, destExtId, path })
         if (!expPnt) {
           throw new Error(`pointer ${pointer} is not exposed to primaries`)
         }
@@ -178,7 +147,7 @@ export const create = ({ global_env }: CreateCfg) => {
 
       const parentMsgId = opts.parent?.id
       // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
-      assertMeIsActive()
+      assertMeEnabled()
       const msg: MessagePush /* <typeof bound, Def, DestDef, typeof path>  */ = {
         id: newMsgId(),
         source: extId,
@@ -188,44 +157,127 @@ export const create = ({ global_env }: CreateCfg) => {
         parentMsgId,
         sub: opts.sub,
         // managedBy: null,
-        activeDest: deployment.ext.id,
+        activeDest: destRegDeployable.ext.id,
       }
 
       setTimeout(() => $MAIN_MSGS$.next(msg), 10)
       return msg as any
     }
 
-    const expose: ExposePointers<Def> = expPnt => {
+    const getExt: Shell['getExt'] = extId => {
+      const regDeployable = deplReg.getCompat(extId)
+
+      const onExtDeployable: OnExtDeployable | undefined = regDeployable && {
+        at: regDeployable.at,
+        pkgInfo: regDeployable.pkgInfo,
+        version: splitExtId(regDeployable.ext.id).version,
+      }
+      const onExtDeployment: OnExtDeployment<Def> | undefined = regDeployable?.deployment && {
+        at: regDeployable.deployment.at,
+        lib: regDeployable.deployment.lib,
+        pkgInfo: regDeployable.pkgInfo,
+        version: splitExtId(regDeployable.ext.id).version,
+      }
+      if (!onExtDeployable && onExtDeployment) {
+        throw new Error(`onExt: should never happen: ${extId} has onExtDeployment but not onExtDeployable`)
+      }
+      const extDepl = [onExtDeployable, onExtDeployment] as ExtDepl<Def>
+      return extDepl
+    }
+
+    const onExt: Shell['onExt'] = (extId, cb) => {
+      const match = matchMessage<KernelExt>()
+      const matchExtIdSplit = splitExtId(extId)
+      const subscription = pipedMessages$.subscribe(msg => {
+        const targetExtIdSplit = splitPointer(msg.pointer)
+
+        if (
+          targetExtIdSplit.extName === matchExtIdSplit.extName &&
+          isVerBWC(targetExtIdSplit.version, matchExtIdSplit.version) &&
+          (match(msg, 'kernel.core@0.1.10::ext/deployed') ||
+            match(msg, 'kernel.core@0.1.10::ext/undeployed') ||
+            match(msg, 'kernel.core@0.1.10::ext/enabled') ||
+            match(msg, 'kernel.core@0.1.10::ext/disabled'))
+        ) {
+          if (!msg) cb(getExt(extId))
+        }
+      })
+      return subscription
+    }
+
+    const onExtDeployed: Shell['onExtDeployed'] = (extId, cb) => {
+      let cleanup: void | (() => void) = undefined
+      const subscription = onExt(extId, ([, extDeployment]) => {
+        if (!extDeployment) {
+          return cleanup?.()
+        }
+        cleanup = cb({
+          at: extDeployment.at,
+          pkgInfo: extDeployment.pkgInfo,
+          lib: extDeployment.lib,
+          version: extDeployment.version,
+        })
+      })
+      return subscription
+    }
+    const onExtEnabled: Shell['onExtEnabled'] = (extId, cb) => {
+      let cleanup: void | (() => void) = undefined
+      const subscription = onExt(extId, ([extDeployable]) => {
+        if (!extDeployable) {
+          return cleanup?.()
+        }
+        cleanup = cb({
+          at: extDeployable.at,
+          pkgInfo: extDeployable.pkgInfo,
+          version: extDeployable.version,
+        })
+      })
+      return subscription
+    }
+
+    const shell: Shell<Def> = {
+      extId,
+      env,
+      msg$: $msg$.asObservable(),
+      // removing "as any" generates  "Error: Debug Failure. No error for last overload signature" ->https://github.com/microsoft/TypeScript/issues/33133  ... related:https://github.com/microsoft/TypeScript/issues/37974
+      emit: path => (data, opts) => (push as any)('out')(extId)(path)(data, opts),
+      send: extId => path => (data, opts) => (push as any)('in')(extId)(path)(data, opts),
+      push,
+      libOf: deplReg.lib,
+      onExtDeployed,
+      onExtEnabled,
+      getExt,
+      onExt,
+      pkgInfo,
+    }
+
+    const regDeployable = deplReg.enable<Def>({
+      pkgInfo,
+      ext,
+      shell,
+      $msg$,
+    })
+
+    return regDeployable
+    function assertMeEnabled() {
+      deplReg.assertEnabled(extId)
+    }
+  }
+  function deployExtension({ extId }: { extId: ExtId }) {
+    const deployable = deplReg.assertEnabled(extId)
+    const tearDown = pipedMessages$.subscribe(deployable.$msg$)
+    const { extName } = splitExtId(extId)
+
+    const expose: ExposePointers = expPnt => {
       EXPOSED_POINTERS_REG[extName] = expPnt
     }
 
-    const { mw } =
-      extPkg.ext.start({
-        pkgInfo: extPkg.pkgInfo,
-        extId,
-        env,
-        msg$: $msg$.asObservable(),
-        // removing "as any" generates  "Error: Debug Failure. No error for last overload signature" ->https://github.com/microsoft/TypeScript/issues/33133  ... related:https://github.com/microsoft/TypeScript/issues/37974
-        emit: path => (data, opts) => (push as any)('out')(extId)(path)(data, opts),
-        send: extId => path => (data, opts) => (push as any)('in')(extId)(path)(data, opts),
-        push,
-        tearDown,
-        expose,
-        isExtAvailable: deplReg.isReady,
-      }) ?? {}
-
-    const deployable: ExtDeployable<Def> = {
-      ...extPkg,
-      $msg$,
-      mw,
+    const deploymentShell: DeploymentShell = {
+      expose,
       tearDown,
     }
 
-    return deplReg.start(deployable)
-
-    function assertMeIsActive() {
-      deplReg.assert(extId)
-    }
+    return deplReg.deploy({ extId, deploymentShell })
   }
 
   function depOrderDeployments() {
@@ -240,7 +292,7 @@ export const create = ({ global_env }: CreateCfg) => {
         }
         return deployment
       })
-      .filter((_): _ is ExtDeployment => !!_)
+      .filter((_): _ is RegDeployable => !!_)
   }
 }
 

@@ -1,25 +1,29 @@
 // import type * as K from '../k'
 import type { Observable, Subscription } from 'rxjs'
-import type { MessagePush } from './message'
-import { PkgInfo } from './pkg'
-import type { Port, PortBinding, PortPathData, PortPaths, Topo } from './topo'
+import type { IMessage, MessagePush } from './message'
+import { PkgInfo } from './reg'
+import type { PortBinding, PortPathData, PortPaths, Topo, Version } from './topo'
 
 // export type KernelLib = typeof K
 export type ExtVersion = string
 
 export type ExtId<Def extends ExtDef = ExtDef> = `${Def['name']}@${Def['version']}` //` ;)
 export type ExtName<Def extends ExtDef = ExtDef> = `${Def['name']}` //` ;)
+export type ExtLib<Def extends ExtDef = ExtDef> = Def['lib']
 export type ExtTopo<Def extends ExtDef = ExtDef> = Def['topo']
 
 export type ExtDef<
   Name extends string = string,
   Version extends ExtVersion = ExtVersion,
   ExtTopo extends Topo = Topo,
+  Lib extends {} = any,
 > = {
   name: Name
   version: Version
-  topo: ExtTopo & { '': Port<PortBinding, any> }
+  topo: ExtTopo //& { '': Port<PortBinding, any> }
+  lib: Lib
 }
+
 export type ExtTopoDef<Def extends ExtTopo> = Def
 
 type _Unsafe_ExtId<Def = ExtDef> = Def extends ExtDef ? ExtId<Def> : never
@@ -27,33 +31,66 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends ExtDef[] = ExtDef[
   id: ExtId<Def>
   displayName: string
   requires: { [Index in keyof Requires]: _Unsafe_ExtId<Requires[Index]> }
-  start: ExtLCStart<Def>
+  enable: ExtEnable<Def>
   description?: string
 }
 
 export type RawExtEnv = Record<string, unknown> | undefined
 
 export interface Shell<Def extends ExtDef = ExtDef> {
-  msg$: Observable<MessagePush>
+  msg$: Observable<IMessage<any>>
+  libOf: GetExtLib
+  onExtEnabled: OnExtEnabled
+  onExtDeployed: OnExtDeployed
+  onExt: OnExt
+  getExt: GetExt
   push: PushMessage<Def>
   emit: EmitMessage<Def>
   send: SendMessage
   env: RawExtEnv
   extId: ExtId<Def>
   pkgInfo: PkgInfo
+}
+
+export type OnExtEnabled = <Def extends ExtDef>(
+  id: ExtId<Def>,
+  cb: (_: OnExtDeployable) => void | (() => void),
+) => Subscription
+
+export type OnExt = <Def extends ExtDef>(id: ExtId<Def>, cb: (_: ExtDepl<Def>) => void) => Subscription
+
+export type OnExtDeployed = <Def extends ExtDef>(
+  id: ExtId<Def>,
+  cb: (_: OnExtDeployment<Def>) => void | (() => void),
+) => Subscription
+
+export type GetExt = <Def extends ExtDef>(id: ExtId<Def>) => ExtDepl<Def>
+
+export type ExtDepl<Def extends ExtDef> =
+  | [OnExtDeployable, OnExtDeployment<Def>]
+  | [OnExtDeployable, undefined]
+  | [undefined, undefined]
+
+export type OnExtDeployment<Def extends ExtDef> = OnExtDeployable & { lib: ExtLib<Def> }
+export type OnExtDeployable = { version: Version; at: Date; pkgInfo: PkgInfo }
+export type GetExtLib = <Def extends ExtDef>(id: ExtId<Def>) => ExtLib<Def> | void
+
+export interface DeploymentShell<Def extends ExtDef = ExtDef> {
   tearDown: Subscription
   expose: ExposePointers<Def>
-  isExtAvailable: ExtAvailable
 }
 
-type ExtAvailable = (extId: ExtId) => boolean
+export type MWFn = (msg: IMessage<any>, index: number) => Observable<IMessage<any>>
 
-export type MWFn = (msg: MessagePush, index: number) => Observable<MessagePush>
-
-export type ExtLCStart<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => void | ExtHandle
-export type ExtHandle = {
+export type ExtEnable<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => ExtDeployable<Def>
+export interface ExtDeployable<Def extends ExtDef = ExtDef> {
+  deploy: (_: DeploymentShell<Def>) => ExtDeploymentHandle<Def>
   mw?: MWFn
 }
+
+export type ExtDeploymentHandle<Def extends ExtDef = ExtDef> = {} & (ExtLib<Def> extends undefined | null | void
+  ? { lib?: undefined }
+  : { lib: ExtLib<Def> })
 
 export type EmitMessage<SrcDef extends ExtDef = ExtDef> = <Path extends PortPaths<SrcDef, 'out'>>(
   path: Path,
@@ -77,7 +114,7 @@ export type PushMessage<SrcDef extends ExtDef = ExtDef> = <Bound extends PortBin
 ) => MessagePush<Bound, SrcDef, DestDef, Path>
 
 export type PushOptions = {
-  parent: MessagePush | null
+  parent: IMessage<any> | null
   primary: boolean
   sub: boolean
 }
