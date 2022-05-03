@@ -1,49 +1,32 @@
-import { Subject } from 'rxjs'
 import { isVerBWC, splitExtId } from '../k/pointer'
-import type {
-  DeploymentShell,
-  Ext,
-  ExtDef,
-  ExtId,
-  ExtName,
-  IMessage,
-  PkgInfo,
-  RegDeployable,
-  RegDeployment,
-  Shell,
-} from '../types'
+import type { ExtDef, ExtId, ExtName, RegDeployment } from '../types'
 
-export type ExtLocalDeployableRegistry = ReturnType<typeof createLocalDeployableRegistry>
+export type ExtLocalDeploymentRegistry = ReturnType<typeof createLocalDeploymentRegistry>
 
-export const createLocalDeployableRegistry = () => {
+export const createLocalDeploymentRegistry = () => {
   const reg: {
-    [Name in ExtName]: RegDeployable
+    [Name in ExtName]: RegDeployment
   } = {}
 
   return {
-    get,
-    enable,
-    disable,
-    assertEnabled,
+    getByName,
     undeploy,
     assertDeployed,
-    isDeployed,
     reg,
     deploy,
-    lib,
-    getCompat,
+    get,
   }
 
-  function getCompat(extId: ExtId) {
+  function get(extId: ExtId) {
     const { extName, version } = splitExtId(extId)
-    const regDeployable = get(extName)
-    if (!regDeployable) {
+    const regDeployment = getByName(extName)
+    if (!regDeployment) {
       return undefined
     }
-    const { version: deployedVersion } = splitExtId(regDeployable.ext.id)
+    const { version: deployedVersion } = splitExtId(regDeployment.ext.id)
     const isCompat = isVerBWC(deployedVersion, version)
     // debug()
-    return isCompat ? regDeployable : undefined
+    return isCompat ? regDeployment : undefined
 
     // function debug() {
     //   console.log({
@@ -56,85 +39,73 @@ export const createLocalDeployableRegistry = () => {
     // }
   }
 
-  function get(extName: ExtName) {
-    const regDeployable = reg[extName]
-    return regDeployable
+  function getByName(extName: ExtName) {
+    const regDeployment = reg[extName]
+    return regDeployment
   }
 
-  function lib(extId: ExtId) {
-    const regDeployable = getCompat(extId)
-    return regDeployable?.deployment?.inst
-  }
+  // function enable<Def extends ExtDef>({
+  //   ext,
+  //   pkgInfo,
+  //   shell,
+  //   $msg$,
+  // }: {
+  //   pkgInfo: PkgInfo
+  //   ext: Ext<Def>
+  //   shell: Shell<Def>
+  //   $msg$: Subject<IMessage<any>>
+  // }) {
+  //   const { extName } = splitExtId(ext.id)
+  //   const currDeployable = reg[extName]
+  //   if (currDeployable) {
+  //     throw new Error(`can't register ${ext.id} as it's already present in registry (${currDeployable.ext.id})`)
+  //   }
+  //   const deployable = ext.enable(shell)
+  //   const regDeployable: RegDeployment<Def> = { ...deployable, ext, pkgInfo, shell, $msg$, at: new Date() }
+  //   return (reg[extName] = regDeployable as any)
+  // }
 
-  function enable<Def extends ExtDef>({
-    ext,
-    pkgInfo,
-    shell,
-    $msg$,
-  }: {
-    pkgInfo: PkgInfo
-    ext: Ext<Def>
-    shell: Shell<Def>
-    $msg$: Subject<IMessage<any>>
-  }) {
-    const { extName } = splitExtId(ext.id)
-    const currDeployable = reg[extName]
-    if (currDeployable) {
-      throw new Error(`can't register ${ext.id} as it's already present in registry (${currDeployable.ext.id})`)
-    }
-    const deployable = ext.enable(shell)
-    const regDeployable: RegDeployable<Def> = { ...deployable, ext, pkgInfo, shell, $msg$, at: new Date() }
-    return (reg[extName] = regDeployable as any)
-  }
-
-  function deploy({ deploymentShell, extId }: { extId: ExtId; deploymentShell: DeploymentShell }) {
-    const currRegDeployable = assertEnabled(extId)
-    if (currRegDeployable.deployment) {
-      throw new Error(`can't deploy ${extId} as it's already deployed since ${currRegDeployable.deployment.at}`)
-    }
-    const deployment = currRegDeployable.deploy(deploymentShell)
-    const regDeployment: RegDeployment = {
-      at: new Date(),
-      ...deploymentShell,
-      ...deployment,
-      inst: deployment.inst ?? undefined,
+  function deploy<Def extends ExtDef>({ depl }: { depl: RegDeployment<Def> }) {
+    const { extName } = splitExtId(depl.extId)
+    const currDeployment = getByName(extName)
+    if (currDeployment) {
+      throw new Error(
+        `can't deploy ${depl.extId} as ${currDeployment.extId} is already deployed since ${currDeployment.at}`,
+      )
     }
 
-    return (currRegDeployable.deployment = regDeployment)
+    reg[extName] = depl as any
+    return depl
   }
 
   function undeploy(extName: ExtName) {
-    const currDeployable = get(extName)
-    currDeployable?.deployment?.tearDown.unsubscribe()
-    delete currDeployable?.deployment
-    return currDeployable
-  }
-
-  function disable(extName: ExtName) {
-    const currDeployable = undeploy(extName)
-    currDeployable?.$msg$.complete()
+    const currDeployment = getByName(extName)
+    // currDeployable?.$msg$.complete()
+    // currDeployable?.tearDown.unsubscribe()
     delete reg[extName]
-    return currDeployable
+    return currDeployment
   }
 
-  function assertEnabled(extId: ExtId) {
-    const currDeployable = getCompat(extId)
-    if (!currDeployable) {
-      throw new Error(`assert: no compat extension matching [${extId}]`)
-    }
-    return currDeployable
-  }
+  // function disable(extName: ExtName) {
+  //   const currDeployable = undeploy(extName)
+  //   currDeployable?.$msg$.complete()
+  //   delete reg[extName]
+  //   return currDeployable
+  // }
+
+  // function assertEnabled(extId: ExtId) {
+  //   const currDeployable = get(extId)
+  //   if (!currDeployable) {
+  //     throw new Error(`assertEnabled: no compat extension matching [${extId}]`)
+  //   }
+  //   return currDeployable
+  // }
 
   function assertDeployed(extId: ExtId) {
-    const currDeployable = assertEnabled(extId)
-    if (!currDeployable.deployment) {
+    const currDeployment = get(extId)
+    if (!currDeployment) {
       throw new Error(`assertDeployed: extension matching [${extId}] not deployed`)
     }
-    return [currDeployable.deployment, currDeployable] as const
-  }
-
-  function isDeployed(extId: ExtId) {
-    const currDeployable = assertEnabled(extId)
-    return !!currDeployable.deployment
+    return currDeployment
   }
 }

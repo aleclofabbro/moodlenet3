@@ -4,7 +4,7 @@ import { depGraphAddNodes } from './dep-graph'
 import { matchMessage } from './k/message'
 import { isVerBWC, joinPointer, splitExtId, splitPointer } from './k/pointer'
 import { pubAll } from './k/sub'
-import { createLocalDeployableRegistry } from './registry'
+import { createLocalDeploymentRegistry } from './registry'
 import type {
   DepGraphData,
   DeploymentShell,
@@ -12,20 +12,18 @@ import type {
   ExposePointers,
   Ext,
   ExtDef,
-  ExtDepl,
+  ExtDeployment,
   ExtId,
   ExtName,
   IMessage,
   KernelExt,
   MessagePush,
   MWFn,
-  OnExtDeployable,
-  OnExtDeployment,
   PkgInfo,
   PushMessage,
   PushOptions,
   RawExtEnv,
-  RegDeployable,
+  RegDeployment,
   Shell,
 } from './types'
 
@@ -44,7 +42,7 @@ export const create = ({ global_env }: CreateCfg) => {
   const EXPOSED_POINTERS_REG: Record<ExtName, ExposedPointerMap> = {}
   // const _env = getEnv(global_env['kernel.core'])
 
-  const deplReg = createLocalDeployableRegistry()
+  const deplReg = createLocalDeploymentRegistry()
   const depGraph = new DepGraph<DepGraphData>()
   const $MAIN_MSGS$ = new Subject<IMessage<any>>()
   const pipedMessages$ = $MAIN_MSGS$.pipe(
@@ -66,12 +64,17 @@ export const create = ({ global_env }: CreateCfg) => {
     description: 'K',
     requires: [],
     enable: shell => {
+      shell.expose({
+        'testSub/sub': { validate: () => ({ valid: true, msg: 'no good' }) },
+      })
+
       return {
         mw: msg => of(msg),
-        deploy({ expose /* , tearDown  */ }) {
-          expose({
-            'testSub/sub': { validate: () => ({ valid: true, msg: 'no good' }) },
-          })
+        deploy(
+          {
+            /* , tearDown  */
+          },
+        ) {
           pubAll<KernelExt>('kernel.core@0.1.10', shell, {
             testSub(_) {
               return interval(500).pipe(
@@ -86,14 +89,11 @@ export const create = ({ global_env }: CreateCfg) => {
     },
   }
   depGraphAddNodes(depGraph, [kernelExt])
-  const KDeployable = enableExtension<KernelExt>({ ext: kernelExt, pkgInfo: kernelPkgInfo })
-  const KDeployment = deployExtension({ extId: kernelExtId })
+  const KDeployment = deployExtension<KernelExt>({ ext: kernelExt, pkgInfo: kernelPkgInfo })
 
   return {
     deployExtension,
-    disableExtension,
     undeployExtension,
-    enableExtension,
     depOrderDeployments,
     extEnv,
     global_env,
@@ -101,27 +101,23 @@ export const create = ({ global_env }: CreateCfg) => {
     depGraph,
     $MAIN_MSGS$,
     pipedMessages$,
-    KDeployable,
     KDeployment,
   }
 
-  function extEnv(extId: ExtId) {
-    //FIXME: should check version compat ?
-    const { extName /* , version  */ } = splitExtId(extId)
-    console.log('extEnv', extId, extName, global_env, global_env[extName])
-    return global_env[extName]
-  }
-
-  function disableExtension(extName: ExtName) {
-    return deplReg.disable(extName)
-  }
-  function undeployExtension(extName: ExtName) {
-    return deplReg.undeploy(extName)
-  }
-  function enableExtension<Def extends ExtDef>({ ext, pkgInfo }: { ext: Ext<Def>; pkgInfo: PkgInfo }) {
+  function deployExtension<Def extends ExtDef>({
+    ext,
+    pkgInfo,
+    deployWith,
+  }: {
+    ext: Ext<Def>
+    pkgInfo: PkgInfo
+    deployWith?: (shell: Shell<Def>, deplShell: DeploymentShell) => ExtDeployment<Def>
+  }) {
     const extId = ext.id
+    const extIdSplit = splitExtId(ext.id)
     const env = extEnv(extId)
     const $msg$ = new Subject<IMessage<any>>()
+
     const push: PushMessage = bound => destExtId => path => (data, _opts) => {
       // console.log('PUSH', { bound, destExtId, path, data, _opts })
       const opts: PushOptions = {
@@ -131,7 +127,7 @@ export const create = ({ global_env }: CreateCfg) => {
         ..._opts,
       }
       const pointer = joinPointer(destExtId, path)
-      const [, destRegDeployable] = deplReg.assertDeployed(destExtId)
+      const destRegDeployment = deplReg.assertDeployed(destExtId)
       if (opts.primary) {
         const { extName: pushToExtName } = splitExtId(destExtId)
         const expPnt = EXPOSED_POINTERS_REG[pushToExtName]?.[path]
@@ -147,7 +143,7 @@ export const create = ({ global_env }: CreateCfg) => {
 
       const parentMsgId = opts.parent?.id
       // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
-      assertMeEnabled()
+      assertMeDeployed()
       const msg: MessagePush /* <typeof bound, Def, DestDef, typeof path>  */ = {
         id: newMsgId(),
         source: extId,
@@ -157,41 +153,14 @@ export const create = ({ global_env }: CreateCfg) => {
         parentMsgId,
         sub: opts.sub,
         // managedBy: null,
-        activeDest: destRegDeployable.ext.id,
+        activeDest: destRegDeployment.ext.id,
       }
 
       setTimeout(() => $MAIN_MSGS$.next(msg), 10)
       return msg as any
     }
 
-    const getExt: Shell['getExt'] = extId => {
-      const regDeployable = deplReg.getCompat(extId)
-
-      const onExtDeployable: OnExtDeployable<ExtDef> | undefined = regDeployable && {
-        lib: regDeployable.lib,
-        at: regDeployable.at,
-        pkgInfo: regDeployable.pkgInfo,
-        version: splitExtId(regDeployable.ext.id).version,
-      }
-      const onExtDeployment: OnExtDeployment<ExtDef> | undefined = regDeployable?.deployment && {
-        at: regDeployable.deployment.at,
-        inst: regDeployable.deployment.inst,
-        lib: regDeployable.lib,
-        pkgInfo: regDeployable.pkgInfo,
-        version: splitExtId(regDeployable.ext.id).version,
-      }
-
-      if (!(onExtDeployable && onExtDeployment)) {
-        throw new Error(
-          `onExt: should never happen: ${extId} missing ${onExtDeployable ? '' : 'onExtDeployable'} ${
-            onExtDeployment ? '' : 'onExtDeployment'
-          }`,
-        )
-      }
-
-      const extDepl = [onExtDeployable, onExtDeployment] as ExtDepl<ExtDef>
-      return extDepl as any
-    }
+    const getExt: Shell['getExt'] = deplReg.get as any
 
     const onExt: Shell['onExt'] = (extId, cb) => {
       const match = matchMessage<KernelExt>()
@@ -200,51 +169,50 @@ export const create = ({ global_env }: CreateCfg) => {
         const targetExtIdSplit = splitPointer(msg.pointer)
 
         if (
-          targetExtIdSplit.extName === matchExtIdSplit.extName &&
-          isVerBWC(targetExtIdSplit.version, matchExtIdSplit.version) &&
-          (match(msg, 'kernel.core@0.1.10::ext/deployed') ||
-            match(msg, 'kernel.core@0.1.10::ext/undeployed') ||
-            match(msg, 'kernel.core@0.1.10::ext/enabled') ||
-            match(msg, 'kernel.core@0.1.10::ext/disabled'))
+          !(
+            (
+              targetExtIdSplit.extName === matchExtIdSplit.extName &&
+              isVerBWC(targetExtIdSplit.version, matchExtIdSplit.version) &&
+              (match(msg, 'kernel.core@0.1.10::ext/deployed') || match(msg, 'kernel.core@0.1.10::ext/undeployed'))
+            ) /* ||
+              match(msg, 'kernel.core@0.1.10::ext/enabled') ||
+              match(msg, 'kernel.core@0.1.10::ext/disabled') */
+          )
         ) {
-          if (!msg) cb(getExt(extId))
+          return
         }
+
+        cb(getExt(extId))
       })
       return subscription
     }
 
-    const onExtDeployed: Shell['onExtDeployed'] = (extId, cb) => {
+    const onExtInstance: Shell['onExtInstance'] = (extId, cb) => {
       let cleanup: void | (() => void) = undefined
-      const subscription = onExt(extId, ([extDeployable, extDeployment]) => {
-        if (!extDeployment) {
+      const subscription = onExt(extId, regDeployment => {
+        if (!regDeployment?.inst) {
           return cleanup?.()
         }
-        const onExtDeployment: OnExtDeployment<ExtDef> = {
-          at: extDeployment.at,
-          pkgInfo: extDeployment.pkgInfo,
-          inst: extDeployment.inst,
-          version: extDeployment.version,
-          lib: extDeployable.lib,
-        }
-        cleanup = cb(onExtDeployment)
+        cleanup = cb(regDeployment.inst, regDeployment as any)
       })
       return subscription
     }
-    const onExtEnabled: Shell['onExtEnabled'] = (extId, cb) => {
+
+    const onExtDeployment: Shell['onExtDeployment'] = (extId, cb) => {
       let cleanup: void | (() => void) = undefined
-      const subscription = onExt(extId, ([extDeployable]) => {
-        if (!extDeployable) {
+      const subscription = onExt(extId, regDeployment => {
+        if (!regDeployment) {
           return cleanup?.()
         }
-        const onExtDeployable: OnExtDeployable<ExtDef> = {
-          at: extDeployable.at,
-          pkgInfo: extDeployable.pkgInfo,
-          version: extDeployable.version,
-          lib: extDeployable.lib,
-        }
-        cleanup = cb(onExtDeployable as any)
+        cleanup = cb(regDeployment as any)
       })
       return subscription
+    }
+
+    const libOf: Shell['libOf'] = id => deplReg.get(id)?.lib
+
+    const expose: ExposePointers = expPnt => {
+      EXPOSED_POINTERS_REG[extIdSplit.extName] = expPnt
     }
 
     const shell: Shell<Def> = {
@@ -255,41 +223,59 @@ export const create = ({ global_env }: CreateCfg) => {
       emit: path => (data, opts) => (push as any)('out')(extId)(path)(data, opts),
       send: extId => path => (data, opts) => (push as any)('in')(extId)(path)(data, opts),
       push,
-      libOf: deplReg.lib,
-      onExtDeployed,
-      onExtEnabled,
+      libOf,
+      onExtInstance,
+      onExtDeployment,
       getExt,
       onExt,
       pkgInfo,
+      expose,
     }
 
-    const regDeployable = deplReg.enable<Def>({
-      pkgInfo,
-      ext,
-      shell,
-      $msg$,
-    })
-
-    return regDeployable
-    function assertMeEnabled() {
-      deplReg.assertEnabled(extId)
-    }
-  }
-  function deployExtension({ extId }: { extId: ExtId }) {
-    const deployable = deplReg.assertEnabled(extId)
-    const tearDown = pipedMessages$.subscribe(deployable.$msg$)
-    const { extName } = splitExtId(extId)
-
-    const expose: ExposePointers = expPnt => {
-      EXPOSED_POINTERS_REG[extName] = expPnt
-    }
+    const tearDown = pipedMessages$.subscribe($msg$)
 
     const deploymentShell: DeploymentShell = {
-      expose,
       tearDown,
     }
 
-    return deplReg.deploy({ extId, deploymentShell })
+    const extDeployable = ext.enable(shell)
+
+    let extDeployment: ExtDeployment<Def> = { inst: undefined }
+    if (deployWith) {
+      extDeployment = deployWith(shell, deploymentShell)
+    } else {
+      extDeployment = extDeployable.deploy(deploymentShell)
+    }
+
+    const depl: RegDeployment<Def> = {
+      ...{ at: new Date(), ext, $msg$ },
+      ...deploymentShell,
+      ...shell,
+      ...extDeployment,
+      ...extDeployable,
+    }
+
+    const regDeployment = deplReg.deploy<Def>({ depl })
+
+    return regDeployment
+
+    function assertMeDeployed() {
+      deplReg.assertDeployed(extId)
+    }
+  }
+
+  function extEnv(extId: ExtId) {
+    //FIXME: should check version compat ?
+    const { extName /* , version  */ } = splitExtId(extId)
+    console.log('extEnv', extId, extName, global_env, global_env[extName])
+    return global_env[extName]
+  }
+
+  function undeployExtension(extName: ExtName) {
+    const wasDeployment = deplReg.undeploy(extName)
+    wasDeployment?.$msg$.complete()
+    wasDeployment?.tearDown.unsubscribe()
+    return wasDeployment
   }
 
   function depOrderDeployments() {
@@ -297,14 +283,14 @@ export const create = ({ global_env }: CreateCfg) => {
       .overallOrder()
       .reverse()
       .map(pushToExtName => {
-        const deployment = deplReg.get(`${pushToExtName}@*`)
+        const deployment = deplReg.getByName(`${pushToExtName}@*`)
         if (!deployment) {
           //TODO: WARN? THROW? IGNORE?
           return
         }
         return deployment
       })
-      .filter((_): _ is RegDeployable => !!_)
+      .filter((_): _ is RegDeployment => !!_)
   }
 }
 

@@ -1,8 +1,8 @@
 // import type * as K from '../k'
 import type { Observable, Subscription } from 'rxjs'
 import type { IMessage, MessagePush } from './message'
-import { PkgInfo } from './reg'
-import type { PortBinding, PortPathData, PortPaths, Topo, Version } from './topo'
+import { PkgInfo, RegDeployment } from './reg'
+import type { PortBinding, PortPathData, PortPaths, Topo } from './topo'
 
 // export type KernelLib = typeof K
 export type ExtVersion = string
@@ -43,8 +43,8 @@ export type RawExtEnv = Record<string, unknown> | undefined
 export interface Shell<Def extends ExtDef = ExtDef> {
   msg$: Observable<IMessage<any>>
   libOf: GetExtLib
-  onExtEnabled: OnExtEnabled
-  onExtDeployed: OnExtDeployed
+  onExtDeployment: OnExtDeployment
+  onExtInstance: OnExtInstance
   onExt: OnExt
   getExt: GetExt
   push: PushMessage<Def>
@@ -53,47 +53,44 @@ export interface Shell<Def extends ExtDef = ExtDef> {
   env: RawExtEnv
   extId: ExtId<Def>
   pkgInfo: PkgInfo
+  expose: ExposePointers<Def>
 }
 
-export type OnExtEnabled = <Def extends ExtDef>(
+export type OnExtDeployment = <Def extends ExtDef>(
   id: ExtId<Def>,
-  cb: (_: OnExtDeployable<Def>) => void | (() => void),
+  cb: (depl: RegDeployment<Def>) => void | (() => void),
 ) => Subscription
 
-export type OnExt = <Def extends ExtDef>(id: ExtId<Def>, cb: (_: ExtDepl<Def>) => void) => Subscription
-
-export type OnExtDeployed = <Def extends ExtDef>(
+export type OnExt = <Def extends ExtDef>(
   id: ExtId<Def>,
-  cb: (_: OnExtDeployment<Def>) => void | (() => void),
+  cb: (depl: RegDeployment<Def> | undefined) => void,
 ) => Subscription
 
-export type GetExt = <Def extends ExtDef>(id: ExtId<Def>) => ExtDepl<Def>
+export type OnExtInstance = <Def extends ExtDef>(
+  id: ExtId<Def>,
+  cb: (inst: ExtInst<Def>, depl: RegDeployment<Def>) => void | (() => void),
+) => Subscription
 
-export type ExtDepl<Def extends ExtDef> =
-  | [OnExtDeployable<Def>, OnExtDeployment<Def>]
-  | [OnExtDeployable<Def>, undefined]
-  | [undefined, undefined]
+export type GetExt = <Def extends ExtDef>(id: ExtId<Def>) => RegDeployment<Def> | undefined
 
-export type OnExtDeployment<Def extends ExtDef> = OnExtDeployable<Def> & { inst: ExtInst<Def> }
-export type OnExtDeployable<Def extends ExtDef> = { version: Version; at: Date; pkgInfo: PkgInfo; lib: ExtLib<Def> }
+// export type OnExtDeployment<Def extends ExtDef> = OnExtDeployable<Def> & { inst: ExtInst<Def> }
+// export type OnExtDeployable<Def extends ExtDef> = { version: Version; at: Date; pkgInfo: PkgInfo; lib: ExtLib<Def> }
 export type GetExtLib = <Def extends ExtDef>(id: ExtId<Def>) => ExtInst<Def> | void
 
-export interface DeploymentShell<Def extends ExtDef = ExtDef> {
+//<Def extends ExtDef = ExtDef> {
+export interface DeploymentShell {
   tearDown: Subscription
-  expose: ExposePointers<Def>
 }
 
 export type MWFn = (msg: IMessage<any>, index: number) => Observable<IMessage<any>>
 
 export type ExtEnable<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => ExtDeployable<Def>
 export type ExtDeployable<Def extends ExtDef = ExtDef> = {
-  deploy: (_: DeploymentShell<Def>) => ExtDeployment<Def>
+  deploy: (_: DeploymentShell) => ExtDeployment<Def>
   mw?: MWFn
-} & (ExtLib<Def> extends undefined | null | void ? { lib?: undefined } : { lib: ExtLib<Def> })
+} & (ExtLib<Def> extends undefined | null | void ? { lib?: ExtLib<Def> } : { lib: ExtLib<Def> })
 
-export type ExtDeployment<Def extends ExtDef = ExtDef> = {} & (ExtInst<Def> extends undefined | null | void
-  ? { inst?: undefined }
-  : { inst: ExtInst<Def> })
+export type ExtDeployment<Def extends ExtDef = ExtDef> = { inst?: ExtInst<Def> }
 
 export type EmitMessage<SrcDef extends ExtDef = ExtDef> = <Path extends PortPaths<SrcDef, 'out'>>(
   path: Path,

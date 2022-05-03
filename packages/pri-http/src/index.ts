@@ -18,7 +18,7 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
   requires: ['kernel.core@0.1.10'], //, 'moodlenet.sys-log@0.1.10'],
   enable(shell) {
     return {
-      deploy(/* { expose, tearDown } */) {
+      deploy(/* {  tearDown } */) {
         const logger = console
         // const logger = coreExt.sysLog.moodlenetSysLogLib(shell)
         const env = getEnv(shell.env)
@@ -94,10 +94,10 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
               return next()
             }
             const pointer = K.joinPointer(extId, path)
-            const [extDeployable] = shell.getExt(extId)
-            console.log('Exposed Api pointer', { pointer, deployable: extDeployable })
+            const extDeployment = shell.getExt(extId)
+            console.log('Exposed Api pointer', { pointer, extDeployment })
 
-            if (!(pointer && extDeployable)) {
+            if (!(pointer && extDeployment)) {
               return next()
             }
 

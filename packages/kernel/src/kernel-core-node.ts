@@ -1,5 +1,6 @@
 import { createRequire } from 'module'
 import { join } from 'path'
+import { inspect } from 'util'
 import { create } from './kernel-core'
 import { pkgDiskInfoOf } from './npm-pkg'
 import { Ext } from './types'
@@ -12,14 +13,14 @@ export function boot() {
   console.log({ activatePkgs, cwd, global_env })
   const req = createRequire(join(cwd, 'node_modules'))
 
-  activatePkgs
+  const deployments = activatePkgs
     .map(mainModPath => pkgDiskInfoOf(mainModPath))
-    .forEach(pkgDiskInfo => {
+    .map(pkgDiskInfo => {
       console.log({ _: pkgDiskInfo })
       const exts: Ext[] = req(pkgDiskInfo.name).default
       console.log({ exts })
-      exts
-        .map(ext => K.enableExtension({ ext, pkgInfo: pkgDiskInfo }))
-        .forEach(regDeployable => K.deployExtension({ extId: regDeployable.ext.id }))
+      return exts.map(ext => K.deployExtension({ ext, pkgInfo: pkgDiskInfo }))
     })
+
+  console.log(inspect(deployments, false, 5, true))
 }
