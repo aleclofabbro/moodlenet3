@@ -1,15 +1,17 @@
-import { K } from '@moodlenet/core'
+import * as K from '@moodlenet/kernel'
 import { json } from 'body-parser'
+// import * as xlib from 'express'
 import express, { Application } from 'express'
 import { Server } from 'http'
 
-interface Lib {
-  mount(_: { app: Application; absMountPath?: string }): void
+interface Instance {
+  mount(_: { mountApp: Application; absMountPath?: string }): void
+  express: typeof express
+  // xlib: typeof xlib
 }
-type GetLib = (shell: K.Shell) => Lib
+type GetInst = <Def extends K.ExtDef>(shell: K.Shell<Def>) => Instance
 
-export type MNPriHttpExt = K.ExtDef<'moodlenet.pri-http', '0.1.10', {}, void, GetLib>
-export const priHttpExtId: K.ExtId<MNPriHttpExt> = 'moodlenet.pri-http@0.1.10'
+export type MNPriHttpExt = K.ExtDef<'moodlenet.pri-http', '0.1.10', {}, void, GetInst>
 
 // const ext: K.Ext<MNPriHttpExt, [K.KernelExt, coreExt.sysLog.MoodlenetSysLogExt]> = {
 const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
@@ -27,7 +29,7 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
         let server: Server | undefined
 
         app.use(`/_`, makeExtPortsApp())
-        app.use(`*`, (_req, res) => res.send('ciao'))
+        // app.use(`/`, express.static(__dirname))
 
         // K.pubAll<MNPriHttpExt>('moodlenet.pri-http@0.1.10', shell, {
         //   setWebAppRootFolder: _shell => async p => {
@@ -47,13 +49,16 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
           inst,
         }
 
-        function inst(userShell: K.Shell): Lib {
+        function inst<Def extends K.ExtDef>(userShell: K.Shell<Def>): Instance {
           return {
-            mount({ app, absMountPath }) {
+            mount({ mountApp, absMountPath }) {
+              console.log('MOUNT', { absMountPath })
               const { extName /* , version */ } = K.splitExtId(userShell.extId)
-              const mountPath = absMountPath ?? extName
-              app.use(mountPath, app)
+              const mountPath = absMountPath ?? `/_/${extName}`
+              app.use(mountPath, mountApp)
             },
+            express,
+            // xlib,
           }
         }
         async function stopServer() {

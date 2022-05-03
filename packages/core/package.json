@@ -15,7 +15,9 @@
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
   "dependencies": {
-    "@moodlenet/kernel": "^0.0.1"
+    "@moodlenet/kernel": "^0.0.1",
+    "@moodlenet/pri-http": "^0.0.1",
+    "@moodlenet/webapp": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^17.0.18",
@@ -24,11 +26,9 @@
     "@types/react-router-dom": "^5.3.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "rxjs": "^7.5.5",
     "shx": "^0.3.4",
     "typescript": "^4.6.3"
-  },
-  "peerDependencies": {
-    "rxjs": "^7.5.5"
   },
   "scripts": {
     "build-dev": "tsc --watch",

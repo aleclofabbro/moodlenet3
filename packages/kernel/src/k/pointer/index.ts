@@ -33,6 +33,13 @@ export function joinPointer<Def extends ExtDef, Path extends AllPaths<Def>>(
 export function isVerBWC(target: Version, requested: Version) {
   return satisfies(target, `^${requested}`)
 }
+export function isExtIdBWC(target: ExtId, requested: ExtId) {
+  const targetSplit = splitExtId(target)
+  const requestedSplit = splitExtId(requested)
+  return (
+    targetSplit.extName === requestedSplit.extName && satisfies(requestedSplit.version, `^${requestedSplit.version}`)
+  )
+}
 
 export function isBWCSemanticallySamePointers(target: Pointer, requested: Pointer) {
   const pointerSplits = areSemanticallySamePointers(target, requested)

@@ -1,4 +1,4 @@
-import { Ext, ExtDef, onMessage, pub, pubAll, SubTopo } from '@moodlenet/kernel'
+import { Ext, ExtDef, pubAll, SubTopo } from '@moodlenet/kernel'
 export * as K from '@moodlenet/kernel'
 export * as coreExt from './core-extensions'
 
@@ -15,39 +15,21 @@ const extImpl: Ext<MoodlenetCoreExt> = {
   displayName: '',
   requires: [],
   description: '',
-  start(shell) {
+  enable(shell) {
     console.log('I am core extension')
-    // watchExt<WebappExt>(shell, '@moodlenet/webapp', webapp => {
-    //   if (!webapp?.active) {
-    //     return
-    //   }
-    // asyncRequest<WebappExt>({ extName: '@moodlenet/webapp', shell })({ path: 'ensureExtension' })({
-    //   extId: testExtId,
-    //   moduleLoc: resolve(__dirname, '..'),
-    //   cmpPath: 'pkg/webapp',
-    // })
-    // })
+    return {
+      deploy({}) {
+        pubAll<MoodlenetCoreExt>('@moodlenet/core@0.1.10', shell, {
+          _test({ msg }) {
+            msg.pointer
+            msg.data.req.a.at
+            return [{ a: 1 }]
+          },
+        })
 
-    shell.msg$.subscribe(msg => {
-      const onMy = onMessage<MoodlenetCoreExt>(msg)
-      onMy('@moodlenet/core@0.1.10::', msg => {
-        msg.pointer
-      })
-      pub<MoodlenetCoreExt>(shell)('@moodlenet/core@0.1.10::_test')(async ({ msg, req }) => {
-        msg.pointer
-        req.a
-        return { a: 2 }
-      })
-      pubAll<MoodlenetCoreExt>('@moodlenet/core@0.1.10', shell, {
-        _test({ msg, req }) {
-          req.a.at
-          msg.bound
-          return [{ a: 1 }]
-        },
-      })
-    })
-
-    return
+        return {}
+      },
+    }
   },
 }
 

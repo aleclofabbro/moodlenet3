@@ -15,26 +15,14 @@
     "lib/"
   ],
   "dependencies": {
-    "@types/semver": "^7.3.9",
-    "arangojs": "^7.7.0",
-    "bullmq": "^1.74.2",
     "dependency-graph": "^0.11.0",
     "execa": "^5.1.1",
     "pkg-dir": "^5",
     "rxjs": "^7.5.4",
     "semver": "^7.3.6"
   },
-  "peerDependencies": {
-    "@types/node": "^17.0.18",
-    "@types/react": "^17.0.39",
-    "@types/react-dom": "^17.0.11",
-    "@types/react-router-dom": "^5.3.3",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
-  },
   "devDependencies": {
-    "@moodlenet/bare-metal": "^0.0.1",
-    "@moodlenet/webapp": "^0.0.1",
+    "@types/semver": "^7.3.9",
     "node-dev": "^7.1.0",
     "shx": "^0.3.4",
     "type-fest": "^2.11.2",

@@ -8,13 +8,18 @@ export type TestExt = K.ExtDef<
   }
 >
 
-const extImpl: K.Ext<TestExt> = {
-  id: '',
-  start(/* shell */) {
+const ext: K.Ext<TestExt, [K.KernelExt]> = {
+  id: '@moodlenet/test-extension@0.1.10',
+  displayName: 'test ext',
+  requires: ['kernel.core@0.1.10'],
+  enable(/* shell */) {
     console.log('I am test extension')
-
-    return () => {}
+    return {
+      deploy() {
+        return {}
+      },
+    }
   },
 }
 
-export default extImpl
+export default [ext]

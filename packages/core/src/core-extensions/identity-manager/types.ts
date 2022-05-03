@@ -8,8 +8,13 @@ export type MoodlenetIdentityManagerPorts = {
 
 export type MoodlenetIdentityManagerExt = ExtDef<'moodlenet.identity-manager', '0.1.10', MoodlenetIdentityManagerPorts>
 
-declare module '@moodlenet/kernel' {
-  interface Shell {
-    session: Session
-  }
-}
+// declare module '@moodlenet/kernel' {
+//   interface IMessage<
+//     Data extends any = any,
+//     Bound extends PortBinding = PortBinding,
+//     SourceId extends ExtId = ExtId,
+//     Point extends Pointer = Pointer,
+//   > {
+//     session: Session
+//   }
+// }

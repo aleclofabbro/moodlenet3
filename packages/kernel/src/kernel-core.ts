@@ -1,11 +1,12 @@
 import { DepGraph } from 'dependency-graph'
-import { interval, map, mergeMap, of, share, Subject, take, tap } from 'rxjs'
+import { interval, map, mergeMap, of, share, Subject, take } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
 import { matchMessage } from './k/message'
-import { isVerBWC, joinPointer, splitExtId, splitPointer } from './k/pointer'
+import { isExtIdBWC, joinPointer, splitExtId } from './k/pointer'
 import { pubAll } from './k/sub'
 import { createLocalDeploymentRegistry } from './registry'
 import type {
+  DataMessage,
   DepGraphData,
   DeploymentShell,
   ExposedPointerMap,
@@ -15,10 +16,10 @@ import type {
   ExtDeployment,
   ExtId,
   ExtName,
-  IMessage,
   KernelExt,
   MessagePush,
   MWFn,
+  PkgDiskInfo,
   PkgInfo,
   PushMessage,
   PushOptions,
@@ -44,8 +45,9 @@ export const create = ({ global_env }: CreateCfg) => {
 
   const deplReg = createLocalDeploymentRegistry()
   const depGraph = new DepGraph<DepGraphData>()
-  const $MAIN_MSGS$ = new Subject<IMessage<any>>()
+  const $MAIN_MSGS$ = new Subject<DataMessage<any>>()
   const pipedMessages$ = $MAIN_MSGS$.pipe(
+    // tap(msg => console.log('++++++msg', msg)),
     mergeMap(msg => {
       const orderDepl = depOrderDeployments()
       // console.log({ orderDepl: orderDepl.map(_ => _.ext.id), msg })
@@ -54,7 +56,7 @@ export const create = ({ global_env }: CreateCfg) => {
         .filter((mw): mw is MWFn => !!mw)
         .reduce(($, mwFn) => $.pipe(mergeMap(mwFn)), of(msg))
     }),
-    tap(msg => setImmediate(() => console.log('*******msg', msg))),
+    // tap(msg => setImmediate(() => console.log('*******msg', msg))),
     share(),
   )
 
@@ -110,73 +112,27 @@ export const create = ({ global_env }: CreateCfg) => {
     deployWith,
   }: {
     ext: Ext<Def>
-    pkgInfo: PkgInfo
+    pkgInfo: PkgInfo | PkgDiskInfo
     deployWith?: (shell: Shell<Def>, deplShell: DeploymentShell) => ExtDeployment<Def>
   }) {
     const extId = ext.id
     const extIdSplit = splitExtId(ext.id)
     const env = extEnv(extId)
-    const $msg$ = new Subject<IMessage<any>>()
+    const $msg$ = new Subject<DataMessage<any>>()
 
-    const push: PushMessage = bound => destExtId => path => (data, _opts) => {
-      // console.log('PUSH', { bound, destExtId, path, data, _opts })
-      const opts: PushOptions = {
-        parent: null,
-        primary: false,
-        sub: false,
-        ..._opts,
-      }
-      const pointer = joinPointer(destExtId, path)
-      const destRegDeployment = deplReg.assertDeployed(destExtId)
-      if (opts.primary) {
-        const { extName: pushToExtName } = splitExtId(destExtId)
-        const expPnt = EXPOSED_POINTERS_REG[pushToExtName]?.[path]
-        console.log({ EXPOSED_POINTERS_REG, pushToExtName, destExtId, path })
-        if (!expPnt) {
-          throw new Error(`pointer ${pointer} is not exposed to primaries`)
-        }
-        const { valid, msg = '- no details -' } = expPnt.validate(data)
-        if (!valid) {
-          throw new Error(`data validation didn't pass for ${pointer} : ${msg}`)
-        }
-      }
-
-      const parentMsgId = opts.parent?.id
-      // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
-      assertMeDeployed()
-      const msg: MessagePush /* <typeof bound, Def, DestDef, typeof path>  */ = {
-        id: newMsgId(),
-        source: extId,
-        bound,
-        pointer,
-        data: data as any,
-        parentMsgId,
-        sub: opts.sub,
-        // managedBy: null,
-        activeDest: destRegDeployment.ext.id,
-      }
-
-      setTimeout(() => $MAIN_MSGS$.next(msg), 10)
-      return msg as any
-    }
-
+    const push = pushMsg<Def>(extId)
     const getExt: Shell['getExt'] = deplReg.get as any
 
     const onExt: Shell['onExt'] = (extId, cb) => {
       const match = matchMessage<KernelExt>()
-      const matchExtIdSplit = splitExtId(extId)
+      // console.log('onExt', extId)
       const subscription = pipedMessages$.subscribe(msg => {
-        const targetExtIdSplit = splitPointer(msg.pointer)
+        // console.log('onExt', msg)
 
         if (
           !(
-            (
-              targetExtIdSplit.extName === matchExtIdSplit.extName &&
-              isVerBWC(targetExtIdSplit.version, matchExtIdSplit.version) &&
-              (match(msg, 'kernel.core@0.1.10::ext/deployed') || match(msg, 'kernel.core@0.1.10::ext/undeployed'))
-            ) /* ||
-              match(msg, 'kernel.core@0.1.10::ext/enabled') ||
-              match(msg, 'kernel.core@0.1.10::ext/disabled') */
+            (match(msg, 'kernel.core@0.1.10::ext/deployed') || match(msg, 'kernel.core@0.1.10::ext/undeployed')) &&
+            isExtIdBWC(msg.data.extId, extId)
           )
         ) {
           return
@@ -220,8 +176,8 @@ export const create = ({ global_env }: CreateCfg) => {
       env,
       msg$: $msg$.asObservable(),
       // removing "as any" generates  "Error: Debug Failure. No error for last overload signature" ->https://github.com/microsoft/TypeScript/issues/33133  ... related:https://github.com/microsoft/TypeScript/issues/37974
-      emit: path => (data, opts) => (push as any)('out')(extId)(path)(data, opts),
-      send: extId => path => (data, opts) => (push as any)('in')(extId)(path)(data, opts),
+      emit: path => (data, opts) => (pushMsg as any)('out')(extId)(path)(data, opts),
+      send: extId => path => (data, opts) => (pushMsg as any)('in')(extId)(path)(data, opts),
       push,
       libOf,
       onExtInstance,
@@ -246,28 +202,76 @@ export const create = ({ global_env }: CreateCfg) => {
     } else {
       extDeployment = extDeployable.deploy(deploymentShell)
     }
-
+    const pkgDiskInfo = 'rootDir' in pkgInfo ? pkgInfo : undefined
     const depl: RegDeployment<Def> = {
-      ...{ at: new Date(), ext, $msg$ },
+      ...{ at: new Date(), ext, $msg$, pkgDiskInfo },
       ...deploymentShell,
       ...shell,
       ...extDeployment,
       ...extDeployable,
     }
 
-    const regDeployment = deplReg.deploy<Def>({ depl })
+    setImmediate(() => {
+      /* const msg = */ pushMsg<KernelExt>('kernel.core@0.1.10')('out')<KernelExt>('kernel.core@0.1.10')(
+        'ext/deployed',
+      )({
+        extId,
+      })
+      // console.log('ext/deployed msg', msg)
+    })
 
-    return regDeployment
+    deplReg.deploy<Def>({ depl })
+    return depl
+  }
+  function pushMsg<Def extends ExtDef>(extId: ExtId<Def>): PushMessage<Def> {
+    return bound => destExtId => path => (data, _opts) => {
+      // console.log('PUSH', { bound, destExtId, path, data, _opts })
+      const opts: PushOptions = {
+        parent: null,
+        primary: false,
+        sub: false,
+        ..._opts,
+      }
+      const pointer = joinPointer(destExtId, path)
+      const destRegDeployment = deplReg.assertDeployed(destExtId)
+      if (opts.primary) {
+        const { extName: pushToExtName } = splitExtId(destExtId)
+        const expPnt = EXPOSED_POINTERS_REG[pushToExtName]?.[path]
+        // console.log({ EXPOSED_POINTERS_REG, pushToExtName, destExtId, path })
+        if (!expPnt) {
+          throw new Error(`pointer ${pointer} is not exposed to primaries`)
+        }
+        const { valid, msg = '- no details -' } = expPnt.validate(data)
+        if (!valid) {
+          throw new Error(`data validation didn't pass for ${pointer} : ${msg}`)
+        }
+      }
 
-    function assertMeDeployed() {
-      deplReg.assertDeployed(extId)
+      const parentMsgId = opts.parent?.id
+      // type DestDef = typeof destExtId extends ExtId<infer Def> ? Def : never
+      deplReg.assertDeployed(extId) // assert me deployed
+
+      const msg: MessagePush /* <typeof bound, Def, DestDef, typeof path>  */ = {
+        id: newMsgId(),
+        source: extId,
+        bound,
+        pointer,
+        data: data as any,
+        parentMsgId,
+        sub: opts.sub,
+        // managedBy: null,
+        activeDest: destRegDeployment.ext.id,
+      }
+
+      setTimeout(() => $MAIN_MSGS$.next(msg), 10)
+      return msg as any
     }
   }
 
   function extEnv(extId: ExtId) {
     //FIXME: should check version compat ?
     const { extName /* , version  */ } = splitExtId(extId)
-    console.log('extEnv', extId, extName, global_env, global_env[extName])
+    // console.log('extEnv', extId, extName, global_env, global_env[extName])
     return global_env[extName]
   }
 

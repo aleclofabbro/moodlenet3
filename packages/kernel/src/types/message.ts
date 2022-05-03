@@ -9,11 +9,18 @@ export type MessagePush<
   Path extends PortPaths<DestDef, Bound> = PortPaths<DestDef, Bound>,
 > = IMessage<PortPathData<DestDef, Path, Bound>, Bound, ExtId<SourceDef>, Pointer<DestDef, Path>>
 
-export interface IMessage<
+export type DataMessage<
   Data,
   Bound extends PortBinding = PortBinding,
   SourceId extends ExtId = ExtId,
   Point extends Pointer = Pointer,
+>= IMessage<Data,Bound,SourceId,Point>
+
+export interface IMessage<
+  Data extends any=any,
+  Bound extends PortBinding =PortBinding ,
+  SourceId extends ExtId =ExtId ,
+  Point extends Pointer =Pointer ,
 > {
   id: MsgID
   bound: Bound

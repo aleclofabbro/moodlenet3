@@ -16,11 +16,18 @@ export function boot() {
   const deployments = activatePkgs
     .map(mainModPath => pkgDiskInfoOf(mainModPath))
     .map(pkgDiskInfo => {
-      console.log({ _: pkgDiskInfo })
+      // console.log({ _: pkgDiskInfo })
       const exts: Ext[] = req(pkgDiskInfo.name).default
-      console.log({ exts })
+      // console.log({ exts })
       return exts.map(ext => K.deployExtension({ ext, pkgInfo: pkgDiskInfo }))
     })
 
-  console.log(inspect(deployments, false, 5, true))
+  console.log(
+    inspect(
+      deployments.map(_ => _.map(__ => __.extId).flat()),
+      false,
+      5,
+      true,
+    ),
+  )
 }

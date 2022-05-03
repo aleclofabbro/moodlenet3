@@ -1,36 +1,36 @@
 import {
-  EMPTY,
-  filter,
-  firstValueFrom,
-  from,
-  isObservable,
-  map,
-  materialize,
-  merge,
-  mergeMap,
-  Observable,
-  of,
-  Subject,
-  Subscription,
-  takeUntil,
-  takeWhile,
-  tap,
-  throwError,
+    EMPTY,
+    filter,
+    firstValueFrom,
+    from,
+    isObservable,
+    map,
+    materialize,
+    merge,
+    mergeMap,
+    Observable,
+    of,
+    Subject,
+    Subscription,
+    takeUntil,
+    takeWhile,
+    tap,
+    throwError
 } from 'rxjs'
 import { isPromise } from 'util/types'
-import type { ExtDef, ExtId, ExtTopo, IMessage, Pointer, Port, PushOptions, Shell, TypeofPath } from '../../types'
+import type { DataMessage, ExtDef, ExtId, ExtTopo, Pointer, Port, PushOptions, Shell, TypeofPath } from '../../types'
 import { manageMsg, matchMessage } from '../message'
 import { isBWCSemanticallySamePointers, joinPointer, splitPointer } from '../pointer'
 import {
-  ItemData,
-  ProvidedValOf,
-  SubcriptionPaths,
-  SubcriptionReq,
-  SubMsgObsOf,
-  SubTopo,
-  ValObsProviderOf,
-  ValOf,
-  ValPromiseOf,
+    ItemData,
+    ProvidedValOf,
+    SubcriptionPaths,
+    SubcriptionReq,
+    SubMsgObsOf,
+    SubTopo,
+    ValObsProviderOf,
+    ValOf,
+    ValPromiseOf
 } from './types'
 export * from './types'
 
@@ -104,7 +104,7 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$' 
           }),
         )
         .subscribe(pubNotifItem => {
-          const parentMsg: IMessage<any> = (pubNotifItem as any)[PUB_SYM]
+          const parentMsg: DataMessage<any> = (pubNotifItem as any)[PUB_SYM]
           const itemSpl = splitPointer(subP.itemPointer)
           shell.emit(itemSpl.path as never)({ item: pubNotifItem }, { parent: parentMsg })
         })
@@ -124,7 +124,7 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$' 
 
       function teardownAndDelSUB(id: string) {
         const teardown = SUBSCRIPTIONS[id]
-        console.log({ teardownAndDelSUB: id, teardown, SUBSCRIPTIONS })
+        // console.log({ teardownAndDelSUB: id, teardown, SUBSCRIPTIONS })
         delete SUBSCRIPTIONS[id]
         teardown?.()
       }
@@ -170,13 +170,13 @@ export function subDemat<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' 
 }
 
 export function dematMessage<T>() {
-  return mergeMap<{ msg: IMessage<ItemData<T>> }, { msg: IMessage<T> }[]>(({ msg }) => {
+  return mergeMap<{ msg: DataMessage<ItemData<T>> }, { msg: DataMessage<T> }[]>(({ msg }) => {
     const notif = msg.data.item
-    console.log({ msg, notif, ________________________: '' })
+    // console.log({ msg, notif, ________________________: '' })
     return typeof notif.kind !== 'string'
-      ? (throwError(() => new TypeError('Invalid notification, missing "kind"')) as unknown as { msg: IMessage<T> }[])
+      ? (throwError(() => new TypeError('Invalid notification, missing "kind"')) as unknown as { msg: DataMessage<T> }[])
       : notif.kind === 'E'
-      ? (throwError(() => new Error(notif.error)) as unknown as { msg: IMessage<T> }[])
+      ? (throwError(() => new Error(notif.error)) as unknown as { msg: DataMessage<T> }[])
       : notif.kind === 'N'
       ? [{ msg: { ...msg, data: notif.value } }]
       : notif.kind === 'C'
@@ -188,7 +188,7 @@ export function dematMessage<T>() {
                 // @ts-expect-error
                 notif.kind,
             ),
-        ) as unknown as { msg: IMessage<T> }[])
+        ) as unknown as { msg: DataMessage<T> }[])
   })
 }
 
@@ -205,7 +205,7 @@ export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'pu
             .pipe(
               // tap(____ => console.log({ ____, reqMsg, itemPointer: subP.itemPointer })),
               filter(
-                (msg): msg is IMessage<ItemData<any>> =>
+                (msg): msg is DataMessage<ItemData<any>> =>
                   msg.parentMsgId === reqMsg.id && isBWCSemanticallySamePointers(subP.itemPointer, msg.pointer),
               ),
               takeWhile(msg => msg.data.item.kind !== 'C', true),

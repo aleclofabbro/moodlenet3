@@ -1,6 +1,6 @@
 // import type * as K from '../k'
 import type { Observable, Subscription } from 'rxjs'
-import type { IMessage, MessagePush } from './message'
+import type { DataMessage, MessagePush } from './message'
 import { PkgInfo, RegDeployment } from './reg'
 import type { PortBinding, PortPathData, PortPaths, Topo } from './topo'
 
@@ -41,7 +41,7 @@ export type Ext<Def extends ExtDef = ExtDef, Requires extends ExtDef[] = ExtDef[
 export type RawExtEnv = Record<string, unknown> | undefined
 
 export interface Shell<Def extends ExtDef = ExtDef> {
-  msg$: Observable<IMessage<any>>
+  msg$: Observable<DataMessage<any>>
   libOf: GetExtLib
   onExtDeployment: OnExtDeployment
   onExtInstance: OnExtInstance
@@ -82,7 +82,7 @@ export interface DeploymentShell {
   tearDown: Subscription
 }
 
-export type MWFn = (msg: IMessage<any>, index: number) => Observable<IMessage<any>>
+export type MWFn = (msg: DataMessage<any>, index: number) => Observable<DataMessage<any>>
 
 export type ExtEnable<Def extends ExtDef = ExtDef> = (_: Shell<Def>) => ExtDeployable<Def>
 export type ExtDeployable<Def extends ExtDef = ExtDef> = {
@@ -114,7 +114,7 @@ export type PushMessage<SrcDef extends ExtDef = ExtDef> = <Bound extends PortBin
 ) => MessagePush<Bound, SrcDef, DestDef, Path>
 
 export type PushOptions = {
-  parent: IMessage<any> | null
+  parent: DataMessage<any> | null
   primary: boolean
   sub: boolean
 }
