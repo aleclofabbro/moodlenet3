@@ -1,54 +1,40 @@
 import {
-    EMPTY,
-    filter,
-    firstValueFrom,
-    from,
-    isObservable,
-    map,
-    materialize,
-    merge,
-    mergeMap,
-    Observable,
-    of,
-    Subject,
-    Subscription,
-    takeUntil,
-    takeWhile,
-    tap,
-    throwError
+  EMPTY,
+  filter,
+  from,
+  map,
+  materialize,
+  merge,
+  mergeMap,
+  Observable,
+  Subject,
+  Subscription,
+  takeUntil,
+  takeWhile,
+  tap,
+  throwError
 } from 'rxjs'
-import { isPromise } from 'util/types'
-import type { DataMessage, ExtDef, ExtId, ExtTopo, Pointer, Port, PushOptions, Shell, TypeofPath } from '../../types'
+import type { DataMessage, ExtDef, ExtId, ExtTopo, Pointer, Port, PushOptions, Shell, TopoPaths, TypeofPath } from '../../types'
 import { manageMsg, matchMessage } from '../message'
 import { isBWCSemanticallySamePointers, joinPointer, splitPointer } from '../pointer'
-import {
-    ItemData,
-    ProvidedValOf,
-    SubcriptionPaths,
-    SubcriptionReq,
-    SubMsgObsOf,
-    SubTopo,
-    ValObsProviderOf,
-    ValOf,
-    ValPromiseOf
-} from './types'
+import { ItemData, SubcriptionPaths, SubObsProviderDef, SubObsProviderDefOfTopo, SubTopo, ValObsTopoProviderOf } from './types'
 export * from './types'
 
-function providedValToObsAndTeardown(providedValOf: ProvidedValOf<SubTopo<any, any>>) {
-  const [valObs$_or_valPromise_orVal, tearDownLogic] = Array.isArray(providedValOf) ? providedValOf : [providedValOf]
+// function providedValToObsAndTeardown(providedValOf: ProvidedValOf<SubTopo<any>>) {
+//   const [valObs$_or_valPromise_orVal, tearDownLogic] = Array.isArray(providedValOf) ? providedValOf : [providedValOf]
 
-  const valObs$ =
-    isPromise(valObs$_or_valPromise_orVal) || isObservable(valObs$_or_valPromise_orVal)
-      ? from(valObs$_or_valPromise_orVal)
-      : of(valObs$_or_valPromise_orVal)
+//   const valObs$ =
+//     isPromise(valObs$_or_valPromise_orVal) || isObservable(valObs$_or_valPromise_orVal)
+//       ? from(valObs$_or_valPromise_orVal)
+//       : of(valObs$_or_valPromise_orVal)
 
-  return [valObs$, tearDownLogic] as const
-}
+//   return [valObs$, tearDownLogic] as const
+// }
 
 const PUB_SYM = Symbol()
 export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$' | 'extId'>) {
   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
-    (valObsProvider: ValObsProviderOf<TypeofPath<ExtTopo<Def>, Path>>) => /* new Observable(subscriber =>  */ {
+    (valObsProvider: ValObsTopoProviderOf<TypeofPath<ExtTopo<Def>, Path>>) => /* new Observable(subscriber =>  */ {
       const mainSub = new Subscription(killAllAndDelSUB)
 
       const SUBSCRIPTIONS: { [k in string]: () => void /* TeardownLogic | undefined  */ } = {}
@@ -68,22 +54,12 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$' 
           mergeMap(subReqMsg => {
             manageMsg(subReqMsg, shell.extId)
             try {
-              const [valObs$, tearDownLogic] = providedValToObsAndTeardown(
-                valObsProvider({
-                  msg: subReqMsg as any,
-                }),
-              )
+              const valObs$ = from(valObsProvider(mainSub, subReqMsg)(...subReqMsg.data.req))
               if (!subReqMsg.sub) {
                 return EMPTY
               }
               const $UNSUB_THIS$ = new Subject()
               SUBSCRIPTIONS[subReqMsg.id] = () => {
-                'function' === typeof tearDownLogic
-                  ? tearDownLogic()
-                  : tearDownLogic
-                  ? tearDownLogic.unsubscribe()
-                  : void 0
-
                 $UNSUB_THIS$.next(0)
                 $UNSUB_THIS$.complete()
               }
@@ -135,7 +111,7 @@ export function pubAll<Def extends ExtDef>(
   extId: ExtId<Def>,
   shell: Pick<Shell<Def>, 'emit' | 'msg$' | 'extId'>,
   handles: {
-    [Path in SubcriptionPaths<Def>]: ValObsProviderOf<TypeofPath<ExtTopo<Def>, Path>>
+    [Path in SubcriptionPaths<Def>]: ValObsTopoProviderOf<TypeofPath<ExtTopo<Def>, Path>>
   },
 ) {
   const allPubSubs = Object.entries(handles).map(([path, valObsProvider]) => {
@@ -147,34 +123,36 @@ export function pubAll<Def extends ExtDef>(
   return globalSub
 }
 
-export function subP<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
-  return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
-    (req: SubcriptionReq<Def, Path>) => {
-      const itemData = firstValueFrom(sub<Def>(shell)<Path>(pointer)(req))
-      return itemData as ValPromiseOf<TypeofPath<ExtTopo<Def>, Path>>
-    }
-}
+// export function subP<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
+//   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
+//     (req: SubcriptionReq<Def, Path>) => {
+//       const itemData = firstValueFrom(sub<Def>(shell)<Path>(pointer)(req))
+//       return itemData as ValPromiseOf<TypeofPath<ExtTopo<Def>, Path>>
+//     }
+// }
 
-export function subPVal<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
-  return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
-    async (req: SubcriptionReq<Def, Path>) => {
-      const itemData = await subP<Def>(shell)<Path>(pointer)(req)
-      return itemData.msg.data as ValOf<TypeofPath<ExtTopo<Def>, Path>>
-    }
-}
+// export function subPVal<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
+//   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
+//     async (req: SubcriptionReq<Def, Path>) => {
+//       const itemData = await subP<Def>(shell)<Path>(pointer)(req)
+//       return itemData.msg.data as ValTypeOf<TypeofPath<ExtTopo<Def>, Path>>
+//     }
+// }
 
-export function subDemat<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
-  return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
-    (req: SubcriptionReq<Def, Path>, _opts?: Partial<PushOptions>) =>
-      sub<Def>(shell)<Path>(pointer)(req, _opts).pipe(dematMessage())
-}
+// export function subDemat<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
+//   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
+//     (req: SubcriptionReq<Def, Path>, _opts?: Partial<PushOptions>) =>
+//       sub<Def>(shell)<Path>(pointer)(req, _opts).pipe(dematMessage())
+// }
 
 export function dematMessage<T>() {
   return mergeMap<{ msg: DataMessage<ItemData<T>> }, { msg: DataMessage<T> }[]>(({ msg }) => {
     const notif = msg.data.item
     // console.log({ msg, notif, ________________________: '' })
     return typeof notif.kind !== 'string'
-      ? (throwError(() => new TypeError('Invalid notification, missing "kind"')) as unknown as { msg: DataMessage<T> }[])
+      ? (throwError(() => new TypeError('Invalid notification, missing "kind"')) as unknown as {
+          msg: DataMessage<T>
+        }[])
       : notif.kind === 'E'
       ? (throwError(() => new Error(notif.error)) as unknown as { msg: DataMessage<T> }[])
       : notif.kind === 'N'
@@ -192,15 +170,23 @@ export function dematMessage<T>() {
   })
 }
 
+type SubWrapper = <Params extends ReadonlyArray<unknown>, Ret>(
+  f: (...args: Params) => Ret,
+  // ) => (...args: Params) => Observable<DataMessage<Ret>>
+) => (...args: Params) => Ret
+
+const subWrapper: SubWrapper = _ => _ as any
+
+
 export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
-  return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
-    (req: SubcriptionReq<Def, Path>, _opts?: Partial<PushOptions>) =>
+  return <Path extends SubcriptionPaths<Def> >(pointer: Pointer<Def, Path>, _opts?: Partial<PushOptions>) => {
+    const SP= ((...args: any) =>
       new Observable(subscriber => {
         const mainSub = new Subscription()
         try {
           const subP = sub_pointers<Def, Path>(pointer)
           const reqSplitP = splitPointer(subP.subPointer)
-          const reqMsg = shell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)({ req }, { ..._opts, sub: true })
+          const reqMsg = shell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)({ args }, { ..._opts, sub: true })
           const subscriberSub = shell.msg$
             .pipe(
               // tap(____ => console.log({ ____, reqMsg, itemPointer: subP.itemPointer })),
@@ -222,7 +208,10 @@ export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'pu
           subscriber.error(err)
           return () => mainSub.unsubscribe()
         }
-      }) as SubMsgObsOf<TypeofPath<ExtTopo<Def>, Path>>
+      })) as SubObsProviderDefOfTopo<Def, Path>
+      
+    return subWrapper(SP )
+  }
 }
 
 function sub_pointers<Def extends ExtDef, Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) {
@@ -260,33 +249,88 @@ function sub_pointers<Def extends ExtDef, Path extends SubcriptionPaths<Def>>(po
  **********************************************************************************************************
  */
 
+
+ type B = <T>(_: T, s: string) => {tt:T, ss:string}
+ type A = <T, A>(_: T, a: A) => { t: T; a: A }
 type D = ExtDef<
   'xxxx',
   '1.4.3',
   {
     d: Port<'in', string>
-    b: SubTopo<'req b', 'res b'>
-    a: SubTopo<'req a', 'res a'>
+    b: SubTopo<B>
+    a: SubTopo<A>
     s: {
       g: Port<'in', 11>
       v: {
         l: Port<'out', string>
-        a: SubTopo<'req s/v/a', 'res s/v/a'>
+        a: SubTopo<(_: 'req s/v/a') => 'res s/v/a'>
       }
       // a: FunTopo<C>
     }
   }
 >
 declare const shell: Shell<D>
+declare const f: SubObsProviderDefOfTopo<D, 'b'>
+
+type _SubcriptionPaths<Def extends ExtDef ,SP extends SubObsProviderDef> = TopoPaths<Def, SubTopo<SP>>  & TopoPaths<Def>
+type _SubWrapper<SP extends (...args:any)=>any>= SP extends (...args:infer Args)=>infer Ret ?(...args: Args) => Ret:never
+
+
+type Wraps<Params extends ReadonlyArray<unknown>, Ret> = (...args: Params) => { value: Ret }
+
+declare function wraps<Params extends ReadonlyArray<unknown>, Ret>(fn:(...args: Params) => Ret): 
+  Wraps<Params, Ret>
+
+export function y<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>):
+<Path extends SubcriptionPaths<Def> >(pointer: Pointer<Def, Path>) => 
+
+declare function aFunction<T>(t: T): { a: T }
+
+
+const c = f(10,'')
 ;async () => {
-  const g = sub<D>(shell)('xxxx@1.4.3::s/v/a')('req s/v/a').subscribe(_ => {})
-  const h = sub<D>(shell)('xxxx@1.4.3::a')('req a').subscribe(_ => {
-    _.msg.data.item.kind === 'N' && _.msg.data.item.value
+  const x = subWrapper(f)
+  x(100, '').toExponential()
+  x('0', '').toExponential()
+  x('0', '').at(1)
+  x<number>(100, '').toExponential()
+  x<string>(100, '').at(3)
+  x<string>('100', '').at(1)
+  x<string>('100', '').at()
+  x<string>('100').at(1)
+  x<string>('100', '').subscribe(_ => _.data.charCodeAt(2))
+
+
+  type vv = SubcriptionPaths<D>
+  
+  const cc=y<D, B>()(12,'12')
+  const c=y<D, B>('xxxx@1.4.3')('b')(12,'12')
+  y<D, B>('xxxx@1.4.3')('b')<number>(100, '')
+  y<D, B>('xxxx@1.4.3')('b')<number>(100, '').tt.toExponential()
+  y<D, B>('xxxx@1.4.3')('b')<string>(100, '').tt.at(3)
+  y<D, B>('xxxx@1.4.3')('b')<string>('100', '').tt.at(1)
+  y<D, B>('xxxx@1.4.3')('b')<string>('100', '').tt.at()
+  y<D, B>('xxxx@1.4.3')('b')<string>('100').tt.at(1)
+  y<D, A>('xxxx@1.4.3')('a')('100', '').subscribe(_ => _.data.charCodeAt(2))
+
+  sub<D>(shell)('xxxx@1.4.3::b')<number>(100,'').toExponential()
+  let gg=sub<D>(shell)('xxxx@1.4.3::b')
+  sub<D>(shell)('xxxx@1.4.3::b')('100','').at(8)
+  sub<D>(shell)('xxxx@1.4.3::b')(100,'').at(4)
+  const g = sub<D>(shell)('xxxx@1.4.3::b')
+  g(100,'')
+  g()
+  g.subscribe(_ => {
+    const x = _.data
   })
-  const w = subDemat<D>(shell)('xxxx@1.4.3::a')('req a').subscribe(_ => {
-    _.msg.data
+  const h = sub<D>(shell)('xxxx@1.4.3::a')(100, 'req a').subscribe(_ => {
+    _.data.a
+    _.t
   })
-  w
+  // const w = subDemat<D>(shell)('xxxx@1.4.3::a')('req a').subscribe(_ => {
+  //   _.msg.data
+  // })
+  // w
   // sub<D>(shell)('xxxx@1.4.3::alpha/beta/gamma')(4).subscribe(_ => {})
   // sub<D>(shell)('xxxx@1.4.3::/alpha/beta/gamma')(4).subscribe(_ => {})
   // sub<D>(shell)('xxxx@1.4.3:/alpha/beta/gamma')(4).subscribe(_ => {})
@@ -296,13 +340,9 @@ declare const shell: Shell<D>
 
   g
   h
-  pub<D>(shell)('xxxx@1.4.3::a')(async _ => {
-    const o = await subPVal<D>(shell)('xxxx@1.4.3::a')('req a')
-    subDemat<D>(shell)('xxxx@1.4.3::a')('req a')
-      .pipe()
-      .subscribe(_ => {
-        _.msg.data
-      })
+
+  pub<D>(shell)('xxxx@1.4.3::a')((_msub, __) => (t, a) => {
+    const o = sub<D>(shell)('xxxx@1.4.3::a')(t, a)
 
     return o //[o, () => {}]
     /*
@@ -316,25 +356,11 @@ declare const shell: Shell<D>
  */
   })
   pubAll<D>('xxxx@1.4.3', shell, {
-    's/v/a': _a =>
-      sub<D>(shell)('xxxx@1.4.3::s/v/a')('req s/v/a').pipe(
-        dematMessage(),
-        map(_ => _.msg.data),
-      ),
-    'a': _a => {
-      _a.msg.data.req === 'req a'
-      // @ts-expect-error
-      _a.msg.data.req === 'req aa'
-      return sub<D>(shell)('xxxx@1.4.3::a')('req a').pipe(
-        dematMessage(),
-        map(_ => _.msg.data),
-      )
+    's/v/a': (_sub, msg) => _a => sub<D>(shell)('xxxx@1.4.3::s/v/a')('req s/v/a'),
+    'a': (_sub, msg) => (_a, _t) => {
+      return sub<D>(shell)('xxxx@1.4.3::a')(_a, _t)
     },
-    'b': _a =>
-      sub<D>(shell)('xxxx@1.4.3::b')(_a.msg.data.req).pipe(
-        dematMessage(),
-        map(_ => _.msg.data),
-      ),
+    'b': (_sub, msg) => _a => sub<D>(shell)('xxxx@1.4.3::b')(_a),
   })
   // // const j: ExtsubTopoPaths<D> = 'a'
   // // listen.port<D>(s)('xxxx@1.4.3::s.v.l', ({ message: { payload } }) => {})

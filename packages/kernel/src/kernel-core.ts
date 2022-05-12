@@ -78,12 +78,14 @@ export const create = ({ global_env }: CreateCfg) => {
           },
         ) {
           pubAll<KernelExt>('kernel.core@0.1.10', shell, {
-            testSub(_) {
-              return interval(500).pipe(
-                take(5),
-                map(n => ({ a: `${_.msg.data.req.XX}\n\n(${n})` })),
-              )
-            },
+            testSub:
+              (_mainSub, _msg) =>
+              ({ XX }) => {
+                return interval(500).pipe(
+                  take(5),
+                  map(n => ({ a: `${XX}\n\n(${n})` })),
+                )
+              },
           })
           return {}
         },
