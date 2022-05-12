@@ -25,26 +25,26 @@ export type SubReqData<Req> = {
 //   id: MsgID
 // }
 
-export type ItemData<Val> = {
-  item: ObservableNotification<Val>
+export type ValueData<Val> = {
+  value: ObservableNotification<Val>
 }
 
 export type SubTopo<SubReq, SubVal> = TopoNode<{
   sub: Port<'in', SubReqData<SubReq>>
   unsub: Port<'in', void /* |UnsubData */>
   // unsubOut: Port<'out', UnsubData>
-  item: Port<'out', ItemData<SubVal>>
+  value: Port<'out', ValueData<SubVal>>
 }>
 
-// export type ValItemOf<Topo> = { msg: IMessage<ObsNotifValOf<Topo>> }
+// export type ValValueOf<Topo> = { msg: IMessage<ObsNotifValOf<Topo>> }
 export type SubMsgObsOf<Topo> = Observable<{ msg: DataMessage<ObsNotifValOf<Topo>> }>
 export type ValPromiseOf<Topo> = Promise<{ msg: DataMessage<ValOf<Topo>> }>
-export type ObsNotifValOf<Topo> = ItemData<ValOf<Topo>>
+export type ObsNotifValOf<Topo> = ValueData<ValOf<Topo>>
 export type ValOf<Topo> = Topo extends SubTopo<any, infer Val> ? Val : unknown
 export type ReqOf<Topo> = Topo extends SubTopo<infer Req, any> ? Req : unknown
 export type ProviderValObsInputOf<Topo> = ObservableInput<ValOf<Topo>>
 export type ProvidedValOf<Topo> =
   | ProviderValObsInputOf<Topo>
-  | [valObsinput: ProviderValObsInputOf<Topo>, tearDownLogic: TeardownLogic]
+  | [valObsinput: ProviderValObsInputOf<Topo>, tearDownLogic?: TeardownLogic]
 
 export type ValObsProviderOf<Topo> = (_: { msg: DataMessage<SubReqData<ReqOf<Topo>>> }) => ProvidedValOf<Topo>

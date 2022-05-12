@@ -1,9 +1,8 @@
 import { DepGraph } from 'dependency-graph'
-import { interval, map, mergeMap, of, share, Subject, take } from 'rxjs'
+import { mergeMap, of, share, Subject } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
 import { matchMessage } from './k/message'
 import { isExtIdBWC, joinPointer, splitExtId } from './k/pointer'
-import { pubAll } from './k/sub'
 import { createLocalDeploymentRegistry } from './registry'
 import type {
   DataMessage,
@@ -30,7 +29,7 @@ import type {
 
 export type CreateCfg = { global_env: Record<ExtName, RawExtEnv> }
 
-export const kernelPkgInfo: PkgInfo = { name: '@moodlenet/kernel', version: '0.1.10' }
+export const kernelPkgInfo: PkgInfo = { name: 'moodlenet.kernel', version: '0.1.10' }
 export const kernelExtId: ExtId<KernelExt> = 'kernel.core@0.1.10'
 
 // type Env = {
@@ -77,14 +76,6 @@ export const create = ({ global_env }: CreateCfg) => {
             /* , tearDown  */
           },
         ) {
-          pubAll<KernelExt>('kernel.core@0.1.10', shell, {
-            testSub(_) {
-              return interval(500).pipe(
-                take(5),
-                map(n => ({ a: `${_.msg.data.req.XX}\n\n(${n})` })),
-              )
-            },
-          })
           return {}
         },
       }
@@ -168,6 +159,7 @@ export const create = ({ global_env }: CreateCfg) => {
     const libOf: Shell['libOf'] = id => deplReg.get(id)?.lib
 
     const expose: ExposePointers = expPnt => {
+      console.log(`Expose `, extIdSplit.extName, expPnt)
       EXPOSED_POINTERS_REG[extIdSplit.extName] = expPnt
     }
 
@@ -176,8 +168,8 @@ export const create = ({ global_env }: CreateCfg) => {
       env,
       msg$: $msg$.asObservable(),
       // removing "as any" generates  "Error: Debug Failure. No error for last overload signature" ->https://github.com/microsoft/TypeScript/issues/33133  ... related:https://github.com/microsoft/TypeScript/issues/37974
-      emit: path => (data, opts) => (pushMsg as any)('out')(extId)(path)(data, opts),
-      send: extId => path => (data, opts) => (pushMsg as any)('in')(extId)(path)(data, opts),
+      emit: path => (data, opts) => (pushMsg as any)(extId)('out')(extId)(path)(data, opts),
+      send: destExtId => path => (data, opts) => (pushMsg as any)(extId)('in')(destExtId)(path)(data, opts),
       push,
       libOf,
       onExtInstance,
@@ -225,7 +217,7 @@ export const create = ({ global_env }: CreateCfg) => {
   }
   function pushMsg<Def extends ExtDef>(extId: ExtId<Def>): PushMessage<Def> {
     return bound => destExtId => path => (data, _opts) => {
-      // console.log('PUSH', { bound, destExtId, path, data, _opts })
+      console.log('PUSH', { bound, destExtId, path, data, _opts })
       const opts: PushOptions = {
         parent: null,
         primary: false,
@@ -234,10 +226,11 @@ export const create = ({ global_env }: CreateCfg) => {
       }
       const pointer = joinPointer(destExtId, path)
       const destRegDeployment = deplReg.assertDeployed(destExtId)
+      // console.log({ EXPOSED_POINTERS_REG, destExtId, path })
       if (opts.primary) {
         const { extName: pushToExtName } = splitExtId(destExtId)
         const expPnt = EXPOSED_POINTERS_REG[pushToExtName]?.[path]
-        // console.log({ EXPOSED_POINTERS_REG, pushToExtName, destExtId, path })
+        console.log({ EXPOSED_POINTERS_REG, pushToExtName, destExtId, path })
         if (!expPnt) {
           throw new Error(`pointer ${pointer} is not exposed to primaries`)
         }

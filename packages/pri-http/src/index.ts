@@ -94,7 +94,7 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
             const tokens = req.path.split('/').slice(1)
             const extId = tokens.slice(0, 2).join('@') as K.ExtId
             const path = tokens.slice(2).join('/') as K.TopoPath
-            console.log('Exposed Api call', req.path, extId, path, req.path)
+            console.log('Exposed Api call', extId, path, req.path)
             if (!(extId && path)) {
               return next()
             }
@@ -109,12 +109,13 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
             res.setHeader('Content-Type', 'application/stream+json')
             console.log('*********body', req.body)
             try {
+              console.log(`http sub ${pointer}`)
               const apiSub = K.subDemat(shell)(pointer as never)(req.body, {
                 primary: true,
               })
                 // .pipe(take(4))
                 .subscribe({
-                  //K.ValItemOf<K.SubTopo<any, any>>
+                  //K.ValValueOf<K.SubTopo<any, any>>
                   next({ msg }) {
                     console.log('HTTP', { parMsgId: msg.parentMsgId, val: msg.data })
                     res.cork()
@@ -124,7 +125,7 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
                   error(err) {
                     console.log('HTTP err', { err })
                     res.status(500)
-                    res.end() //(JSON.stringify({ msg: {}, val: String(err) }))
+                    res.end(String(err)) //(JSON.stringify({ msg: {}, val: String(err) }))
                   },
                   complete() {
                     console.log('HTTP complete')

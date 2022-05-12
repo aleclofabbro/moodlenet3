@@ -1,36 +1,36 @@
 import {
-    EMPTY,
-    filter,
-    firstValueFrom,
-    from,
-    isObservable,
-    map,
-    materialize,
-    merge,
-    mergeMap,
-    Observable,
-    of,
-    Subject,
-    Subscription,
-    takeUntil,
-    takeWhile,
-    tap,
-    throwError
+  EMPTY,
+  filter,
+  firstValueFrom,
+  from,
+  isObservable,
+  map,
+  materialize,
+  merge,
+  mergeMap,
+  Observable,
+  of,
+  Subject,
+  Subscription,
+  takeUntil,
+  takeWhile,
+  tap,
+  throwError,
 } from 'rxjs'
 import { isPromise } from 'util/types'
 import type { DataMessage, ExtDef, ExtId, ExtTopo, Pointer, Port, PushOptions, Shell, TypeofPath } from '../../types'
 import { manageMsg, matchMessage } from '../message'
 import { isBWCSemanticallySamePointers, joinPointer, splitPointer } from '../pointer'
 import {
-    ItemData,
-    ProvidedValOf,
-    SubcriptionPaths,
-    SubcriptionReq,
-    SubMsgObsOf,
-    SubTopo,
-    ValObsProviderOf,
-    ValOf,
-    ValPromiseOf
+  ProvidedValOf,
+  SubcriptionPaths,
+  SubcriptionReq,
+  SubMsgObsOf,
+  SubTopo,
+  ValObsProviderOf,
+  ValOf,
+  ValPromiseOf,
+  ValueData,
 } from './types'
 export * from './types'
 
@@ -103,10 +103,10 @@ export function pub<Def extends ExtDef>(shell: Pick<Shell<Def>, 'emit' | 'msg$' 
             }
           }),
         )
-        .subscribe(pubNotifItem => {
-          const parentMsg: DataMessage<any> = (pubNotifItem as any)[PUB_SYM]
-          const itemSpl = splitPointer(subP.itemPointer)
-          shell.emit(itemSpl.path as never)({ item: pubNotifItem }, { parent: parentMsg })
+        .subscribe(pubNotifValue => {
+          const parentMsg: DataMessage<any> = (pubNotifValue as any)[PUB_SYM]
+          const valueSpl = splitPointer(subP.valuePointer)
+          shell.emit(valueSpl.path as never)({ value: pubNotifValue }, { parent: parentMsg })
         })
 
       manageMsgsSub.add(mainSub)
@@ -150,16 +150,16 @@ export function pubAll<Def extends ExtDef>(
 export function subP<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
     (req: SubcriptionReq<Def, Path>) => {
-      const itemData = firstValueFrom(sub<Def>(shell)<Path>(pointer)(req))
-      return itemData as ValPromiseOf<TypeofPath<ExtTopo<Def>, Path>>
+      const valueData = firstValueFrom(sub<Def>(shell)<Path>(pointer)(req))
+      return valueData as ValPromiseOf<TypeofPath<ExtTopo<Def>, Path>>
     }
 }
 
 export function subPVal<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'push'>) {
   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
     async (req: SubcriptionReq<Def, Path>) => {
-      const itemData = await subP<Def>(shell)<Path>(pointer)(req)
-      return itemData.msg.data as ValOf<TypeofPath<ExtTopo<Def>, Path>>
+      const valueData = await subP<Def>(shell)<Path>(pointer)(req)
+      return valueData.msg.data as ValOf<TypeofPath<ExtTopo<Def>, Path>>
     }
 }
 
@@ -170,11 +170,13 @@ export function subDemat<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' 
 }
 
 export function dematMessage<T>() {
-  return mergeMap<{ msg: DataMessage<ItemData<T>> }, { msg: DataMessage<T> }[]>(({ msg }) => {
-    const notif = msg.data.item
+  return mergeMap<{ msg: DataMessage<ValueData<T>> }, { msg: DataMessage<T> }[]>(({ msg }) => {
+    const notif = msg.data.value
     // console.log({ msg, notif, ________________________: '' })
     return typeof notif.kind !== 'string'
-      ? (throwError(() => new TypeError('Invalid notification, missing "kind"')) as unknown as { msg: DataMessage<T> }[])
+      ? (throwError(() => new TypeError('Invalid notification, missing "kind"')) as unknown as {
+          msg: DataMessage<T>
+        }[])
       : notif.kind === 'E'
       ? (throwError(() => new Error(notif.error)) as unknown as { msg: DataMessage<T> }[])
       : notif.kind === 'N'
@@ -196,19 +198,21 @@ export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'pu
   return <Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) =>
     (req: SubcriptionReq<Def, Path>, _opts?: Partial<PushOptions>) =>
       new Observable(subscriber => {
+        console.log(`K sub`, pointer, req)
         const mainSub = new Subscription()
         try {
           const subP = sub_pointers<Def, Path>(pointer)
           const reqSplitP = splitPointer(subP.subPointer)
           const reqMsg = shell.send<Def>(reqSplitP.extId)(reqSplitP.path as never)({ req }, { ..._opts, sub: true })
+          console.log(`K sub sent reqMsg `, String(reqMsg))
           const subscriberSub = shell.msg$
             .pipe(
-              // tap(____ => console.log({ ____, reqMsg, itemPointer: subP.itemPointer })),
+              // tap(____ => console.log({ ____, reqMsg, valuePointer: subP.valuePointer })),
               filter(
-                (msg): msg is DataMessage<ItemData<any>> =>
-                  msg.parentMsgId === reqMsg.id && isBWCSemanticallySamePointers(subP.itemPointer, msg.pointer),
+                (msg): msg is DataMessage<ValueData<any>> =>
+                  msg.parentMsgId === reqMsg.id && isBWCSemanticallySamePointers(subP.valuePointer, msg.pointer),
               ),
-              takeWhile(msg => msg.data.item.kind !== 'C', true),
+              takeWhile(msg => msg.data.value.kind !== 'C', true),
               map(msg => ({ msg })),
             )
             .subscribe(subscriber)
@@ -228,7 +232,7 @@ export function sub<Def extends ExtDef>(shell: Pick<Shell, 'send' | 'msg$' | 'pu
 function sub_pointers<Def extends ExtDef, Path extends SubcriptionPaths<Def>>(pointer: Pointer<Def, Path>) {
   return {
     subPointer: `${pointer}/sub` as `${Pointer<Def, Path>}/sub`,
-    itemPointer: `${pointer}/item` as `${Pointer<Def, Path>}/item`,
+    valuePointer: `${pointer}/value` as `${Pointer<Def, Path>}/value`,
     unsubPointer: `${pointer}/unsub` as `${Pointer<Def, Path>}/unsub`,
     // unsubOut: `${pointer}/unsubOut` as `${Pointer<Def, Path>}/unsubOut`,
   }
@@ -281,7 +285,7 @@ declare const shell: Shell<D>
 ;async () => {
   const g = sub<D>(shell)('xxxx@1.4.3::s/v/a')('req s/v/a').subscribe(_ => {})
   const h = sub<D>(shell)('xxxx@1.4.3::a')('req a').subscribe(_ => {
-    _.msg.data.item.kind === 'N' && _.msg.data.item.value
+    _.msg.data.value.kind === 'N' && _.msg.data.value.value
   })
   const w = subDemat<D>(shell)('xxxx@1.4.3::a')('req a').subscribe(_ => {
     _.msg.data

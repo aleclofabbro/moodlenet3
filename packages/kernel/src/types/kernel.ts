@@ -1,4 +1,3 @@
-import { SubTopo } from '../k'
 import type { ExtDef, ExtId } from './ext'
 import type { Port } from './topo'
 
@@ -12,6 +11,5 @@ export type KernelExt = ExtDef<
       deployed: Port<'out', { extId: ExtId }>
       undeployed: Port<'out', { extId: ExtId }>
     }
-    testSub: SubTopo<{ XX: string }, { a: string }>
   }
 >

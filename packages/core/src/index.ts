@@ -3,7 +3,7 @@ export * as K from '@moodlenet/kernel'
 export * as coreExt from './core-extensions'
 
 export type MoodlenetCoreExt = ExtDef<
-  '@moodlenet/core',
+  'moodlenet.core',
   '0.1.10',
   {
     _test: SubTopo<{ a: string }, { a: number }>
@@ -11,7 +11,7 @@ export type MoodlenetCoreExt = ExtDef<
 >
 
 const extImpl: Ext<MoodlenetCoreExt> = {
-  id: '@moodlenet/core@0.1.10',
+  id: 'moodlenet.core@0.1.10',
   displayName: '',
   requires: [],
   description: '',
@@ -19,7 +19,7 @@ const extImpl: Ext<MoodlenetCoreExt> = {
     console.log('I am core extension')
     return {
       deploy({}) {
-        pubAll<MoodlenetCoreExt>('@moodlenet/core@0.1.10', shell, {
+        pubAll<MoodlenetCoreExt>('moodlenet.core@0.1.10', shell, {
           _test({ msg }) {
             msg.pointer
             msg.data.req.a.at

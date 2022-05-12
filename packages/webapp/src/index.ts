@@ -14,23 +14,24 @@ const extAliases: {
 } = {}
 
 export type WebappExt = K.ExtDef<
-  '@moodlenet/webapp',
+  'moodlenet.webapp',
   '0.1.10',
   {
     ensureExtension: K.Port<'in', { cmpPath: string }>
   }
 >
 const extImpl: K.Ext<WebappExt, [K.KernelExt, coreExt.priHttp.MNPriHttpExt]> = {
-  id: '@moodlenet/webapp@0.1.10',
+  id: 'moodlenet.webapp@0.1.10',
   displayName: 'webapp',
   requires: ['kernel.core@0.1.10', 'moodlenet.pri-http@0.1.10'],
   enable(shell) {
     return {
       deploy(/* { tearDown } */) {
         shell.msg$.subscribe(msg => {
-          K.onMessage<WebappExt>(msg)('@moodlenet/webapp@0.1.10::ensureExtension', msg => {
+          K.onMessage<WebappExt>(msg)('moodlenet.webapp@0.1.10::ensureExtension', msg => {
             const { extId } = K.splitPointer(msg.pointer)
             const extDepl = shell.getExt(extId)
+            console.log('....ensureExtension', msg)
             if (!extDepl?.pkgDiskInfo) {
               throw new Error(`${msg.pointer}: extId ${extId} not deployed`)
             }
