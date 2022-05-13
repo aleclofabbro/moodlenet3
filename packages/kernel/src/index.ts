@@ -1,4 +1,4 @@
-export * as rx from 'rxjs'
 export * from './k'
-export * from './registry'
+export * as core from './kernel-core'
+export * as coreNode from './kernel-node'
 export * from './types'

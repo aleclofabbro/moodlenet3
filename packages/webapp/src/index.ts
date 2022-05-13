@@ -1,4 +1,5 @@
-import { coreExt, K } from '@moodlenet/core'
+import type { Ext, ExtDef, KernelExt } from '@moodlenet/kernel'
+import type { MNPriHttpExt } from '@moodlenet/pri-http'
 import { rename, rm, stat, writeFile } from 'fs/promises'
 import { join, resolve } from 'path'
 import { inspect, promisify } from 'util'
@@ -13,44 +14,50 @@ const extAliases: {
   [extId: string]: { moduleLoc: string; cmpPath: string }
 } = {}
 
-export type WebappExt = K.ExtDef<
+export type WebappExt = ExtDef<
   'moodlenet.webapp',
   '0.1.10',
+  {},
+  null,
   {
-    ensureExtension: K.Port<'in', { cmpPath: string }>
+    ensureExtension(_: { cmpPath: string }): void
   }
 >
-const extImpl: K.Ext<WebappExt, [K.KernelExt, coreExt.priHttp.MNPriHttpExt]> = {
+const extImpl: Ext<WebappExt, [KernelExt, MNPriHttpExt]> = {
   id: 'moodlenet.webapp@0.1.10',
   displayName: 'webapp',
   requires: ['kernel.core@0.1.10', 'moodlenet.pri-http@0.1.10'],
   enable(shell) {
     return {
       deploy(/* { tearDown } */) {
-        shell.msg$.subscribe(msg => {
-          K.onMessage<WebappExt>(msg)('moodlenet.webapp@0.1.10::ensureExtension', msg => {
-            const { extId } = K.splitPointer(msg.pointer)
-            const extDepl = shell.getExt(extId)
-            console.log('....ensureExtension', msg)
-            if (!extDepl?.pkgDiskInfo) {
-              throw new Error(`${msg.pointer}: extId ${extId} not deployed`)
-            }
-            extAliases[extId] = {
-              cmpPath: msg.data.cmpPath,
-              moduleLoc: extDepl.pkgDiskInfo.mainModPath,
-            }
-            buildAndClean()
-          })
-        })
-        shell.onExtInstance<coreExt.priHttp.MNPriHttpExt>('moodlenet.pri-http@0.1.10', (inst /* , depl */) => {
-          const { express, mount } = inst(shell)
+        shell.onExtInstance<MNPriHttpExt>('moodlenet.pri-http@0.1.10', (inst /* , depl */) => {
+          const { express, mount } = inst
           const mountApp = express()
           const staticWebApp = express.static(latestBuildFolder, {})
           mountApp.use(staticWebApp)
+          mountApp.get('*', (_req, res) => {
+            res.sendFile(join(latestBuildFolder, 'index.html'))
+          })
           mount({ mountApp, absMountPath: '/' })
         })
         buildAndClean()
-        return {}
+        return {
+          inst({ depl }) {
+            return {
+              ensureExtension({ cmpPath }) {
+                console.log('....ensureExtension', depl.extId, cmpPath)
+                if (!depl.pkgDiskInfo) {
+                  throw new Error(`ensureExtension: extId ${depl.extId} not deployed`)
+                }
+                extAliases[depl.extId] = {
+                  cmpPath,
+                  moduleLoc: depl.pkgDiskInfo.rootDir,
+                }
+                buildAndClean()
+              },
+            }
+          },
+        }
       },
     }
   },
@@ -111,7 +118,9 @@ function extensionsJsString() {
 
   return `  
 ${Object.entries(extAliases)
-  .map(([pkgName, { cmpPath }], index) => `module.exports['Cmp_${index}']= require('${pkgName}/${cmpPath}').default`)
+  .map(
+    ([pkgName, { cmpPath, moduleLoc }]) => `module.exports['${pkgName}']= require('${moduleLoc}/${cmpPath}').default`,
+  )
   // .map(([pkgName, { cmpPath }], index) => `export { Cmp as Cmp_${index} } from '${pkgName}/${cmpPath}' //pkgName`)
   .join('\n')}
 `

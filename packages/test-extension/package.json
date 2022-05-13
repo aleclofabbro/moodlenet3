@@ -13,9 +13,9 @@
   "description": "moodlenet test-extension package",
   "repository": "https://gitlab.com/moodlenet/moodlenet",
   "author": "https://github.com/aleclofabbro",
-  "dependencies": {},
   "devDependencies": {
-    "@moodlenet/core": "^0.0.1",
+    "@moodlenet/kernel": "^0.0.1",
+    "@moodlenet/webapp": "^0.0.1",
     "@types/node": "^17.0.18",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.11",

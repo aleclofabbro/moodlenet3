@@ -14,9 +14,8 @@ export function boot() {
   const req = createRequire(join(cwd, 'node_modules'))
 
   const deployments = activatePkgs
-    .map(mainModPath => pkgDiskInfoOf(mainModPath))
+    .map(mainModPath => pkgDiskInfoOf(req.resolve(mainModPath)))
     .map(pkgDiskInfo => {
-      // console.log({ _: pkgDiskInfo })
       const exts: Ext[] = req(pkgDiskInfo.name).default
       // console.log({ exts })
       return exts.map(ext => K.deployExtension({ ext, pkgInfo: pkgDiskInfo }))

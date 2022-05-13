@@ -18,7 +18,7 @@
     "dependency-graph": "^0.11.0",
     "execa": "^5.1.1",
     "pkg-dir": "^5",
-    "rxjs": "^7.5.4",
+    "rxjs": "^7.5.5",
     "semver": "^7.3.6"
   },
   "devDependencies": {

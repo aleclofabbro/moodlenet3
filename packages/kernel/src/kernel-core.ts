@@ -1,6 +1,7 @@
 import { DepGraph } from 'dependency-graph'
 import { mergeMap, of, share, Subject } from 'rxjs'
 import { depGraphAddNodes } from './dep-graph'
+import * as K from './k'
 import { matchMessage } from './k/message'
 import { isExtIdBWC, joinPointer, splitExtId } from './k/pointer'
 import { createLocalDeploymentRegistry } from './registry'
@@ -64,11 +65,7 @@ export const create = ({ global_env }: CreateCfg) => {
     displayName: 'K',
     description: 'K',
     requires: [],
-    enable: shell => {
-      shell.expose({
-        'testSub/sub': { validate: () => ({ valid: true, msg: 'no good' }) },
-      })
-
+    enable: (/* shell */) => {
       return {
         mw: msg => of(msg),
         deploy(
@@ -137,10 +134,11 @@ export const create = ({ global_env }: CreateCfg) => {
     const onExtInstance: Shell['onExtInstance'] = (extId, cb) => {
       let cleanup: void | (() => void) = undefined
       const subscription = onExt(extId, regDeployment => {
+        // console.log('onExtInstance', extId, `[${regDeployment?.extId}]`)
         if (!regDeployment?.inst) {
           return cleanup?.()
         }
-        cleanup = cb(regDeployment.inst, regDeployment as any)
+        cleanup = cb(regDeployment.inst?.({ depl: depl as any }) /* , regDeployment as any */)
       })
       return subscription
     }
@@ -156,7 +154,9 @@ export const create = ({ global_env }: CreateCfg) => {
       return subscription
     }
 
-    const libOf: Shell['libOf'] = id => deplReg.get(id)?.lib
+    const libOf: Shell['libOf'] = id => {
+      return deplReg.get(id)?.lib?.({ depl: depl as any })
+    }
 
     const expose: ExposePointers = expPnt => {
       console.log(`Expose `, extIdSplit.extName, expPnt)
@@ -178,6 +178,7 @@ export const create = ({ global_env }: CreateCfg) => {
       onExt,
       pkgInfo,
       expose,
+      lib: K,
     }
 
     const tearDown = pipedMessages$.subscribe($msg$)
@@ -188,7 +189,7 @@ export const create = ({ global_env }: CreateCfg) => {
 
     const extDeployable = ext.enable(shell)
 
-    let extDeployment: ExtDeployment<Def> = { inst: undefined }
+    let extDeployment: ExtDeployment<Def> = { inst: () => undefined }
     if (deployWith) {
       extDeployment = deployWith(shell, deploymentShell)
     } else {

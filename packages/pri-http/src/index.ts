@@ -9,9 +9,8 @@ interface Instance {
   express: typeof express
   // xlib: typeof xlib
 }
-type GetInst = <Def extends K.ExtDef>(shell: K.Shell<Def>) => Instance
 
-export type MNPriHttpExt = K.ExtDef<'moodlenet.pri-http', '0.1.10', {}, void, GetInst>
+export type MNPriHttpExt = K.ExtDef<'moodlenet.pri-http', '0.1.10', {}, void, Instance>
 
 // const ext: K.Ext<MNPriHttpExt, [K.KernelExt, coreExt.sysLog.MoodlenetSysLogExt]> = {
 const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
@@ -46,21 +45,20 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
           logger.info(`No port defined in env, won't start HTTP server at startup`)
         }
         return {
-          inst,
+          inst({ depl }) {
+            return {
+              mount({ mountApp, absMountPath }) {
+                console.log('MOUNT', { absMountPath })
+                const { extName /* , version */ } = K.splitExtId(depl.extId)
+                const mountPath = absMountPath ?? `/_/${extName}`
+                app.use(mountPath, mountApp)
+              },
+              express,
+              // xlib,
+            }
+          },
         }
 
-        function inst<Def extends K.ExtDef>(userShell: K.Shell<Def>): Instance {
-          return {
-            mount({ mountApp, absMountPath }) {
-              console.log('MOUNT', { absMountPath })
-              const { extName /* , version */ } = K.splitExtId(userShell.extId)
-              const mountPath = absMountPath ?? `/_/${extName}`
-              app.use(mountPath, mountApp)
-            },
-            express,
-            // xlib,
-          }
-        }
         async function stopServer() {
           return new Promise<void>((resolve, reject) => {
             if (!server) {
@@ -100,7 +98,7 @@ const ext: K.Ext<MNPriHttpExt, [K.KernelExt]> = {
             }
             const pointer = K.joinPointer(extId, path)
             const extDeployment = shell.getExt(extId)
-            console.log('Exposed Api pointer', { pointer, extDeployment })
+            console.log('Exposed Api pointer', { pointer, extDeployment: extDeployment?.extId })
 
             if (!(pointer && extDeployment)) {
               return next()

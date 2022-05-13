@@ -1,5 +1,6 @@
 //export * from './deps'
 // export * from './fun'
+export * as rx from 'rxjs'
 export * from './message'
 export * from './pointer'
 // export * from './probe'
